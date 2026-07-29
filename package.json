@@ -1,0 +1,13 @@
+{
+  "name": "casa-nira-construction-audit",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone construction feed audit for Casa Nira Uluwatu — CLI + refreshable HTML report, zero dependencies.",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "audit": "node audit-cli.mjs",
+    "audit:html": "node audit-cli.mjs --html",
+    "serve": "node server.mjs"
+  }
+}

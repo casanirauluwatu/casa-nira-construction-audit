@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Casa Nira — Construction Feed Audit</title>
+<style>
+  :root{color-scheme:light;--bg:#f5f2ea;--card:#fffdf8;--ink:#2b2620;--muted:#8f887c;--line:#e6dfd1;--olive:#6f7043;--gold:#a9822f;--green:#3f7d4f;--red:#b4472e;--amber:#b5842c;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:40px 24px 64px;}
+  .eyebrow{font:600 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+  h1{margin:10px 0 6px;font-size:30px;font-weight:600;letter-spacing:-.01em;}
+  .sub-h{color:var(--muted);font-size:13.5px;margin:0;}
+  button.refresh{font:600 13px -apple-system,sans-serif;color:#fff;background:var(--olive);border:none;border-radius:8px;padding:10px 18px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;}
+  button.refresh:hover{background:#5c5d38;}
+  button.refresh:disabled{opacity:.55;cursor:default;}
+  .spin{width:13px;height:13px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+  @media (prefers-reduced-motion:reduce){.spin{animation:none;}}
+  .note{margin:18px 0 26px;padding:12px 16px;background:var(--card);border:1px solid var(--line);border-left:3px solid var(--olive);border-radius:8px;font-size:13px;color:#5f594e;}
+  .err{border-left-color:var(--red);color:var(--red);}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:26px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;}
+  .card-n{font-size:26px;font-weight:600;line-height:1;}
+  .card-l{margin-top:6px;font:600 10.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card);}
+  table{border-collapse:collapse;width:100%;min-width:1080px;font-size:13.5px;}
+  thead th{position:sticky;top:0;background:#efe9dd;color:#5f594e;font:600 10.5px/1.3 ui-monospace,Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;text-align:right;padding:12px 12px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  thead th.l{text-align:left;}
+  tbody td{padding:11px 12px;text-align:right;border-bottom:1px solid #f0eadd;white-space:nowrap;}
+  tbody tr:last-child td{border-bottom:none;}
+  td.u{text-align:left;font-weight:600;}
+  .mono{font-family:ui-monospace,Menlo,monospace;}
+  .dim{color:var(--muted);}
+  .pos{color:var(--green);}
+  .neg{color:var(--red);}
+  .req-ok{color:var(--green);}
+  .req-risk{color:var(--red);font-weight:600;}
+  .sub{font:600 10.5px ui-monospace,Menlo,monospace;color:var(--muted);}
+  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font:600 11px/1.4 -apple-system,sans-serif;white-space:nowrap;}
+  .badge.on-track,.badge.complete{background:#e7f1e9;color:var(--green);}
+  .badge.behind{background:#f7e8e1;color:var(--red);}
+  .badge.stale{background:#f6ecd6;color:var(--amber);}
+  .badge.unreachable{background:#eee;color:#777;}
+  tr.row-stale{background:#fdf7ea;}
+  tr.row-down{background:#faf3f0;}
+  .down-note{text-align:left;color:var(--red);font-family:ui-monospace,Menlo,monospace;font-size:12.5px;}
+  .legend{margin-top:22px;font-size:12.5px;color:#5f594e;}
+  .legend dt{font-weight:600;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;}
+  .legend dd{margin:2px 0 10px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <div class="eyebrow">Casa Nira Uluwatu · Build Progress</div>
+      <h1>Construction Feed Audit</h1>
+      <p class="sub-h" id="subh">Loading live feed data…</p>
+    </div>
+    <button class="refresh" id="refresh" type="button">Refresh data</button>
+  </div>
+  <div class="note" id="note">Pulled live from the construction “Time Schedule” feeds — the same source the dashboard reads. Click <strong>Refresh data</strong> to re-pull.</div>
+  <div class="cards" id="cards"></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th class="l">Unit</th><th>Week</th><th>Last reported</th><th>Actual %</th><th>Planned %</th>
+        <th>Behind (pp)</th><th>Δ this wk</th><th>Δ −1w</th><th>Δ −2w</th><th>Req Δ/wk</th>
+        <th class="l">Target delivery</th><th class="l">Projected (recent pace)</th><th class="l">Status</th>
+      </tr></thead>
+      <tbody id="body"></tbody>
+    </table>
+  </div>
+  <dl class="legend">
+    <dt>Last reported</dt><dd>End date of the latest week with actual progress filled in (period close, Sunday).</dd>
+    <dt>Δ this wk / −1w / −2w</dt><dd>Actual progress in each of the last three reported weeks (each week’s cumulative actual − the previous week’s).</dd>
+    <dt>Req Δ/wk</dt><dd>Weekly progress now required to still hit target delivery (remaining ÷ weeks to target). Red = above the pace achieved last week.</dd>
+    <dt>Target delivery</dt><dd>Scheduled completion from the planned S-curve (planned reaches 100%), at week-end.</dd>
+    <dt>Projected (recent pace)</dt><dd>Completion extrapolated from the average weekly gain over the last 6 weeks.</dd>
+  </dl>
+</div>
+<script>
+  const params = new URLSearchParams(location.search);
+  const TOKEN = params.get("token") || "";
+  const $ = (id) => document.getElementById(id);
+  const sgn = (v) => (v >= 0 ? "+" : "") + v.toFixed(1);
+
+  function statusOf(r, staleDays) {
+    if (!r.ok) return "unreachable";
+    if ((r.lastAgeDays ?? 0) > staleDays) return "stale";
+    if (r.actual != null && r.actual >= 100) return "complete";
+    if (r.targetInWeeks == null || r.targetInWeeks <= 0) return "behind";
+    const slip = (r.projInWeeks == null ? 999 : r.projInWeeks) - r.targetInWeeks;
+    return slip <= 2 ? "on-track" : "behind";
+  }
+  const BADGE = { "on-track": "On track", behind: "Behind", stale: "Stale", unreachable: "Unreachable", complete: "Complete" };
+
+  function render(data) {
+    const rows = data.rows || [];
+    const staleDays = data.staleDays ?? 7;
+    const okA = rows.filter((r) => r.ok && r.actual != null);
+    const overall = okA.length ? okA.reduce((s, r) => s + r.actual, 0) / okA.length : 0;
+    const okD = rows.filter((r) => r.ok && r.d0 != null);
+    const avgD = okD.length ? okD.reduce((s, r) => s + r.d0, 0) / okD.length : 0;
+    let onTrack = 0;
+    for (const r of rows) { const st = statusOf(r, staleDays); if (st === "on-track" || st === "complete") onTrack++; }
+
+    $("cards").innerHTML =
+      card(overall.toFixed(1) + "%", "Overall complete", "") +
+      card(sgn(avgD), "Avg Δ this week", avgD >= 0 ? "pos" : "neg") +
+      card(rows.length, "Feeds", "") +
+      card(onTrack, "On track", "pos");
+
+    const dcell = (v) => (v == null ? '<td class="mono dim">—</td>' : `<td class="mono ${v >= 0 ? "pos" : "neg"}">${sgn(v)}</td>`);
+    $("body").innerHTML = rows.map((r) => {
+      const st = statusOf(r, staleDays);
+      if (!r.ok) return `<tr class="row-down"><td class="u">${r.unit}</td><td colspan="11" class="down-note">feed unreachable</td><td><span class="badge unreachable">Unreachable</span></td></tr>`;
+      const reqTxt = r.reqPace == null ? "past due" : r.reqPace.toFixed(1);
+      const reqCls = r.reqPace == null ? "req-risk" : (r.d0 != null && r.reqPace > r.d0 ? "req-risk" : "req-ok");
+      const tw = r.targetInWeeks, tSub = tw == null ? "" : tw < 0 ? `${-tw}w overdue` : `+${tw}w`;
+      const pMain = r.projDate == null ? "—" : r.projDate, pSub = r.projInWeeks == null ? "" : `+${r.projInWeeks}w`;
+      return `<tr class="row-${st}">
+        <td class="u">${r.unit}</td>
+        <td class="mono dim">${r.week}</td>
+        <td class="mono">${r.lastReported}</td>
+        <td class="mono">${r.actual == null ? "—" : r.actual.toFixed(1)}</td>
+        <td class="mono dim">${r.planned.toFixed(1)}</td>
+        <td class="mono ${r.deviation < 0 ? "neg" : "pos"}">${sgn(r.deviation)}</td>
+        ${dcell(r.d0)}${dcell(r.d1)}${dcell(r.d2)}
+        <td class="mono ${reqCls}">${reqTxt}</td>
+        <td>${r.target}${tSub ? ` <span class="sub">${tSub}</span>` : ""}</td>
+        <td>${pMain}${pSub ? ` <span class="sub">${pSub}</span>` : ""}</td>
+        <td><span class="badge ${st}">${BADGE[st]}</span></td>
+      </tr>`;
+    }).join("");
+
+    const when = new Date(data.generatedAt);
+    $("subh").textContent = `${rows.length} villa feeds · pulled ${isNaN(when) ? "just now" : when.toLocaleString()} · stale threshold ${staleDays}d`;
+  }
+  function card(n, label, cls) {
+    return `<div class="card"><div class="card-n ${cls}">${n}</div><div class="card-l">${label}</div></div>`;
+  }
+
+  async function load() {
+    const btn = $("refresh");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span> Refreshing…';
+    try {
+      const res = await fetch(`/api/construction/audit?token=${encodeURIComponent(TOKEN)}`, { cache: "no-store" });
+      if (res.status === 401) throw new Error("Not authorized — append ?token=… to the URL.");
+      if (!res.ok) throw new Error(`Feed error (HTTP ${res.status}).`);
+      render(await res.json());
+      $("note").className = "note";
+      $("note").innerHTML = 'Pulled live from the construction “Time Schedule” feeds — the same source the dashboard reads. Click <strong>Refresh data</strong> to re-pull.';
+    } catch (e) {
+      $("note").className = "note err";
+      $("note").textContent = e.message || "Could not load the audit.";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Refresh data";
+    }
+  }
+  $("refresh").addEventListener("click", load);
+  load();
+</script>
+</body>
+</html>
