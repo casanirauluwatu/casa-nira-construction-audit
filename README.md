@@ -2,54 +2,49 @@
 
 A standalone audit of the Casa Nira Uluwatu construction **Time Schedule** feeds
 across all villas — progress, weekly pace, and target-vs-projected delivery.
-**Zero dependencies** (Node 18+ only). Two ways to use it:
+**Zero dependencies** (Node 18+). Reads the same `CONSTRUCTION_FEEDS` the main
+dashboard uses, so figures match.
 
-- **CLI** — print a table (and optionally a static HTML report).
-- **Server** — serve a live report page with a **Refresh data** button.
+Three ways to run it: **CLI**, a **plain Node server**, or **Vercel**.
 
-It reads the same `CONSTRUCTION_FEEDS` the main dashboard uses, so figures match.
+## The one variable it needs
 
-## Setup
-
-```bash
-cp .env.example .env      # then fill in CONSTRUCTION_FEEDS and AUDIT_TOKEN
-```
-
-`CONSTRUCTION_FEEDS` is a JSON map of villa → Apps Script `/exec` URL. Keep `.env`
-out of git (it's gitignored) — those URLs are effectively credentials.
+`CONSTRUCTION_FEEDS` — a JSON map of villa → Apps Script `/exec` URL. Keep it out
+of git (those URLs are effectively credentials). See `.env.example`.
 
 ## CLI
 
 ```bash
-# load .env into the shell, then run
+cp .env.example .env          # fill in CONSTRUCTION_FEEDS
 set -a; . ./.env; set +a
 
-npm run audit            # print the audit table
-npm run audit -- 14 8    # stale threshold 14 days, 8-week pace window
-npm run audit:html       # also write docs/construction-audit.html
+npm run audit                 # print the audit table
+npm run audit -- 14 8         # stale threshold 14 days, 8-week pace window
+npm run audit:html            # also write docs/construction-audit.html
 ```
 
-Columns: week reached, last-reported week (period end), actual vs planned, the
-last 3 weeks' progress deltas, required pace to hit target, target delivery, and
-a recent-pace projected delivery.
-
-## Server (live report + Refresh button)
+## Plain Node server (Render, Railway, a VPS, a container)
 
 ```bash
 set -a; . ./.env; set +a
-npm run serve            # http://localhost:3000
+npm run serve                 # http://localhost:3000
 ```
 
-Open **`http://localhost:3000/?token=<AUDIT_TOKEN>`**. The page pulls every feed
-live via `GET /api/construction/audit?token=…` and re-pulls on **Refresh data**.
-Without a valid token the endpoint returns 401.
+Set `CONSTRUCTION_FEEDS` in the host's environment and run `npm run serve`.
 
-### Deploy
+## Vercel
 
-Any Node host works (Render, Railway, Fly, a VPS, or a container). Set
-`CONSTRUCTION_FEEDS` and `AUDIT_TOKEN` in the host's environment and run
-`npm run serve`. Then share `https://<host>/?token=<AUDIT_TOKEN>` — treat that
-URL as sensitive, since it shows every unit.
+Import this repo as a Vercel project and add one Environment Variable:
+
+- **`CONSTRUCTION_FEEDS`** = the JSON map (paste the `{…}` only, no quotes).
+
+Deploy. Vercel serves `public/index.html` at `/` and runs
+`api/construction/audit.js` as a serverless function. Open the site root — the
+page pulls every feed and re-pulls on **Refresh data**. No token required.
+
+> The report shows every unit and is public to anyone with the URL. If you want
+> it locked down, put it behind Vercel's password protection (Project → Settings
+> → Deployment Protection) or a reverse proxy.
 
 ## Column reference
 

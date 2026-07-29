@@ -83,8 +83,6 @@
   </dl>
 </div>
 <script>
-  const params = new URLSearchParams(location.search);
-  const TOKEN = params.get("token") || "";
   const $ = (id) => document.getElementById(id);
   const sgn = (v) => (v >= 0 ? "+" : "") + v.toFixed(1);
 
@@ -149,8 +147,7 @@
     btn.disabled = true;
     btn.innerHTML = '<span class="spin"></span> Refreshing…';
     try {
-      const res = await fetch(`/api/construction/audit?token=${encodeURIComponent(TOKEN)}`, { cache: "no-store" });
-      if (res.status === 401) throw new Error("Not authorized — append ?token=… to the URL.");
+      const res = await fetch(`/api/construction/audit`, { cache: "no-store" });
       if (!res.ok) throw new Error(`Feed error (HTTP ${res.status}).`);
       render(await res.json());
       $("note").className = "note";
