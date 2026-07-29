@@ -1,6 +1,7 @@
 // Zero-dependency audit core: fetch each villa's construction "Time Schedule"
-// feed, parse the S-curve, and compute the per-unit audit row. Shared by the
-// CLI (audit-cli.mjs) and the standalone server (server.mjs). Node 18+ only.
+// feed, parse the S-curve, and compute the per-unit audit row (incl. the weekly
+// series for charting). Shared by the CLI, the Node server and the Vercel
+// function. Node 18+ only.
 
 const TIMEOUT_MS = 15000;
 
@@ -87,6 +88,10 @@ function computeRow(unit, data, now, trailWeeks) {
     return x != null && y != null ? x - y : null;
   };
   const d0 = delta(0, 1) ?? (idxs.length === 1 ? val(0) : null);
+  const d1 = delta(1, 2);
+  const d2 = delta(2, 3);
+  const recent = [d0, d1, d2].filter((v) => v != null);
+  const avg3 = recent.length ? recent.reduce((a, b) => a + b, 0) / recent.length : null;
 
   let di = weeks.findIndex((x) => x.planned >= 99.5);
   if (di < 0) di = weeks.length - 1;
@@ -111,29 +116,33 @@ function computeRow(unit, data, now, trailWeeks) {
   }
 
   const reqPace = actual >= 100 ? 0 : targetInWeeks && targetInWeeks > 0 ? (100 - actual) / targetInWeeks : null;
+  // How the recent 3-week average pace compares to what's required to hit target.
+  const paceGap = avg3 != null && reqPace != null ? avg3 - reqPace : null;
 
   return {
     unit,
     ok: true,
     week: `${ni + 1}/${weeks.length}`,
+    nowIndex: ni,
     lastReported: we ? fmtSheetDate(we) : w.date,
     lastAgeDays: we ? daysBetween(now, we) : null,
     actual,
     planned,
     deviation: actual - planned,
     d0,
-    d1: delta(1, 2),
-    d2: delta(2, 3),
+    d1,
+    d2,
+    avg3,
     reqPace,
+    paceGap,
     target: twe ? fmtSheetDate(twe) : weeks[di].date,
     targetInWeeks,
     projDate,
     projInWeeks,
+    series: weeks.map((x) => ({ d: x.date, p: x.planned, a: x.actual })),
   };
 }
 
-/** Fetch + compute every villa in the feeds map. Returns the payload the
- *  report page and CLI both render. */
 export async function auditAll(feeds, { staleDays = 10, trailWeeks = 6 } = {}) {
   const now = new Date();
   const units = Object.keys(feeds);
