@@ -56,7 +56,7 @@
     </div>
     <button class="refresh" id="refresh" type="button">Refresh data</button>
   </div>
-  <div class="note" id="note">Pulled live from the construction “Time Schedule” feeds. Click <strong>Refresh data</strong> to re-pull.</div>
+  <div class="note" id="note">Pulled live from the construction “Time Schedule” feeds. Served from a ~6-hour cache — click <strong>Refresh data</strong> for the latest.</div>
   <div class="cards" id="cards"></div>
 
   <div class="chart-card">
@@ -207,17 +207,18 @@
     $("chartHint").innerHTML = `Rows sorted by target date. <strong>${late}</strong> of ${ok.length} units project past their target. Click a row to open its S-curve.`;
   }
 
-  async function load(){
+  async function load(fresh){
     const btn=$("refresh"); btn.disabled=true; btn.innerHTML='<span class="spin"></span> Refreshing…';
     try{
-      const res=await fetch("/api/construction/audit",{cache:"no-store"});
+      const url="/api/construction/audit"+(fresh?"?fresh=1":"");
+      const res=await fetch(url, fresh?{cache:"no-store"}:{});
       if(!res.ok){let m;try{m=(await res.json()).error;}catch{}throw new Error(m||`Feed error (HTTP ${res.status}).`);}
       render(await res.json());
       $("note").className="note"; $("note").innerHTML='Pulled live from the construction “Time Schedule” feeds. Click <strong>Refresh data</strong> to re-pull.';
     }catch(e){ $("note").className="note err"; $("note").textContent=e.message||"Could not load the audit."; }
     finally{ btn.disabled=false; btn.textContent="Refresh data"; }
   }
-  $("refresh").addEventListener("click", load);
+  $("refresh").addEventListener("click", ()=>load(true));
   $("unitSel").addEventListener("change", e=>drawChart(e.target.value));
   load();
 </script>

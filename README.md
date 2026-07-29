@@ -46,6 +46,16 @@ page pulls every feed and re-pulls on **Refresh data**. No token required.
 > it locked down, put it behind Vercel's password protection (Project → Settings
 > → Deployment Protection) or a reverse proxy.
 
+
+## Caching
+
+Construction data moves ~weekly, so the audit is cached rather than refetched on every open:
+
+- **Vercel** — responses carry `s-maxage=21600` (6h edge cache) + stale-while-revalidate, so most opens are served from the CDN without invoking the function.
+- **Node server** — an in-memory cache (`CACHE_TTL_MIN`, default 360 = 6h).
+
+The **Refresh data** button requests `?fresh=1`, which bypasses both and re-pulls all feeds.
+
 ## Column reference
 
 | Column | Meaning |
