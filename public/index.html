@@ -132,6 +132,7 @@
   .pbadge{position:absolute;left:8px;top:8px;background:rgba(43,38,32,.82);color:#f3efe4;font:600 11px ui-monospace,Menlo,monospace;padding:3px 8px;border-radius:6px;}
   .wbadge{position:absolute;right:8px;top:8px;color:#fff;font:600 10px ui-monospace,Menlo,monospace;padding:3px 8px;border-radius:6px;}
   .wbadge.on{background:rgba(63,125,79,.92);}.wbadge.off{background:rgba(143,136,124,.92);}
+  .nshot{position:absolute;right:8px;bottom:8px;background:rgba(43,38,32,.82);color:#f3efe4;font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;border-radius:6px;}
   .uc .bd{display:flex;flex-direction:column;gap:3px;padding:10px 12px 12px;flex:1;}
   .uc .ty{font:600 9.5px ui-monospace,Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);}
   .uc .ft{margin-top:auto;padding-top:9px;border-top:1px solid #f0eadd;display:flex;justify-content:space-between;align-items:center;gap:8px;}
@@ -268,7 +269,7 @@
     <div class="tbl-wrap"><table><thead id="wkHead"></thead><tbody id="wkBody"></tbody></table></div>
     <p class="src" id="wkSrc"></p>
 
-    <div class="sec"><h2>Dokumentasi Foto per Unit</h2><div class="rule"></div><span class="hint">terhubung ke Google Drive</span></div>
+    <div class="sec"><h2>Dokumentasi Foto per Unit</h2><div class="rule"></div><span class="hint" id="phHint">terhubung ke Google Drive</span></div>
     <div class="pgrid" id="pgrid"></div>
 
     <div class="sec"><h2>Catatan &amp; Kendala</h2><div class="rule"></div></div>
@@ -472,6 +473,7 @@
   };
   const DOW = ["Sen","Sel","Rab","Kam","Jum","Sab","Min"];
   let WX = null, D_DATE = null, D_MONTH = null, MP_SEL = "ALL";
+  let PHOTOS = null;   // { ok, photos:{unit:[{id,name}]}, folders, alias }
 
   // One attendance colour code, used on the chart, the table bars and the % cells.
   const BANDS = [
@@ -601,6 +603,7 @@
       : `${units.length} villa ${totalW}/${totalP}.`;
 
     paintPhotos(d);
+    loadPhotos(d.date);
     syncDateBar(d);
     buildManpower(d);
 
@@ -619,16 +622,46 @@
     }).join("");
   }
 
+  // Site photos arrive separately so a slow Drive lookup never delays the numbers.
+  async function loadPhotos(date){
+    if(!date) return;
+    PHOTOS = null;
+    try{
+      const res = await fetch("/api/daily/photos?date="+encodeURIComponent(date));
+      const j = await res.json();
+      PHOTOS = j && j.ok ? j : { ok:false, error:(j&&j.error)||`HTTP ${res.status}` };
+    }catch(e){ PHOTOS = { ok:false, error:e.message }; }
+    if(DAILY && DAILY.date === date) paintPhotos(DAILY);
+  }
+  // Drive folder names don't all match the sheet's block names — "Infra" holds
+  // both Infrastruktur and Fabrikasi.
+  function shotsFor(id){
+    if(!PHOTOS || !PHOTOS.ok) return [];
+    const p = PHOTOS.photos || {}, a = PHOTOS.alias || {};
+    return p[id] || p[a[id]] || [];
+  }
+
   // Photo cards. Progress % is read from the audit data — never duplicated here.
   function paintPhotos(d){
     const prog={};
     if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok && r.actual!=null) prog[r.unit]=r.actual;
     $("pgrid").innerHTML = (d.units||[]).map(u=>{
-      const folder = u.folder ? `https://drive.google.com/drive/folders/${u.folder}`
+      const dayF = PHOTOS && PHOTOS.ok && PHOTOS.dayFolders ? (PHOTOS.dayFolders[u.id] || PHOTOS.dayFolders[(PHOTOS.alias||{})[u.id]]) : null;
+      const folder = dayF ? `https://drive.google.com/drive/folders/${dayF}`
+        : u.folder ? `https://drive.google.com/drive/folders/${u.folder}`
         : d.photosFolder ? `https://drive.google.com/drive/folders/${d.photosFolder}` : null;
-      const inner = u.photo
-        ? `<img src="https://drive.google.com/thumbnail?id=${esc(u.photo)}&sz=w600" alt="Foto ${esc(u.id)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.hidden=false"><div class="empty" hidden>${WI.cam}<span>Foto tidak dapat dimuat</span></div>`
-        : `<div class="empty">${WI.cam}<span>Foto belum diunggah</span></div>`;
+      // Drive transcodes HEIC to JPEG through the thumbnail endpoint, so phone
+      // photos display; the file itself would not. If the folder isn't shared
+      // publicly the request returns a sign-in page, so fall back to the link.
+      const shots = shotsFor(u.id), first = shots[0];
+      const inner = first
+        ? `<img src="https://drive.google.com/thumbnail?id=${esc(first.id)}&sz=w600" alt="Foto ${esc(u.id)}" loading="lazy"`
+          + ` onerror="this.style.display='none';this.nextElementSibling.hidden=false">`
+          + `<div class="empty" hidden>${WI.cam}<span>Tidak dapat memuat — buka folder</span></div>`
+          + (shots.length>1?`<span class="nshot">+${shots.length-1}</span>`:"")
+        : PHOTOS===null
+          ? `<div class="empty">${WI.cam}<span>Memuat foto…</span></div>`
+          : `<div class="empty">${WI.cam}<span>${PHOTOS.ok?"Belum ada foto":"Foto tidak tersedia"}</span></div>`;
       const p = prog[u.id];
       return `<div class="uc"><div class="ph"><span class="pbadge">${esc(u.id)}</span>`
         + `<span class="wbadge ${u.workers?"on":"off"}">${u.workers||0}/${u.plan||0} pkj</span>${inner}</div>`
@@ -636,6 +669,35 @@
         + `<div class="ft">${folder?`<a href="${folder}" target="_blank" rel="noopener">Buka folder ↗</a>`:`<span class="pct">—</span>`}`
         + `<span class="pct">${p!=null?p.toFixed(1)+"%":"—"}</span></div></div></div>`;
     }).join("");
+
+    // Anything uploaded to a folder with no villa card of its own — Utilities,
+    // Infra, Receiption — still gets shown, so no photo goes unseen.
+    if(PHOTOS && PHOTOS.ok){
+      const shown = new Set();
+      for(const u of (d.units||[])){ shown.add(u.id); const a=(PHOTOS.alias||{})[u.id]; if(a) shown.add(a); }
+      const extra = Object.keys(PHOTOS.photos||{}).filter(k=>!shown.has(k) && PHOTOS.photos[k].length);
+      if(extra.length){
+        $("pgrid").insertAdjacentHTML("beforeend", extra.map(k=>{
+          const shots = PHOTOS.photos[k], first = shots[0];
+          const day = (PHOTOS.dayFolders||{})[k] || (PHOTOS.folders||{})[k];
+          return `<div class="uc"><div class="ph"><span class="pbadge">${esc(k)}</span>`
+            + `<span class="wbadge off">di luar villa</span>`
+            + `<img src="https://drive.google.com/thumbnail?id=${esc(first.id)}&sz=w600" alt="Foto ${esc(k)}" loading="lazy"`
+            + ` onerror="this.style.display='none';this.nextElementSibling.hidden=false">`
+            + `<div class="empty" hidden>${WI.cam}<span>Tidak dapat memuat — buka folder</span></div>`
+            + (shots.length>1?`<span class="nshot">+${shots.length-1}</span>`:"")
+            + `</div><div class="bd"><div class="ty">Area umum</div><div class="ft">`
+            + (day?`<a href="https://drive.google.com/drive/folders/${esc(day)}" target="_blank" rel="noopener">Buka folder ↗</a>`:`<span class="pct">—</span>`)
+            + `<span class="pct">${shots.length} foto</span></div></div></div>`;
+        }).join(""));
+      }
+    }
+
+    const tot = PHOTOS && PHOTOS.ok ? Object.values(PHOTOS.photos||{}).reduce((a,b)=>a+b.length,0) : 0;
+    const withShots = PHOTOS && PHOTOS.ok ? Object.keys(PHOTOS.photos||{}).length : 0;
+    $("phHint").textContent = PHOTOS===null ? "memuat…"
+      : PHOTOS.ok ? `${tot} foto · ${withShots} unit · folder Rekap`
+      : `foto tidak tersedia (${PHOTOS.error||"?"})`;
   }
 
   /* ---------- pemilih tanggal ---------- */

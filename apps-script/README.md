@@ -45,6 +45,34 @@ be present. If they're missing, the URL is still on old code.
 Also make sure the project holds only **one** copy of this script — a leftover
 `Code.gs` with an older `doGet()` can win over a newly added file.
 
+## Site photos (`daily-photos.gs`)
+
+Add **`daily-photos.gs`** to the same Apps Script project as a second file, then:
+
+> Apps Script editor → **Services (+)** → **Drive API** (v3) → **Add**
+
+`daily-labour.gs` routes `?photos=YYYY-MM-DD` to it, so there is still one
+deployment and one `DAILY_FEED` URL. Re-deploy after adding it.
+
+It reads `Rekap / <UNIT> / <MM YYYY> / <DD MM YYYY> / *`, e.g.
+`Rekap / A1 / 07 2026 / 30 07 2026 / IMG_8893.HEIC`. Folder names that differ from
+the sheet's block names are mapped in `FOLDER_ALIAS` — `Infra` covers both
+*Infrastruktur* and *Fabrikasi*.
+
+Walking 22 units three levels deep would be ~66 Drive round trips. Instead four
+`Drive.Files.list` queries resolve a whole day, because every unit's date folder
+shares one name: ask for all folders called `30 07 2026` whose parent is one of
+the month folders, in a single call. Cached 6h.
+
+**Sharing:** the script reads as the deploying account, so it lists photos
+whatever the sharing is — but the *browser* renders the thumbnail. With the Rekap
+folder set to **anyone with the link → Viewer**, photos load for everyone; with
+domain sharing they load only for signed-in `aurum-dev.com` staff and the card
+falls back to a "buka folder" link for anyone else.
+
+HEIC is fine: `drive.google.com/thumbnail?id=…` transcodes to JPEG, so phone
+photos display. The file itself would not — never link it directly.
+
 ## Endpoints
 
 | URL | Returns |
@@ -53,6 +81,7 @@ Also make sure the project holds only **one** copy of this script — a leftover
 | `/exec?date=2026-07-30` | That exact day. Honoured even if empty (`hasData: false`) — no silent substitution. |
 | `/exec?month=2026-05` | The newest day **with data** in that month — so picking a month lands somewhere useful instead of an empty 1st. |
 | `/exec?pretty=1` | Indented JSON for eyeballing. |
+| `/exec?photos=2026-07-30` | Site photos for that day from the Rekap folder (needs `daily-photos.gs`). |
 | `/exec?nocache=1` | Skip the cache and re-read the sheet. The dashboard's **Refresh data** sends this. |
 
 ## Response

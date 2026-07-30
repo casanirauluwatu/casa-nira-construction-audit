@@ -73,6 +73,25 @@ async function fetchFeed(url, ms) {
   }
 }
 
+/** Site photos for one day. Same feed, `?photos=YYYY-MM-DD`. */
+export async function getPhotos({ date, fresh = false } = {}) {
+  const feed = process.env.DAILY_FEED;
+  if (!feed) return { ok: false, date, error: "DAILY_FEED not set", photos: {} };
+  const url = new URL(feed);
+  url.searchParams.set("photos", date);
+  if (fresh) url.searchParams.set("nocache", "1");
+  const { res, why } = await fetchFeed(url, TIMEOUT_MS);
+  if (why) return { ok: false, date, error: why, photos: {} };
+  if (!res.ok) return { ok: false, date, error: `HTTP ${res.status}`, photos: {} };
+  try {
+    const data = await res.json();
+    if (data && data.error) return { ok: false, date, error: data.error, photos: {} };
+    return { ok: true, ...data, photos: data.photos || {} };
+  } catch (err) {
+    return { ok: false, date, error: `bad JSON (${err.message})`, photos: {} };
+  }
+}
+
 export async function getDaily({ date = null, month = null, fresh = false } = {}) {
   const feed = process.env.DAILY_FEED;
   if (!feed) return offline(null, date || month);

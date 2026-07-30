@@ -51,6 +51,7 @@
  *   /exec                     today (Bali time), or the latest day that has data
  *   /exec?date=2026-07-30     one specific day
  *   /exec?month=2026-05       newest day with data in that month
+ *   /exec?photos=2026-07-30   site photos for that day (needs daily-photos.gs)
  *   /exec?nocache=1           skip the cache and re-read the sheet
  *   /exec?pretty=1            indented JSON, for eyeballing in a browser
  */
@@ -78,6 +79,15 @@ function doGet(e) {
   var p = (e && e.parameter) || {};
   var skip = (p.nocache != null) || (p.fresh != null);
   try {
+    // Site photos live in daily-photos.gs; routed here so there is one deployment.
+    if (p.photos) {
+      var pk = 'photos:' + CACHE_VER + ':' + p.photos;
+      var pc = tryCache();
+      if (pc && !skip) { var ph = pc.get(pk); if (ph) return out(ph, p.pretty); }
+      var pd = JSON.stringify(photosFor(p.photos));
+      if (pc) { try { pc.put(pk, pd, PHOTO_CACHE_SEC); } catch (ignore) {} }
+      return out(pd, p.pretty);
+    }
     var key = cacheKey(p.date, p.month);
     var cache = tryCache();
     if (cache && !skip) {

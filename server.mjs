@@ -9,7 +9,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join, normalize } from "node:path";
 import { auditAll, feedsFromEnv } from "./audit-core.mjs";
-import { getDaily } from "./daily-core.mjs";
+import { getDaily, getPhotos } from "./daily-core.mjs";
 import { getWeather } from "./weather-core.mjs";
 
 const PORT = Number(process.env.PORT || 3000);
@@ -65,6 +65,13 @@ const server = http.createServer(async (req, res) => {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get("date") || "") ? url.searchParams.get("date") : null;
     const month = /^\d{4}-\d{2}$/.test(url.searchParams.get("month") || "") ? url.searchParams.get("month") : null;
     await serveJson(res, `daily:${date || month || "today"}`, fresh, () => getDaily({ date, month, fresh }));
+    return;
+  }
+
+  if (url.pathname === "/api/daily/photos") {
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get("date") || "") ? url.searchParams.get("date") : null;
+    if (!date) { res.writeHead(400, { "content-type": "application/json" }).end('{"error":"date required"}'); return; }
+    await serveJson(res, `photos:${date}`, fresh, () => getPhotos({ date, fresh }));
     return;
   }
 
