@@ -21,8 +21,29 @@ Same pattern as the construction "Time Schedule" feeds.
      `/exec` URL → **Redeploy** (env changes need one).
    - Locally: add `DAILY_FEED=…` to `.env`.
 
-After editing the script, use **Manage deployments › edit › Deploy** to publish a
-new version — the `/exec` URL stays the same.
+### Re-deploying after an edit
+
+**Saving the code does not update a live `/exec` URL** — the URL is pinned to a
+version. To publish an edit to the *same* URL:
+
+> **Deploy › Manage deployments › ✏️ Edit › Version: `New version` › Deploy**
+
+Do **not** use *New deployment*: that mints a **different** `/exec` URL and leaves
+the old one serving the old code — which looks exactly like the re-deploy did
+nothing. If you already did, either point `DAILY_FEED` at the new URL or publish a
+new version of the original deployment.
+
+Check which code is actually live:
+
+```
+<exec-url>?pretty=1
+```
+
+`scriptVersion` should read **`v3-series-months`**, and `series` / `months` should
+be present. If they're missing, the URL is still on old code.
+
+Also make sure the project holds only **one** copy of this script — a leftover
+`Code.gs` with an older `doGet()` can win over a newly added file.
 
 ## Endpoints
 
@@ -132,3 +153,5 @@ icon) if you'd rather not.
 | Dashboard still shows the snapshot | `DAILY_FEED` unset, or set but not redeployed. The page's note line says which source it used. |
 | Edited the sheet but the JSON is stale | The 6h cache. Hit **Refresh data** (sends `?nocache=1`), or wait it out. |
 | `hasData: false` | The day's `Jumlah Aktual` column is genuinely empty. |
+| Re-deployed but `series` / `months` still missing | The `/exec` URL is on an old version — see [Re-deploying after an edit](#re-deploying-after-an-edit). Check `scriptVersion` in the response. |
+| Only one month in the dropdown, no chart | Same cause: an older script sends no `months` / `series`. Typing a date still works. |

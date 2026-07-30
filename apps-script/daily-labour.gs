@@ -38,7 +38,14 @@
  *     Execute as:      Me
  *     Who has access:  Anyone            (required — the dashboard calls it server-side)
  *   Copy the /exec URL → set DAILY_FEED to it on the dashboard.
- *   Re-deploy (Manage deployments → edit → Deploy) after editing this script.
+ *
+ * RE-DEPLOYING AFTER AN EDIT — saving does NOT update a live /exec URL.
+ *   Deploy → Manage deployments → pencil (Edit) → Version: "New version" → Deploy.
+ *   Keep the SAME deployment: "New deployment" mints a DIFFERENT /exec URL and
+ *   leaves the old one serving old code, which looks exactly like nothing changed.
+ *   Verify with /exec?pretty=1 — `scriptVersion` should read the value below.
+ *   Also make sure this is the only copy of the script in the project: a second
+ *   file still holding an old doGet() can win.
  *
  * ENDPOINTS
  *   /exec                     today (Bali time), or the latest day that has data
@@ -60,7 +67,10 @@ var MAX_SCAN_ROWS = 420;  // rows pulled per read; blocks end ~320
 var BLOCK_TAIL = 20;      // if a block starts this close to the window end, re-read wider
 var CACHE_SEC = 21600;    // 6h — matches the dashboard's edge cache
 var EMPTY_CACHE_SEC = 600;// 10min while the requested day still has no numbers
-var CACHE_VER = 'v2';     // bump to invalidate every cached entry
+var CACHE_VER = 'v3';     // bump to invalidate every cached entry
+// Shown in every response as `scriptVersion`, so you can tell at a glance which
+// code the /exec URL is actually serving after a re-deploy.
+var SCRIPT_VERSION = 'v3-series-months';
 var MONTHS_ID = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
@@ -205,6 +215,7 @@ function build(dateParam, monthParam) {
 function payload(ss, day, d, requested, fellBack) {
   return {
     project: 'Casa Nira Uluwatu',
+    scriptVersion: SCRIPT_VERSION,
     date: ymd(day),
     labourSource: 'Daily Mapping Labour on Site',
     sheet: day.sheet.getName(),
