@@ -552,9 +552,14 @@
         : `Data pekerja adalah snapshot <strong>${fmtID(rd)}</strong> dari “${esc(d.labourSource||"Daily Mapping Labour on Site")}”. Progres, deviasi &amp; proyeksi per unit ada di tab <strong>Construction Audit</strong>.`;
     }
 
+    // Head-line figures cover every block on the sheet — villas plus Utilities /
+    // Infrastruktur / Fabrikasi — so the card matches the spreadsheet's Total row.
+    const othW=(d.other||[]).reduce((a,o)=>a+(o.workers||0),0), othP=(d.other||[]).reduce((a,o)=>a+(o.plan||0),0);
+    const siteW=totalW+othW, siteP=totalP+othP;
+    const siteHadir = siteP ? Math.round(siteW/siteP*100) : 0;
     $("dcards").innerHTML =
-      card(`${totalW}<span style="font-size:16px;color:var(--muted)"> / ${totalP}</span>`, "Pekerja villa · rencana", "") +
-      card(`<span style="color:${band(totalP?hadir:null).c}">${hadir}%</span>`, "Kehadiran vs rencana", "") +
+      card(`${siteW}<span style="font-size:16px;color:var(--muted)"> / ${siteP}</span>`, "Pekerja di lapangan · rencana", "") +
+      card(`<span style="color:${band(siteP?siteHadir:null).c}">${siteHadir}%</span>`, "Kehadiran vs rencana", "") +
       card(`${aktif.length}<span style="font-size:16px;color:var(--muted)"> / ${units.length}</span>`, "Unit aktif", "") +
       card(kosong.length, "Unit tanpa pekerja", kosong.length?"neg":"pos");
 
@@ -579,7 +584,20 @@
           + `<td class="dim wtxt">${esc(u.comp)||"—"}</td></tr>`;
       }
     }
-    rows += `<tr class="totrow"><td class="u">TOTAL</td><td class="dim">${units.length} unit</td><td class="mono dim">${totalP}</td><td class="mono"><b>${totalW}</b></td><td></td><td class="mono">${hadir}%</td><td></td><td></td></tr>`;
+    const oth=(d.other||[]).filter(o=>(o.plan||0)||(o.workers||0));
+    if(oth.length){
+      rows += `<tr class="blkhdr"><td colspan="8">Di luar villa — ${othW}/${othP} pekerja</td></tr>`;
+      for(const o of oth){
+        const pct=o.plan?Math.round(o.workers/o.plan*100):0, bd=band(o.plan?pct:null);
+        rows += `<tr><td class="u">${esc(o.id)}</td><td class="dim">—</td>`
+          + `<td class="mono dim">${o.plan||0}</td><td class="mono"><b>${o.workers||0}</b></td>`
+          + `<td><span class="khbar"><i style="width:${Math.min(pct,100)}%;background:${bd.c}"></i></span></td>`
+          + `<td class="mono" style="color:${bd.c};font-weight:600">${o.plan?pct+"%":"—"}</td>`
+          + `<td><span class="badge ${o.workers?(o.workers>=o.plan?"penuh":"aktif"):"kosong"}">${o.workers?(o.workers>=o.plan?"Penuh":"Aktif"):"Kosong"}</span></td>`
+          + `<td class="dim wtxt">${esc(o.comp)||"—"}</td></tr>`;
+      }
+    }
+    rows += `<tr class="totrow"><td class="u">TOTAL</td><td class="dim">${units.length} villa${oth.length?" + "+oth.length:""}</td><td class="mono dim">${siteP}</td><td class="mono"><b>${siteW}</b></td><td></td><td class="mono">${siteHadir}%</td><td></td><td></td></tr>`;
     $("wkBody").innerHTML = rows;
     $("wkSrc").textContent = `Sumber: ${d.labourSource||"Daily Mapping Labour on Site"} — kolom “Jumlah Aktual” tanggal ${fmtID(rd)}.`;
 
@@ -601,16 +619,13 @@
       // ditampilkan agar total cocok dengan baris "Total" di spreadsheet.
       + (d.other||[]).filter(o=>(o.plan||0)||(o.workers||0)).map(o=>
           `<li><span class="k" style="color:var(--muted)">${esc(o.id)}</span><span class="v">${o.workers||0}/${o.plan||0} <span class="dim">di luar 19 villa</span></span></li>`).join("")
-      + ((d.other||[]).some(o=>(o.plan||0)||(o.workers||0))
-          ? `<li><span class="k">Total lapangan</span><span class="v">${totalW+(d.other||[]).reduce((s,o)=>s+(o.workers||0),0)}/${totalP+(d.other||[]).reduce((s,o)=>s+(o.plan||0),0)} · <b style="color:var(--ink)">semua kategori</b></span></li>`
-          : "");
+      + (othW||othP ? `<li><span class="k">Total lapangan</span><span class="v">${siteW}/${siteP} · <b style="color:var(--ink)">${units.length} villa + ${othW}/${othP} lainnya</b></span></li>` : "");
 
     // The spreadsheet's own Total row counts Utilities/Infrastruktur/Fabrikasi as
     // well, so state the reconciliation rather than let 112 look like it disagrees.
-    const oW=(d.other||[]).reduce((a,o)=>a+(o.workers||0),0), oP=(d.other||[]).reduce((a,o)=>a+(o.plan||0),0);
-    $("dRecon").innerHTML = oW||oP
-      ? `19 villa <strong>${totalW}/${totalP}</strong> · ${(d.other||[]).filter(o=>o.plan||o.workers).map(o=>esc(o.id).toLowerCase()).join(" &amp; ")} <strong>${oW}/${oP}</strong> · total lapangan <strong>${totalW+oW}/${totalP+oP}</strong> — sesuai baris “Total” di spreadsheet.`
-      : `19 villa ${totalW}/${totalP}.`;
+    $("dRecon").innerHTML = othW||othP
+      ? `Terdiri dari ${units.length} villa <strong>${totalW}/${totalP}</strong> (${hadir}%) + ${(d.other||[]).filter(o=>o.plan||o.workers).map(o=>esc(o.id).toLowerCase()).join(" &amp; ")} <strong>${othW}/${othP}</strong> — sesuai baris “Total” di spreadsheet.`
+      : `${units.length} villa ${totalW}/${totalP}.`;
 
     paintPhotos(d);
     syncDateBar(d);
@@ -699,9 +714,13 @@
   function buildManpower(d){
     const sr = d.series;
     const sel = $("mpSel");
-    const ids = sr && sr.units ? Object.keys(sr.units) : (d.units||[]).map(u=>u.id);
-    sel.innerHTML = `<option value="ALL">Semua unit · ${ids.length} villa</option>`
-      + ids.map(id=>`<option value="${esc(id)}">${esc(id)}</option>`).join("");
+    const su = sr && sr.units ? sr.units : null;
+    const ids = su ? Object.keys(su) : (d.units||[]).map(u=>u.id);
+    const villas = ids.filter(id=>!su || su[id].villa!==false);
+    const rest = ids.filter(id=>su && su[id].villa===false);
+    sel.innerHTML = `<option value="ALL">Semua · seluruh lapangan</option>`
+      + `<optgroup label="Villa">${villas.map(id=>`<option value="${esc(id)}">${esc(id)}</option>`).join("")}</optgroup>`
+      + (rest.length?`<optgroup label="Di luar villa">${rest.map(id=>`<option value="${esc(id)}">${esc(id)}</option>`).join("")}</optgroup>`:"");
     if(MP_SEL!=="ALL" && !ids.includes(MP_SEL)) MP_SEL="ALL";
     sel.value = MP_SEL;
     drawManpower(d);
@@ -724,7 +743,7 @@
     const todayISO = dstr(new Date());
     const future = dates.map(x => x > todayISO);
     const lastReal = (()=>{ for(let i=dates.length-1;i>=0;i--) if(!future[i]) return i; return -1; })();
-    $("mpTitle").textContent = `Jumlah pekerja per hari · ${MP_SEL==="ALL"?"semua unit":MP_SEL} · ${sr.month||""}`;
+    $("mpTitle").textContent = `Jumlah pekerja per hari · ${MP_SEL==="ALL"?"seluruh lapangan":MP_SEL} · ${sr.month||""}`;
 
     const W=960,H=250,PL=38,PR=14,PT=16,PB=34,iw=W-PL-PR,ih=H-PT-PB;
     const n=dates.length;
@@ -790,7 +809,7 @@
       + `<span class="lg" style="color:#b4472e">| tanggal laporan</span>`
       + `<span class="lg" style="color:var(--muted)">▮ Minggu</span>`
       + `<span class="lg" style="color:var(--line);user-select:none">│</span>` + bandLegend();
-    $("mpHint").textContent = `${sr.month||""} · ${MP_SEL==="ALL"?"19 villa":MP_SEL}`;
+    $("mpHint").textContent = `${sr.month||""} · ${MP_SEL==="ALL"?"semua blok":MP_SEL}`;
     $("mpFoot").innerHTML = `Rata-rata <strong>${avg.toFixed(1)}</strong> pekerja pada ${worked.length} hari kerja · puncak <strong>${peak}</strong> (${peakAt||"—"}) · ${real.length-worked.length} hari tanpa pekerja.`
       + (lastReal<n-1?` ${n-1-lastReal} hari setelah hari ini dikecualikan.`:"")
       + (d.live?` Klik salah satu hari untuk membuka laporannya.`:"");

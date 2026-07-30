@@ -65,7 +65,22 @@ new version — the `/exec` URL stays the same.
 
 `series` is the whole month's day-by-day head-count, feeding the Manpower Harian
 chart and its unit selector; `months` fills the date picker's hint. Both come out
-of the same read as the day itself, so they cost nothing extra.
+of the same read as the day itself, so they cost nothing extra. `series.total`
+spans **every** block so it equals the sheet's Total row, and `series.units`
+carries each block with a `villa` flag.
+
+## Days that haven't happened
+
+A date after today cannot have a recorded actual, so `Jumlah Aktual` is reported
+as 0 for those columns and `Status` blank — the plan is still returned. This
+matters because a month tab created by copying the previous month arrives
+pre-filled: the *Agustus 2026* tab held non-zero actuals on 23 future days.
+
+To clear those cells in the sheet itself, run **`previewClearFutureActuals()`**
+from the editor (logs what it would touch, changes nothing), then
+**`clearFutureActuals()`**. It only blanks the actual column of dates after today,
+only on named rows, and never touches plan, status or a past day. Take
+File → Version history first if you want a way back.
 
 `units` is the 19 villas (`A1`…`D1`); `other` is Utilities / Infrastruktur /
 Fabrikasi, split out so the villa figures stay clean while

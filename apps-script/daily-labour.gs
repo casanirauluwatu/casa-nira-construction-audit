@@ -104,6 +104,55 @@ function warmup() {
   return data.date + ' warmed (' + data.totals.villaWorkers + '/' + data.totals.villaPlan + ')';
 }
 
+/**
+ * MAINTENANCE — blank the `Jumlah Aktual` cells for days that haven't happened.
+ * Tabs created by copying a previous month arrive pre-filled with that month's
+ * numbers; this clears them so the sheet says "not yet recorded" rather than
+ * carrying figures forward.
+ *
+ * Run previewClearFutureActuals() first — it only logs what it would touch.
+ * clearFutureActuals() then writes. This EDITS THE SPREADSHEET: check the
+ * preview, and note that Apps Script edits are undoable in the sheet (Ctrl+Z)
+ * only in the same session, so take File → Version history first if unsure.
+ */
+function previewClearFutureActuals() { return sweepFuture_(true); }
+function clearFutureActuals() { return sweepFuture_(false); }
+
+function sweepFuture_(dryRun) {
+  var ss = SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
+  var tKey = key(todayYMD()), log = [], cleared = 0;
+  var sheets = ss.getSheets();
+  for (var s = 0; s < sheets.length; s++) {
+    var sh = sheets[s], ds = datesOf(sh);
+    if (!ds.length) continue;
+    var lastRow = sh.getLastRow(), n = Math.min(lastRow - FIRST_ROW + 1, MAX_SCAN_ROWS);
+    if (n <= 0) continue;
+    var names = sh.getRange(FIRST_ROW, ID_COL_C, n, 1).getValues();
+    var perSheet = 0;
+    for (var i = 0; i < ds.length; i++) {
+      if (key(ds[i]) <= tKey) continue;                 // already happened — leave it
+      var colA = ds[i].col + 1;                          // Jumlah Aktual
+      var vals = sh.getRange(FIRST_ROW, colA, n, 1).getValues();
+      var hits = 0, blank = [];
+      for (var r = 0; r < n; r++) {
+        var named = String(names[r][0] == null ? '' : names[r][0]).trim() !== '';
+        var v = vals[r][0];
+        if (named && v !== '' && v !== null) { hits++; blank.push(['']); } else blank.push([v]);
+      }
+      if (!hits) continue;
+      perSheet += hits; cleared += hits;
+      if (!dryRun) sh.getRange(FIRST_ROW, colA, n, 1).setValues(blank);
+    }
+    if (perSheet) log.push(sh.getName() + ': ' + perSheet + ' cell(s)');
+  }
+  if (cache_()) cache_().removeAll(['daily:' + CACHE_VER + ':today:' + ymd(todayYMD())]);
+  var msg = (dryRun ? 'WOULD clear ' : 'Cleared ') + cleared + ' future actual cell(s) — ' + (log.join(' · ') || 'nothing to do');
+  Logger.log(msg);
+  return msg;
+}
+function cache_() { return tryCache(); }
+var ID_COL_C = 3;   // col C — unit / trade name
+
 function build(dateParam, monthParam) {
   var ss = SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('spreadsheet not found — set SHEET_ID');
@@ -268,6 +317,14 @@ function readDay(day, monthDays) {
 
 function scan(sh, pick, days, n) {
   var ids = sh.getRange(FIRST_ROW, NO_COL, n, 2).getValues();          // [B, C]
+  // A day after today cannot have a recorded actual. Some tabs are pre-filled by
+  // copying a previous month, so those cells hold placeholder numbers — report
+  // them as absent instead of passing them off as measurements.
+  var tKey = key(todayYMD());
+  var fut = [];
+  for (var fi = 0; fi < days.length; fi++) fut.push(key(days[fi]) > tKey);
+  var pickFuture = key(pick) > tKey;
+  var actOf = function (row, off, isFut) { return isFut ? 0 : num(row[off + 1]); };
   var first = days[0].col;
   var width = days[days.length - 1].col + 2 - first + 1;
   var grid = sh.getRange(FIRST_ROW, first, n, width).getValues();      // every day on this tab
@@ -287,15 +344,15 @@ function scan(sh, pick, days, n) {
   for (var i = 0; i < starts.length; i++) {
     var st = starts[i];
     var end = (i + 1 < starts.length) ? starts[i + 1].r : n;
-    var plan = num(grid[st.r][at]), workers = num(grid[st.r][at + 1]);
-    var status = String(grid[st.r][at + 2] == null ? '' : grid[st.r][at + 2]).trim();
+    var plan = num(grid[st.r][at]), workers = actOf(grid[st.r], at, pickFuture);
+    var status = pickFuture ? '' : String(grid[st.r][at + 2] == null ? '' : grid[st.r][at + 2]).trim();
     var villa = isVilla(st.id);
 
     var comp = [], trades = [];
     for (var r2 = st.r + 1; r2 < end; r2++) {
       var tname = String(ids[r2][1] == null ? '' : ids[r2][1]).trim();
       if (!tname) continue;
-      var tp = num(grid[r2][at]), ta = num(grid[r2][at + 1]);
+      var tp = num(grid[r2][at]), ta = actOf(grid[r2], at, pickFuture);
       if (tp === 0 && ta === 0) continue;
       trades.push({ name: tname, plan: tp, workers: ta });
       if (ta > 0) comp.push(tname + ' ' + ta);
@@ -306,17 +363,19 @@ function scan(sh, pick, days, n) {
     var sp = [], sa = [];
     for (var k2 = 0; k2 < days.length; k2++) {
       var o = days[k2].col - first;
-      var dp = num(grid[st.r][o]), da = num(grid[st.r][o + 1]);
+      var dp = num(grid[st.r][o]), da = actOf(grid[st.r], o, fut[k2]);
       sp.push(dp); sa.push(da);
-      if (villa) { sTotalP[k2] += dp; sTotalA[k2] += da; }
+      // Totals span every block, so they line up with the sheet's own Total row.
+      sTotalP[k2] += dp; sTotalA[k2] += da;
     }
 
     var row = {
       id: st.id, plan: plan, workers: workers,
       comp: comp.join(' · '), status: status, trades: trades,
     };
-    if (villa) { row.block = st.id.charAt(0); units.push(row); sUnits[st.id] = { plan: sp, workers: sa }; }
+    if (villa) { row.block = st.id.charAt(0); units.push(row); }
     else other.push(row);
+    sUnits[st.id] = { plan: sp, workers: sa, villa: villa };
   }
 
   return {
@@ -327,10 +386,12 @@ function scan(sh, pick, days, n) {
         villaPlan: sum(units, 'plan'), villaWorkers: sum(units, 'workers'),
         otherPlan: sum(other, 'plan'), otherWorkers: sum(other, 'workers'),
         // The sheet's own "Total" row (row 5) — villas + Utilities/Infrastruktur/Fabrikasi.
-        sheetPlan: num(grid[0][at]), sheetWorkers: num(grid[0][at + 1]),
+        sheetPlan: num(grid[0][at]), sheetWorkers: actOf(grid[0], at, pickFuture),
       },
-      // 19-villa daily manpower for the month shown on this tab.
-      series: { month: sh.getName(), dates: sDates, total: { plan: sTotalP, workers: sTotalA }, units: sUnits },
+      // Daily manpower for the month on this tab. `total` covers every block so it
+      // matches the sheet's Total row; `units` carries each block, villa or not.
+      series: { month: sh.getName(), dates: sDates, total: { plan: sTotalP, workers: sTotalA }, units: sUnits,
+                future: fut, today: ymd(todayYMD()) },
     },
   };
 }

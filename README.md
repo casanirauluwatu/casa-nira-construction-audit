@@ -53,9 +53,15 @@ Villa **type**, **batch** and **Drive photo folder** always come from
 `daily-data.mjs` — the labour sheet doesn't carry them, so `daily-core.mjs`
 merges them onto the feed rows. Add a villa there when one is added to the sheet.
 
-The 19 villas are reported separately from the sheet's non-villa blocks
-(Utilities / Infrastruktur / Fabrikasi), which appear as a "Total lapangan" line
-so the report reconciles with the spreadsheet's own Total row.
+Head-line figures cover the whole site — the 19 villas **plus** the sheet's
+non-villa blocks (Utilities / Infrastruktur / Fabrikasi) — so the scorecard, the
+labour table's TOTAL row and the chart all equal the spreadsheet's own Total row
+(123 / 325 on 30 Jul 2026). The villa-only subset is stated in the caption under
+the scorecard and in the per-block rollups, since unit counts and block
+attendance are villa concepts.
+
+Actuals on dates after today are reported as absent rather than as measurements;
+see [days that haven't happened](apps-script/README.md#days-that-havent-happened).
 
 ## CLI
 
