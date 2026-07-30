@@ -503,6 +503,18 @@
       DAILY = await res.json();
       $("dnote").className="note";
       renderDaily(DAILY);
+      // If the API ignored the date/month we asked for, the picker looks broken
+      // with no explanation. Usually a stale serverless function that predates
+      // ?date=/?month= — say so instead of silently showing the wrong day.
+      const askedD = D_DATE && DAILY.date !== D_DATE;
+      const askedM = D_MONTH && !String(DAILY.date||"").startsWith(D_MONTH);
+      if(askedD || askedM){
+        $("dnote").className="note err";
+        $("dnote").innerHTML = `Server mengabaikan pilihan ${askedM?"bulan":"tanggal"} `
+          + `<strong>${esc(D_MONTH||D_DATE)}</strong> dan mengembalikan <strong>${esc(DAILY.date)}</strong>. `
+          + `Fungsi API di server masih versi lama (<code>apiVersion: ${esc(DAILY.apiVersion||"tidak ada")}</code>) — `
+          + `deploy ulang di Vercel tanpa build cache.`;
+      }
       if(!WX) fetchWeather();
     }catch(e){
       $("dnote").className="note err";
