@@ -543,7 +543,14 @@
       return `<li><span class="k">${BLOK[b]||esc(b)}</span><span class="v">${sw}/${sp} · <b style="color:var(--ink)">${sp?Math.round(sw/sp*100):0}%</b></span></li>`;
     }).join("")
       + `<li><span class="k" style="color:var(--green)">Tenaga penuh</span><span class="v">${penuh.length?penuh.map(u=>esc(u.id)).join(", "):"—"}</span></li>`
-      + `<li><span class="k" style="color:var(--red)">Tanpa pekerja</span><span class="v">${kosong.length?kosong.map(u=>esc(u.id)).join(", "):"—"}</span></li>`;
+      + `<li><span class="k" style="color:var(--red)">Tanpa pekerja</span><span class="v">${kosong.length?kosong.map(u=>esc(u.id)).join(", "):"—"}</span></li>`
+      // Non-villa blocks (utilitas, infrastruktur, fabrikasi) — di luar 19 villa,
+      // ditampilkan agar total cocok dengan baris "Total" di spreadsheet.
+      + (d.other||[]).filter(o=>(o.plan||0)||(o.workers||0)).map(o=>
+          `<li><span class="k" style="color:var(--muted)">${esc(o.id)}</span><span class="v">${o.workers||0}/${o.plan||0} <span class="dim">di luar 19 villa</span></span></li>`).join("")
+      + ((d.other||[]).some(o=>(o.plan||0)||(o.workers||0))
+          ? `<li><span class="k">Total lapangan</span><span class="v">${totalW+(d.other||[]).reduce((s,o)=>s+(o.workers||0),0)}/${totalP+(d.other||[]).reduce((s,o)=>s+(o.plan||0),0)} · <b style="color:var(--ink)">semua kategori</b></span></li>`
+          : "");
 
     paintPhotos(d);
 

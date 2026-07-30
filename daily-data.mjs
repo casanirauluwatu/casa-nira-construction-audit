@@ -41,5 +41,13 @@ export const DAILY = {
     { id: "C8", block: "C", type: "The Sanctuary", batch: "Batch 4", plan: 17, workers: 0,  comp: "",                                                              folder: "1DUXfpizbIDnKzXJl54UF4SKtkJd_q6Ui" },
     { id: "D1", block: "D", type: "The Eden",      batch: "Batch 3", plan: 17, workers: 8,  comp: "ARS Sipil 4 · MEP Elektrikal 2 · MEP Plumbing 2",               folder: "1SnKcbBJpvZIEUFEWc1KvnC3jpTsxc67b" },
   ],
+  // Non-villa blocks from the same sheet. Kept out of `units` so the 19-villa
+  // figures and per-block rollups stay clean, but surfaced so the report totals
+  // reconcile with the spreadsheet's own "Total" row (325 plan / 123 actual).
+  other: [
+    { id: "Utilities",     plan: 7, workers: 6, comp: "STR 6" },
+    { id: "Infrastruktur", plan: 0, workers: 0, comp: "" },
+    { id: "Fabrikasi",     plan: 8, workers: 5, comp: "Pak Karno : Begisting 1 · Pak Pri : Begisting 2 · Pak Pri : Besi 2" },
+  ],
   notes: [],
 };

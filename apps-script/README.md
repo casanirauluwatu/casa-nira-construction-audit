@@ -1,0 +1,85 @@
+# Daily Mapping Labour → JSON web app
+
+`daily-labour.gs` publishes the labour sheet as JSON so the **Laporan Harian** tab
+reads live head-counts instead of the snapshot committed in `daily-data.mjs`.
+Same pattern as the construction "Time Schedule" feeds.
+
+## Deploy
+
+1. Open **Daily Mapping Labour on Site** → **Extensions › Apps Script**.
+2. Delete the placeholder `Code.gs` contents, paste **`daily-labour.gs`**, Save.
+   (`SHEET_ID` is already set; leave it blank to use whichever sheet the script is
+   bound to.)
+3. **Deploy › New deployment › Web app**
+   - *Execute as*: **Me**
+   - *Who has access*: **Anyone** — required, the dashboard calls it server-side
+     with no Google session.
+4. Authorise when prompted, then copy the **`/exec`** URL.
+5. Test it in a browser: `<exec-url>?pretty=1` — you should see today's JSON.
+6. Set it on the dashboard as **`DAILY_FEED`**:
+   - Vercel → Project → Settings → Environment Variables → `DAILY_FEED` = the
+     `/exec` URL → **Redeploy** (env changes need one).
+   - Locally: add `DAILY_FEED=…` to `.env`.
+
+After editing the script, use **Manage deployments › edit › Deploy** to publish a
+new version — the `/exec` URL stays the same.
+
+## Endpoints
+
+| URL | Returns |
+| --- | --- |
+| `/exec` | Today (Bali time). If today isn't filled in yet, the most recent day that has numbers, flagged with `usedLatestWithData: true`. |
+| `/exec?date=2026-07-30` | That exact day. Honoured even if empty (`hasData: false`) — no silent substitution. |
+| `/exec?pretty=1` | Indented JSON for eyeballing. |
+
+## Response
+
+```json
+{
+  "date": "2026-07-30",
+  "sheet": "Juli 2026",
+  "isToday": true,
+  "usedLatestWithData": false,
+  "hasData": true,
+  "units": [
+    { "id": "A1", "block": "A", "plan": 21, "workers": 4,
+      "comp": "ARS Sipil 2 · MEP Elektrikal 2",
+      "status": "Tidak Memenuhi",
+      "trades": [ { "name": "ARS Sipil", "plan": 4, "workers": 2 } ] }
+  ],
+  "other": [ { "id": "Utilities", "plan": 7, "workers": 6, "comp": "STR 6" } ],
+  "totals": { "villaPlan": 310, "villaWorkers": 112,
+              "otherPlan": 15, "otherWorkers": 11,
+              "sheetPlan": 325, "sheetWorkers": 123 }
+}
+```
+
+`units` is the 19 villas (`A1`…`D1`); `other` is Utilities / Infrastruktur /
+Fabrikasi, split out so the villa figures stay clean while
+`villa* + other* == sheet*` still reconciles with the sheet's own Total row.
+
+Villa **type**, **batch** and **Drive folder** are *not* in this response — they
+live in `daily-data.mjs` and are merged in by `daily-core.mjs`, so that metadata
+stays in one place.
+
+## What it reads
+
+| Where | What |
+| --- | --- |
+| row 3 | one real `Date` cell every 3rd column from **D**. Stray non-date values in that row are ignored. |
+| row 4 | repeating `Jumlah Rencana` / `Jumlah Aktual` / `Status` under each date. |
+| row 5 | the sheet's `Total` (includes non-villa categories). |
+| unit blocks | a row with a **number in col B** and a name in **col C** starts a block; the rows beneath it until the next numbered row are its trades. |
+| tabs | one per month (`Juli 2026`). Tabs are found by **scanning row 3 for the date**, not by name — so a missing month (there's no *Juni 2026*) or a renamed tab won't break it. |
+
+Verified against the workbook: all 123 dated columns across the four tabs parse,
+and 30 Jul 2026 reproduces 310 planned / 112 actual across 19 villas.
+
+## Troubleshooting
+
+| Symptom | Cause |
+| --- | --- |
+| `{"error":"no column for … — sheet covers …"}` | That date has no column — e.g. a month tab doesn't exist yet. |
+| `{"error":"spreadsheet not found — set SHEET_ID"}` | Wrong `SHEET_ID`, or the deploying account can't open it. |
+| Dashboard still shows the snapshot | `DAILY_FEED` unset, or set but not redeployed. The page's note line says which source it used. |
+| `hasData: false` | The day's `Jumlah Aktual` column is genuinely empty. |

@@ -25,7 +25,7 @@ weather, photos and notes; the audit owns everything schedule-derived.
 | Variable | Required | Meaning |
 | --- | --- | --- |
 | `CONSTRUCTION_FEEDS` | yes | JSON map of villa → Apps Script `/exec` URL. Keep it out of git — those URLs are effectively credentials. |
-| `DAILY_FEED` | no | Apps Script `/exec` URL returning the daily labour JSON. Unset = serve the snapshot committed in `daily-data.mjs`. |
+| `DAILY_FEED` | no | Apps Script `/exec` URL for the labour sheet — deploy `apps-script/daily-labour.gs`, see [`apps-script/README.md`](apps-script/README.md). Unset = serve the snapshot committed in `daily-data.mjs`. |
 | `STALE_DAYS` | no | Staleness threshold in days (default 10). |
 | `CACHE_TTL_MIN` | no | Node-server in-memory cache, minutes (default 360). |
 
@@ -33,10 +33,25 @@ See `.env.example`.
 
 ## Updating the daily labour numbers
 
-Without `DAILY_FEED` the head-counts come from the snapshot in
-**`daily-data.mjs`** (`plan`, `workers`, `comp` per unit, plus `date`). Edit that
-file and redeploy to publish a new day, or point `DAILY_FEED` at an Apps Script
-endpoint returning the same shape to make it live.
+Two options:
+
+- **Live (recommended)** — deploy `apps-script/daily-labour.gs` on the *Daily
+  Mapping Labour on Site* sheet as a web app and set `DAILY_FEED` to its `/exec`
+  URL. The dashboard then follows the sheet with no redeploys.
+  See [`apps-script/README.md`](apps-script/README.md).
+- **Snapshot** — without `DAILY_FEED`, head-counts come from `daily-data.mjs`
+  (`plan`, `workers`, `comp` per unit, plus `date`). Edit and redeploy.
+
+Either way the page says which source it used, and an unreachable or erroring
+feed falls back to the snapshot rather than showing an empty site.
+
+Villa **type**, **batch** and **Drive photo folder** always come from
+`daily-data.mjs` — the labour sheet doesn't carry them, so `daily-core.mjs`
+merges them onto the feed rows. Add a villa there when one is added to the sheet.
+
+The 19 villas are reported separately from the sheet's non-villa blocks
+(Utilities / Infrastruktur / Fabrikasi), which appear as a "Total lapangan" line
+so the report reconciles with the spreadsheet's own Total row.
 
 ## CLI
 
