@@ -243,7 +243,6 @@
     </div>
     <div class="note" id="dnote">Memuat laporan harian…</div>
     <div class="cards" id="dcards"></div>
-    <p class="src" id="dRecon"></p>
 
     <div class="sec"><h2>Manpower Harian</h2><div class="rule"></div><span class="hint" id="mpHint"></span></div>
     <div class="chart-card">
@@ -596,11 +595,6 @@
     rows += `<tr class="totrow"><td class="u">TOTAL</td><td class="dim">${units.length} villa${oth.length?" + "+oth.length:""}</td><td class="mono dim">${siteP}</td><td class="mono"><b>${siteW}</b></td><td></td><td class="mono">${siteHadir}%</td><td></td><td></td></tr>`;
     $("wkBody").innerHTML = rows;
     $("wkSrc").textContent = `Sumber: ${d.labourSource||"Daily Mapping Labour on Site"} — kolom “Jumlah Aktual” tanggal ${fmtID(rd)}.`;
-
-    // The head-line figures span every block, so state the villa subset here.
-    $("dRecon").innerHTML = othW||othP
-      ? `Terdiri dari ${units.length} villa <strong>${totalW}/${totalP}</strong> (${hadir}%) + ${(d.other||[]).filter(o=>o.plan||o.workers).map(o=>esc(o.id).toLowerCase()).join(" &amp; ")} <strong>${othW}/${othP}</strong> — sesuai baris “Total” di spreadsheet.`
-      : `${units.length} villa ${totalW}/${totalP}.`;
 
     paintPhotos(d);
     loadPhotos(d.date);

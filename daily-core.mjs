@@ -86,7 +86,12 @@ export async function getPhotos({ date, fresh = false } = {}) {
   try {
     const data = await res.json();
     if (data && data.error) return { ok: false, date, error: data.error, photos: {} };
-    return { ok: true, ...data, photos: data.photos || {} };
+    // An older daily-labour.gs ignores ?photos= and answers with the day's labour
+    // instead. That is a stale deployment, not a day without photos — say so.
+    if (!data || typeof data.photos !== "object" || data.photos === null) {
+      return { ok: false, date, photos: {}, error: `feed has no photo support (scriptVersion ${data?.scriptVersion || "unknown"})` };
+    }
+    return { ok: true, ...data, photos: data.photos };
   } catch (err) {
     return { ok: false, date, error: `bad JSON (${err.message})`, photos: {} };
   }
