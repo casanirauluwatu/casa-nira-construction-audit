@@ -635,6 +635,18 @@
     return p[id] || p[a[id]] || [];
   }
 
+  // Drive serves thumbnails from two hosts and can refuse a request that carries
+  // a Referer from another site, so send none and fall back to the other host
+  // before showing a placeholder.
+  function shotImg(id, alt){
+    const a = `https://drive.google.com/thumbnail?id=${esc(id)}&sz=w600`;
+    const b = `https://lh3.googleusercontent.com/d/${esc(id)}=w600`;
+    return `<img src="${a}" alt="${esc(alt)}" loading="lazy" referrerpolicy="no-referrer"`
+      + ` onerror="if(this.dataset.alt){this.style.display='none';this.nextElementSibling.hidden=false;}`
+      + `else{this.dataset.alt=1;this.src='${b}';}">`
+      + `<div class="empty" hidden>${WI.cam}<span>Tidak dapat memuat — buka folder</span></div>`;
+  }
+
   // Photo cards. Progress % is read from the audit data — never duplicated here.
   function paintPhotos(d){
     const prog={};
@@ -649,9 +661,7 @@
       // publicly the request returns a sign-in page, so fall back to the link.
       const shots = shotsFor(u.id), first = shots[0];
       const inner = first
-        ? `<img src="https://drive.google.com/thumbnail?id=${esc(first.id)}&sz=w600" alt="Foto ${esc(u.id)}" loading="lazy"`
-          + ` onerror="this.style.display='none';this.nextElementSibling.hidden=false">`
-          + `<div class="empty" hidden>${WI.cam}<span>Tidak dapat memuat — buka folder</span></div>`
+        ? shotImg(first.id, `Foto ${u.id}`)
           + (shots.length>1?`<span class="nshot">+${shots.length-1}</span>`:"")
         : PHOTOS===null
           ? `<div class="empty">${WI.cam}<span>Memuat foto…</span></div>`
@@ -676,9 +686,7 @@
           const day = (PHOTOS.dayFolders||{})[k] || (PHOTOS.folders||{})[k];
           return `<div class="uc"><div class="ph"><span class="pbadge">${esc(k)}</span>`
             + `<span class="wbadge off">di luar villa</span>`
-            + `<img src="https://drive.google.com/thumbnail?id=${esc(first.id)}&sz=w600" alt="Foto ${esc(k)}" loading="lazy"`
-            + ` onerror="this.style.display='none';this.nextElementSibling.hidden=false">`
-            + `<div class="empty" hidden>${WI.cam}<span>Tidak dapat memuat — buka folder</span></div>`
+            + shotImg(first.id, `Foto ${k}`)
             + (shots.length>1?`<span class="nshot">+${shots.length-1}</span>`:"")
             + `</div><div class="bd"><div class="ty">Area umum</div><div class="ft">`
             + (day?`<a href="https://drive.google.com/drive/folders/${esc(day)}" target="_blank" rel="noopener">Buka folder ↗</a>`:`<span class="pct">—</span>`)
