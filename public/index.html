@@ -104,7 +104,7 @@
 </div>
 <script>
   const $ = (id) => document.getElementById(id);
-  const sgn = (v) => (v == null ? "—" : (v >= 0 ? "+" : "") + v.toFixed(1));
+  const sgn = (v) => (v == null ? "—" : (v >= 0 ? "+" : "") + v.toFixed(1) + "%");
   let CHART_OK = [], CHART_SEL = new URLSearchParams(location.search).get("unit") || "ALL", CHART_NOW = new Date();
 
   const MON3 = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];

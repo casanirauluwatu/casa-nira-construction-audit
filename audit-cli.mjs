@@ -13,7 +13,7 @@ const nums = argv.filter((a) => /^\d+$/.test(a));
 const STALE_DAYS = Number(nums[0] || 10);
 const TRAIL_WEEKS = Number(nums[1] || 6);
 
-const sgn = (v) => (v == null ? "—" : `${v >= 0 ? "+" : ""}${v.toFixed(1)}`);
+const sgn = (v) => (v == null ? "—" : `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 function statusOf(r, staleDays) {
@@ -44,7 +44,7 @@ function printTable(data) {
   const overall = okA.length ? okA.reduce((s, r) => s + r.actual, 0) / okA.length : 0;
   const okD = rows.filter((r) => r.ok && r.d0 != null);
   const avgD = okD.length ? okD.reduce((s, r) => s + r.d0, 0) / okD.length : 0;
-  console.log(`\nWhole complex: ${overall.toFixed(1)}% complete (avg of ${okA.length}) · avg Δ this week ${sgn(avgD)}pp`);
+  console.log(`\nWhole complex: ${overall.toFixed(1)}% complete (avg of ${okA.length}) · avg Δ this week ${sgn(avgD)}`);
   console.log("AVG3 = avg of last 3 weekly deltas · ΔvsREQ = AVG3 − required pace (positive = beating what's needed).");
 }
 
