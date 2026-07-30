@@ -497,7 +497,7 @@
       const qs=[]; if(fresh) qs.push("fresh=1");
       if(D_MONTH) qs.push("month="+encodeURIComponent(D_MONTH));
       else if(D_DATE) qs.push("date="+encodeURIComponent(D_DATE));
-      const url="/api/daily/report"+(qs.length?"?"+qs.join("&"):"");
+      const url="/api/daily/day"+(qs.length?"?"+qs.join("&"):"");
       const res=await fetch(url, fresh?{cache:"no-store"}:{});
       if(!res.ok){let m;try{m=(await res.json()).error;}catch{}throw new Error(m||`Gagal memuat data harian (HTTP ${res.status}).`);}
       DAILY = await res.json();

@@ -60,8 +60,10 @@ const server = http.createServer(async (req, res) => {
     await serveJson(res, "audit", fresh, () => auditAll(feeds, { staleDays: STALE_DAYS }));
     return;
   }
-  if (url.pathname === "/api/daily/report") {
-    await serveJson(res, "daily", fresh, getDaily);
+  if (url.pathname === "/api/daily/day" || url.pathname === "/api/daily/report") {
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get("date") || "") ? url.searchParams.get("date") : null;
+    const month = /^\d{4}-\d{2}$/.test(url.searchParams.get("month") || "") ? url.searchParams.get("month") : null;
+    await serveJson(res, `daily:${date || month || "today"}`, fresh, () => getDaily({ date, month, fresh }));
     return;
   }
 
