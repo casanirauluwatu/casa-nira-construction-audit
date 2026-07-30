@@ -51,7 +51,8 @@
   .due-sub{display:block;font:600 10px ui-monospace,Menlo,monospace;color:#c07a1e;margin-top:4px;letter-spacing:.02em;}
   .badge{display:inline-block;padding:3px 9px;border-radius:999px;font:600 11px/1.4 -apple-system,sans-serif;white-space:nowrap;}
   .badge.on-track,.badge.complete{background:#e7f1e9;color:var(--green);}.badge.behind{background:#f7e8e1;color:var(--red);}.badge.stale{background:#f6ecd6;color:var(--amber);}.badge.unreachable{background:#eee;color:#777;}
-  tr.row-stale{background:#fdf7ea;}tr.row-down{background:#faf3f0;}.down-note{text-align:left;color:var(--red);font-family:ui-monospace,Menlo,monospace;font-size:12.5px;}
+  tr.row-stale{background:#fdf7ea;}tr.row-down,tr.row-empty{background:#fbf0ec;}
+  tr.row-empty td.u{box-shadow:inset 3px 0 0 var(--red);}tr.row-empty td.u,tr.row-empty .mono{color:var(--red);}.down-note{text-align:left;color:var(--red);font-family:ui-monospace,Menlo,monospace;font-size:12.5px;}
   .legend{margin-top:22px;font-size:12.5px;color:#5f594e;}.legend dt{font-weight:600;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;}.legend dd{margin:2px 0 10px;color:var(--muted);}
 
   /* ---------- tabs ---------- */
@@ -120,16 +121,6 @@
   .badge.aktif{background:#eef0e2;color:var(--olive);}
   .badge.kosong{background:#f7e8e1;color:var(--red);}
   .badge.libur{background:#eee;color:#777;}
-  .blk{display:flex;align-items:center;gap:10px;margin:9px 0;}
-  .blk .n{width:52px;font:600 11.5px ui-monospace,Menlo,monospace;color:var(--olive);}
-  .blk .t{flex:1;height:9px;background:#ece5d6;border-radius:5px;position:relative;overflow:hidden;}
-  .blk .p{position:absolute;inset:0;background:#e2d9c4;}
-  .blk .a{position:absolute;left:0;top:0;bottom:0;background:var(--gold);border-radius:5px;}
-  .blk .v{width:60px;text-align:right;font:600 11.5px ui-monospace,Menlo,monospace;}
-  .alist{list-style:none;margin:0;padding:0;}
-  .alist li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #f0eadd;font-size:12.5px;}
-  .alist li:last-child{border-bottom:none;}
-  .alist .k{font-weight:600;color:var(--olive);}.alist .v{color:var(--muted);text-align:right;}
   .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(188px,1fr));gap:12px;}
   .uc{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--card);box-shadow:0 1px 2px rgba(43,38,32,.05);}
   .uc .ph{position:relative;aspect-ratio:4/3;background:#ede7da;overflow:hidden;}
@@ -180,7 +171,7 @@
     .dbar{border:none;padding:0;box-shadow:none;}
     .tabpanel[hidden]{display:none!important;}
     .card,.pnl,.uc,.tbl-wrap,.wx,.chart-card{box-shadow:none;}
-    .pnl,.uc,.wx,.nbox,.blk,.alist li,tr{break-inside:avoid;}
+    .pnl,.uc,.wx,.nbox,tr{break-inside:avoid;}
     .sec{break-after:avoid;}
     .tbl-wrap,.chart-scroll{overflow:visible;}
     #panel-harian .tbl-wrap table,#panel-audit table{min-width:0;}
@@ -276,11 +267,6 @@
     <div class="chart-legend" id="wkKey" style="margin:0 0 10px"></div>
     <div class="tbl-wrap"><table><thead id="wkHead"></thead><tbody id="wkBody"></tbody></table></div>
     <p class="src" id="wkSrc"></p>
-
-    <div class="twoup even" style="margin-top:16px">
-      <div class="pnl"><div class="pnl-t">Rencana vs aktual per blok</div><div id="blkBars"></div></div>
-      <div class="pnl"><div class="pnl-t">Ringkasan kehadiran per blok</div><ul class="alist" id="blkList"></ul></div>
-    </div>
 
     <div class="sec"><h2>Dokumentasi Foto per Unit</h2><div class="rule"></div><span class="hint">terhubung ke Google Drive</span></div>
     <div class="pgrid" id="pgrid"></div>
@@ -576,7 +562,7 @@
       rows += `<tr class="blkhdr"><td colspan="8">${BLOK[b]||"Blok "+esc(b)} — ${sw}/${sp} pekerja</td></tr>`;
       for(const u of arr){
         const st=wkStatus(u), pct=u.plan?Math.round(u.workers/u.plan*100):0, bd=band(u.plan?pct:null);
-        rows += `<tr><td class="u">${esc(u.id)}</td><td class="dim">${esc((u.type||"").replace(/^The /,""))}</td>`
+        rows += `<tr class="${st.c==="kosong"?"row-empty":""}"><td class="u">${esc(u.id)}</td><td class="dim">${esc((u.type||"").replace(/^The /,""))}</td>`
           + `<td class="mono dim">${u.plan||0}</td><td class="mono"><b>${u.workers||0}</b></td>`
           + `<td><span class="khbar"><i style="width:${Math.min(pct,100)}%;background:${bd.c}"></i></span></td>`
           + `<td class="mono" style="color:${bd.c};font-weight:600">${u.plan?pct+"%":"—"}</td>`
@@ -589,7 +575,7 @@
       rows += `<tr class="blkhdr"><td colspan="8">Di luar villa — ${othW}/${othP} pekerja</td></tr>`;
       for(const o of oth){
         const pct=o.plan?Math.round(o.workers/o.plan*100):0, bd=band(o.plan?pct:null);
-        rows += `<tr><td class="u">${esc(o.id)}</td><td class="dim">—</td>`
+        rows += `<tr class="${(o.plan||0)>0&&!(o.workers||0)?"row-empty":""}"><td class="u">${esc(o.id)}</td><td class="dim">—</td>`
           + `<td class="mono dim">${o.plan||0}</td><td class="mono"><b>${o.workers||0}</b></td>`
           + `<td><span class="khbar"><i style="width:${Math.min(pct,100)}%;background:${bd.c}"></i></span></td>`
           + `<td class="mono" style="color:${bd.c};font-weight:600">${o.plan?pct+"%":"—"}</td>`
@@ -601,28 +587,7 @@
     $("wkBody").innerHTML = rows;
     $("wkSrc").textContent = `Sumber: ${d.labourSource||"Daily Mapping Labour on Site"} — kolom “Jumlah Aktual” tanggal ${fmtID(rd)}.`;
 
-    // --- per blok ---
-    const maxP = Math.max(1, ...bk.map(b=>blocks[b].reduce((s,u)=>s+(u.plan||0),0)));
-    $("blkBars").innerHTML = bk.map(b=>{
-      const sw=blocks[b].reduce((s,u)=>s+(u.workers||0),0), sp=blocks[b].reduce((s,u)=>s+(u.plan||0),0);
-      return `<div class="blk"><span class="n">${BLOK[b]||esc(b)}</span><span class="t"><span class="p" style="width:${Math.round(sp/maxP*100)}%"></span><span class="a" style="width:${Math.round(sw/maxP*100)}%"></span></span><span class="v">${sw} / ${sp}</span></div>`;
-    }).join("") + `<div style="margin-top:11px;padding-top:9px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)">`
-      + `<span style="display:inline-block;width:9px;height:9px;background:var(--gold);border-radius:2px;vertical-align:middle"></span> Aktual &nbsp; `
-      + `<span style="display:inline-block;width:9px;height:9px;background:#e2d9c4;border-radius:2px;vertical-align:middle"></span> Rencana &nbsp;·&nbsp; Total <b style="color:var(--ink)">${totalW}/${totalP}</b></div>`;
-    $("blkList").innerHTML = bk.map(b=>{
-      const sw=blocks[b].reduce((s,u)=>s+(u.workers||0),0), sp=blocks[b].reduce((s,u)=>s+(u.plan||0),0);
-      return `<li><span class="k">${BLOK[b]||esc(b)}</span><span class="v">${sw}/${sp} · <b style="color:var(--ink)">${sp?Math.round(sw/sp*100):0}%</b></span></li>`;
-    }).join("")
-      + `<li><span class="k" style="color:var(--green)">Tenaga penuh</span><span class="v">${penuh.length?penuh.map(u=>esc(u.id)).join(", "):"—"}</span></li>`
-      + `<li><span class="k" style="color:var(--red)">Tanpa pekerja</span><span class="v">${kosong.length?kosong.map(u=>esc(u.id)).join(", "):"—"}</span></li>`
-      // Non-villa blocks (utilitas, infrastruktur, fabrikasi) — di luar 19 villa,
-      // ditampilkan agar total cocok dengan baris "Total" di spreadsheet.
-      + (d.other||[]).filter(o=>(o.plan||0)||(o.workers||0)).map(o=>
-          `<li><span class="k" style="color:var(--muted)">${esc(o.id)}</span><span class="v">${o.workers||0}/${o.plan||0} <span class="dim">di luar 19 villa</span></span></li>`).join("")
-      + (othW||othP ? `<li><span class="k">Total lapangan</span><span class="v">${siteW}/${siteP} · <b style="color:var(--ink)">${units.length} villa + ${othW}/${othP} lainnya</b></span></li>` : "");
-
-    // The spreadsheet's own Total row counts Utilities/Infrastruktur/Fabrikasi as
-    // well, so state the reconciliation rather than let 112 look like it disagrees.
+    // The head-line figures span every block, so state the villa subset here.
     $("dRecon").innerHTML = othW||othP
       ? `Terdiri dari ${units.length} villa <strong>${totalW}/${totalP}</strong> (${hadir}%) + ${(d.other||[]).filter(o=>o.plan||o.workers).map(o=>esc(o.id).toLowerCase()).join(" &amp; ")} <strong>${othW}/${othP}</strong> — sesuai baris “Total” di spreadsheet.`
       : `${units.length} villa ${totalW}/${totalP}.`;
