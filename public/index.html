@@ -75,7 +75,7 @@
   .wx-row{display:grid;grid-template-columns:1.3fr 1fr .92fr;gap:14px;align-items:stretch;}
   .dbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:11px 14px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 2px rgba(43,38,32,.05);}
   .dbar-f{font:600 11px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:inline-flex;align-items:center;gap:8px;}
-  .dbar-f input{font:600 13px ui-monospace,Menlo,monospace;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 9px;}
+  .dbar-f input,.dbar-f select{font:600 13px ui-monospace,Menlo,monospace;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 9px;cursor:pointer;}
   .dnav{font:600 14px -apple-system,sans-serif;line-height:1;color:var(--olive);background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 11px;cursor:pointer;}
   .dnav.wide{font-size:12px;padding:7px 12px;}
   .dnav:hover{background:#f1ede2;}.dnav:disabled{opacity:.45;cursor:default;}
@@ -242,6 +242,7 @@
 
   <section class="tabpanel" id="panel-harian" role="tabpanel" aria-labelledby="tab-harian" hidden>
     <div class="dbar">
+      <label class="dbar-f">Bulan <select id="dMonth"></select></label>
       <label class="dbar-f">Tanggal <input type="date" id="dDate"></label>
       <button type="button" class="dnav" id="dPrev" title="Hari sebelumnya" aria-label="Hari sebelumnya">‹</button>
       <button type="button" class="dnav" id="dNext" title="Hari berikutnya" aria-label="Hari berikutnya">›</button>
@@ -271,6 +272,7 @@
     <p class="src" id="wxSrc"></p>
 
     <div class="sec"><h2>Jumlah Pekerja per Unit</h2><div class="rule"></div><span class="hint" id="wkHint"></span></div>
+    <div class="chart-legend" id="wkKey" style="margin:0 0 10px"></div>
     <div class="tbl-wrap"><table><thead id="wkHead"></thead><tbody id="wkBody"></tbody></table></div>
     <p class="src" id="wkSrc"></p>
 
@@ -486,14 +488,28 @@
   const wmo = (c) => { c=+c; if(c<=1) return "cerah"; if(c===2) return "berawan"; if(c===3||c===45||c===48) return "mendung"; return "hujan"; };
   const cIco = (c) => c==="cerah"?"sun":c==="berawan"?"partly":c==="mendung"?"cloud":"rain";
   const DOW = ["Sen","Sel","Rab","Kam","Jum","Sab","Min"];
-  let WX = null, D_DATE = null, MP_SEL = "ALL";
+  let WX = null, D_DATE = null, D_MONTH = null, MP_SEL = "ALL";
 
-  async function loadDaily(fresh, date){
+  // One attendance colour code, used on the chart, the table bars and the % cells.
+  const BANDS = [
+    { min:100, c:"#3f7d4f", l:"Penuh · ≥100%" },
+    { min:75,  c:"#6f7043", l:"Baik · 75–99%" },
+    { min:50,  c:"#b5842c", l:"Sedang · 50–74%" },
+    { min:1,   c:"#b4472e", l:"Rendah · 1–49%" },
+    { min:0,   c:"#8f887c", l:"Kosong · 0%" },
+  ];
+  const band = (pct) => (pct == null ? BANDS[4] : BANDS.find(b => pct >= b.min) || BANDS[4]);
+  const bandLegend = () => BANDS.map(b=>`<span class="lg" style="color:${b.c}">■ ${b.l}</span>`).join("");
+
+  async function loadDaily(fresh, date, month){
     LOADING_DAILY = true;
-    if(date!==undefined) D_DATE = date;
+    if(month!==undefined){ D_MONTH = month; D_DATE = null; }
+    else if(date!==undefined){ D_DATE = date; D_MONTH = null; }
     const btn=$("refresh"); btn.disabled=true; btn.innerHTML='<span class="spin"></span> Memuat…';
     try{
-      const qs=[]; if(fresh) qs.push("fresh=1"); if(D_DATE) qs.push("date="+encodeURIComponent(D_DATE));
+      const qs=[]; if(fresh) qs.push("fresh=1");
+      if(D_MONTH) qs.push("month="+encodeURIComponent(D_MONTH));
+      else if(D_DATE) qs.push("date="+encodeURIComponent(D_DATE));
       const url="/api/daily/report"+(qs.length?"?"+qs.join("&"):"");
       const res=await fetch(url, fresh?{cache:"no-store"}:{});
       if(!res.ok){let m;try{m=(await res.json()).error;}catch{}throw new Error(m||`Gagal memuat data harian (HTTP ${res.status}).`);}
@@ -534,14 +550,15 @@
 
     $("dcards").innerHTML =
       card(`${totalW}<span style="font-size:16px;color:var(--muted)"> / ${totalP}</span>`, "Pekerja · rencana", "") +
-      card(hadir+"%", "Kehadiran vs rencana", hadir>=75?"pos":hadir<50?"neg":"") +
+      card(`<span style="color:${band(totalP?hadir:null).c}">${hadir}%</span>`, "Kehadiran vs rencana", "") +
       card(`${aktif.length}<span style="font-size:16px;color:var(--muted)"> / ${units.length}</span>`, "Unit aktif", "") +
       card(kosong.length, "Unit tanpa pekerja", kosong.length?"neg":"pos");
 
     // --- pekerja per unit ---
     const blocks={}; units.forEach(u=>{(blocks[u.block]=blocks[u.block]||[]).push(u);});
     const bk = Object.keys(blocks).sort((a,b)=>(BORD[a]??9)-(BORD[b]??9));
-    $("wkHint").textContent = `${aktif.length} unit aktif · ${units.length-aktif.length} tanpa pekerja`;
+    $("wkHint").innerHTML = `${aktif.length} unit aktif · ${units.length-aktif.length} tanpa pekerja`;
+    $("wkKey").innerHTML = bandLegend();
     $("wkHead").innerHTML = `<tr><th class="l">Unit</th><th class="l">Tipe</th><th>Rencana</th><th>Aktual</th><th class="l">Kehadiran</th><th>%</th><th class="l">Status</th><th class="l">Pekerjaan hari ini</th></tr>`;
     let rows="";
     for(const b of bk){
@@ -549,11 +566,11 @@
       const sw=arr.reduce((s,u)=>s+(u.workers||0),0), sp=arr.reduce((s,u)=>s+(u.plan||0),0);
       rows += `<tr class="blkhdr"><td colspan="8">${BLOK[b]||"Blok "+esc(b)} — ${sw}/${sp} pekerja</td></tr>`;
       for(const u of arr){
-        const st=wkStatus(u), pct=u.plan?Math.round(u.workers/u.plan*100):0;
+        const st=wkStatus(u), pct=u.plan?Math.round(u.workers/u.plan*100):0, bd=band(u.plan?pct:null);
         rows += `<tr><td class="u">${esc(u.id)}</td><td class="dim">${esc((u.type||"").replace(/^The /,""))}</td>`
           + `<td class="mono dim">${u.plan||0}</td><td class="mono"><b>${u.workers||0}</b></td>`
-          + `<td><span class="khbar"><i style="width:${Math.min(pct,100)}%"></i></span></td>`
-          + `<td class="mono ${pct>=100?"pos":pct===0?"neg":""}">${u.plan?pct+"%":"—"}</td>`
+          + `<td><span class="khbar"><i style="width:${Math.min(pct,100)}%;background:${bd.c}"></i></span></td>`
+          + `<td class="mono" style="color:${bd.c};font-weight:600">${u.plan?pct+"%":"—"}</td>`
           + `<td><span class="badge ${st.c}">${st.t}</span></td>`
           + `<td class="dim wtxt">${esc(u.comp)||"—"}</td></tr>`;
       }
@@ -626,19 +643,42 @@
   const dstr = (dt) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
   const shiftDay = (iso, by) => { const t=new Date(iso+"T00:00:00"); t.setDate(t.getDate()+by); return dstr(t); };
 
+  // "Juli 2026" → "2026-07"
+  const MON_ID = ["januari","februari","maret","april","mei","juni","juli","agustus","september","oktober","november","desember"];
+  function tabToYM(name){
+    const m=/^([A-Za-z]+)\s+(\d{4})$/.exec(String(name||"").trim());
+    if(!m) return null;
+    const i=MON_ID.indexOf(m[1].toLowerCase());
+    return i<0 ? null : `${m[2]}-${String(i+1).padStart(2,"0")}`;
+  }
+  const ymLabel = (ym) => { const [y,m]=ym.split("-"); return `${BULAN[+m-1]} ${y}`; };
+
   function syncDateBar(d){
     const dates = d.series && d.series.dates ? d.series.dates : [];
-    const inp = $("dDate");
+    const inp = $("dDate"), sel = $("dMonth");
     inp.value = d.date || "";
     // Bound the picker to the month on screen; the arrows step past its edges.
     if(dates.length){ inp.min = dates[0]; inp.max = dates[dates.length-1]; }
-    $("dMonths").textContent = (d.months && d.months.length)
-      ? `Bulan tersedia: ${d.months.join(" · ")}`
-      : (d.live ? "" : "Snapshot satu hari — sambungkan DAILY_FEED untuk memilih tanggal lain.");
+    const yms = (d.months||[]).map(tabToYM).filter(Boolean);
+    const here = (d.date||"").slice(0,7);
+    if(here && !yms.includes(here)) yms.push(here);
+    yms.sort();
+    sel.innerHTML = yms.map(ym=>`<option value="${ym}">${ymLabel(ym)}</option>`).join("");
+    sel.value = here;
+    $("dMonths").textContent = d.live ? "" : "Snapshot satu hari — sambungkan DAILY_FEED untuk memilih tanggal lain.";
     const off = !d.live;                     // snapshot can only answer its one day
     ["dPrev","dNext","dToday"].forEach(id=>{ $(id).disabled = off; });
-    inp.disabled = off;
+    inp.disabled = off; sel.disabled = off;
+    saveUrl(d.date);
   }
+  // Keep the chosen day and unit in the URL so a link reopens the same view.
+  function saveUrl(date){
+    const q=new URLSearchParams(location.search);
+    date ? q.set("d",date) : q.delete("d");
+    MP_SEL&&MP_SEL!=="ALL" ? q.set("mp",MP_SEL) : q.delete("mp");
+    history.replaceState(null,"",location.pathname+(q.toString()?"?"+q:"")+"#"+TAB);
+  }
+  $("dMonth").addEventListener("change", e=>loadDaily(false, undefined, e.target.value));
   $("dDate").addEventListener("change", e=>{ if(e.target.value) loadDaily(false, e.target.value); });
   $("dPrev").addEventListener("click", ()=>loadDaily(false, shiftDay(($("dDate").value)||dstr(new Date()), -1)));
   $("dNext").addEventListener("click", ()=>loadDaily(false, shiftDay(($("dDate").value)||dstr(new Date()), 1)));
@@ -655,7 +695,7 @@
     sel.value = MP_SEL;
     drawManpower(d);
   }
-  $("mpSel").addEventListener("change", e=>{ MP_SEL=e.target.value; if(DAILY) drawManpower(DAILY); });
+  $("mpSel").addEventListener("change", e=>{ MP_SEL=e.target.value; if(DAILY){ drawManpower(DAILY); saveUrl(DAILY.date); } });
 
   function drawManpower(d){
     const svg=$("mpchart"), sr=d.series;
@@ -692,7 +732,19 @@
     s2+=`<polygon points="${pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ")} ${xF(n-1).toFixed(1)},${yF(0).toFixed(1)} ${xF(0).toFixed(1)},${yF(0).toFixed(1)}" fill="#6f7043" opacity="0.10"/>`;
     s2+=poly(line(plan),"#a9822f","5 4",2);
     s2+=poly(pts,"#6f7043",null,2.4);
-    for(let i=0;i<n;i++) s2+=`<circle cx="${xF(i).toFixed(1)}" cy="${yF(act[i]).toFixed(1)}" r="2.2" fill="#6f7043"/>`;
+    // Points carry the attendance colour code; labels sit above each one.
+    const pctAt=i=>plan[i]?act[i]/plan[i]*100:null;
+    const at0=dates.indexOf(d.date);
+    for(let i=0;i<n;i++){
+      s2+=`<circle cx="${xF(i).toFixed(1)}" cy="${yF(act[i]).toFixed(1)}" r="2.8" fill="${band(pctAt(i)).c}"/>`;
+      if(i!==at0 && act[i]>0)
+        s2+=`<text x="${xF(i).toFixed(1)}" y="${(yF(act[i])-8).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="600" fill="${band(pctAt(i)).c}" ${MONO}>${act[i]}</text>`;
+    }
+    // Plan is flat for long stretches — label it only where it starts or changes.
+    for(let i=0;i<n;i++){
+      if(i===0||plan[i]!==plan[i-1])
+        s2+=`<text x="${(xF(i)+(i===0?2:0)).toFixed(1)}" y="${(yF(plan[i])-7).toFixed(1)}" text-anchor="${i===0?"start":"middle"}" font-size="9.5" font-weight="600" fill="#a9822f" ${MONO}>${plan[i]}</text>`;
+    }
     // marker on the day being reported
     const at=dates.indexOf(d.date);
     if(at>=0){
@@ -712,7 +764,8 @@
     $("mpLegend").innerHTML = `<span class="lg"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#a9822f" stroke-width="2" stroke-dasharray="5 4"/></svg> Rencana</span>`
       + `<span class="lg"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#6f7043" stroke-width="2.4"/></svg> Aktual</span>`
       + `<span class="lg" style="color:#b4472e">| tanggal laporan</span>`
-      + `<span class="lg" style="color:var(--muted)">▮ Minggu</span>`;
+      + `<span class="lg" style="color:var(--muted)">▮ Minggu</span>`
+      + `<span class="lg" style="color:var(--line);user-select:none">│</span>` + bandLegend();
     $("mpHint").textContent = `${sr.month||""} · ${MP_SEL==="ALL"?"19 villa":MP_SEL}`;
     $("mpFoot").innerHTML = `Rata-rata <strong>${avg.toFixed(1)}</strong> pekerja pada ${worked.length} hari kerja · puncak <strong>${peak}</strong> (${peakAt||"—"}) · ${n-worked.length} hari tanpa pekerja.`
       + (d.live?` Klik salah satu hari untuk membuka laporannya.`:"");
@@ -830,6 +883,12 @@
   }
 
   /* ==================== boot ==================== */
+  {
+    const q=new URLSearchParams(location.search);
+    const qd=q.get("d"), qm=q.get("mp");
+    if(qd && /^\d{4}-\d{2}-\d{2}$/.test(qd)) D_DATE=qd;
+    if(qm) MP_SEL=qm;
+  }
   setTab(TAB);
   load();
 </script>

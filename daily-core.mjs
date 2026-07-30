@@ -45,24 +45,25 @@ function offline(note, date) {
   return out;
 }
 
-export async function getDaily({ date = null, fresh = false } = {}) {
+export async function getDaily({ date = null, month = null, fresh = false } = {}) {
   const feed = process.env.DAILY_FEED;
-  if (!feed) return offline(null, date);
+  if (!feed) return offline(null, date || month);
   const url = new URL(feed);
   if (date) url.searchParams.set("date", date);
+  else if (month) url.searchParams.set("month", month);
   if (fresh) url.searchParams.set("nocache", "1");
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
-    if (!res.ok) return offline(`feed HTTP ${res.status}`, date);
+    if (!res.ok) return offline(`feed HTTP ${res.status}`, date || month);
     const data = await res.json();
     // The Apps Script reports its own failures as {error}, with HTTP 200.
-    if (data && data.error) return offline(`feed: ${data.error}`, date);
+    if (data && data.error) return offline(`feed: ${data.error}`, date || month);
     if (!Array.isArray(data?.units) || !data.units.some((u) => isVilla(u.id))) {
-      return offline("feed returned no villa rows", date);
+      return offline("feed returned no villa rows", date || month);
     }
     return fromFeed(data);
   } catch (err) {
     const why = err.name === "TimeoutError" ? "timeout" : err.message || "fetch failed";
-    return offline(`feed ${why}`, date);
+    return offline(`feed ${why}`, date || month);
   }
 }

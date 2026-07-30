@@ -43,6 +43,7 @@
  * ENDPOINTS
  *   /exec                     today (Bali time), or the latest day that has data
  *   /exec?date=2026-07-30     one specific day
+ *   /exec?month=2026-05       newest day with data in that month
  *   /exec?nocache=1           skip the cache and re-read the sheet
  *   /exec?pretty=1            indented JSON, for eyeballing in a browser
  */
@@ -67,14 +68,14 @@ function doGet(e) {
   var p = (e && e.parameter) || {};
   var skip = (p.nocache != null) || (p.fresh != null);
   try {
-    var key = cacheKey(p.date);
+    var key = cacheKey(p.date, p.month);
     var cache = tryCache();
     if (cache && !skip) {
       var hit = cache.get(key);
       // generatedAt in the payload shows how old a cached answer is.
       if (hit) return out(hit, p.pretty);
     }
-    var data = build(p.date);
+    var data = build(p.date, p.month);
     var body = JSON.stringify(data);
     if (cache) {
       try { cache.put(key, body, data.hasData ? CACHE_SEC : EMPTY_CACHE_SEC); } catch (ignore) {}
@@ -103,9 +104,21 @@ function warmup() {
   return data.date + ' warmed (' + data.totals.villaWorkers + '/' + data.totals.villaPlan + ')';
 }
 
-function build(dateParam) {
+function build(dateParam, monthParam) {
   var ss = SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('spreadsheet not found — set SHEET_ID');
+
+  // ?month=YYYY-MM — the newest day that has numbers in that month, so picking a
+  // month lands on a useful day instead of an empty 1st.
+  if (monthParam && !dateParam) {
+    var mw = parseYM(monthParam);
+    if (!mw) throw new Error('bad month "' + monthParam + '" — use YYYY-MM');
+    var mdays = daysInMonth(ss, mw);
+    if (!mdays.length) throw new Error('no columns for ' + monthParam);
+    var mgot = pickWithData(mdays, mdays[mdays.length - 1]);
+    if (mgot) return payload(ss, mgot.day, mgot.data, monthParam, false);
+    return payload(ss, mdays[0], readDay(mdays[0], mdays), monthParam, false);
+  }
 
   if (dateParam) {
     var want = parseYMD(dateParam);
@@ -157,6 +170,20 @@ function payload(ss, day, d, requested, fellBack) {
     series: d.series || null,// day-by-day manpower for the month, for the chart
     months: tabNames(ss),    // month tabs available, for the date picker
   };
+}
+
+/** Every day column belonging to one calendar month. */
+function daysInMonth(ss, mw) {
+  var sh = ss.getSheetByName(MONTHS_ID[mw.m - 1] + ' ' + mw.y);
+  var pool = sh ? datesOf(sh) : allDays(ss);
+  var out = [];
+  for (var i = 0; i < pool.length; i++) if (pool[i].y === mw.y && pool[i].m === mw.m) out.push(pool[i]);
+  if (!out.length && sh) {   // tab exists but holds another month — scan everything
+    pool = allDays(ss);
+    for (var j = 0; j < pool.length; j++) if (pool[j].y === mw.y && pool[j].m === mw.m) out.push(pool[j]);
+  }
+  out.sort(function (a, b) { return a.col - b.col; });
+  return out;
 }
 
 /** The day entries that live on the same tab as `day` (one month's columns). */
@@ -338,8 +365,14 @@ function lastIndexNotAfter(days, want) {
   for (var i = 0; i < days.length; i++) if (key(days[i]) <= k) at = i;
   return at;
 }
-function cacheKey(dateParam) {
-  return 'daily:' + CACHE_VER + (dateParam ? ':d:' + dateParam : ':today:' + ymd(todayYMD()));
+function cacheKey(dateParam, monthParam) {
+  if (dateParam) return 'daily:' + CACHE_VER + ':d:' + dateParam;
+  if (monthParam) return 'daily:' + CACHE_VER + ':m:' + monthParam;
+  return 'daily:' + CACHE_VER + ':today:' + ymd(todayYMD());
+}
+function parseYM(s) {
+  var m = /^(\d{4})-(\d{1,2})$/.exec(String(s).trim());
+  return m ? { y: +m[1], m: +m[2] } : null;
 }
 function tryCache() {
   try { return CacheService.getScriptCache(); } catch (ignore) { return null; }

@@ -5,10 +5,13 @@ Two tabs on one page for the Casa Nira Uluwatu build:
 - **Construction Audit** — the **Time Schedule** feeds across all villas:
   progress, weekly pace, deviation, and target-vs-projected delivery. Reads the
   same `CONSTRUCTION_FEEDS` the main dashboard uses, so figures match.
-- **Laporan Harian** — the daily site report: a date picker for any day the sheet
-  covers, day-by-day manpower charted per unit or across all 19 villas, field
-  weather (live from Open-Meteo), head-count per unit vs plan, per-block
-  attendance, photo links, and auto-generated notes.
+- **Laporan Harian** — the daily site report: month + date pickers for any day the
+  sheet covers, day-by-day manpower charted per unit or across all 19 villas with
+  value labels, field weather (live from Open-Meteo), head-count per unit vs plan,
+  per-block attendance, photo links, and auto-generated notes. One attendance
+  colour code (≥100 / 75–99 / 50–74 / 1–49 / 0%) runs across the chart points, the
+  table bars and the % cells. The chosen day and unit live in the URL (`?d=&mp=`),
+  so a link reopens the same view.
 
 **Zero dependencies** (Node 18+). Three ways to run it: **CLI** (audit only), a
 **plain Node server**, or **Vercel**.

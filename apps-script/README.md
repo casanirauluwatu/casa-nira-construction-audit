@@ -30,6 +30,7 @@ new version — the `/exec` URL stays the same.
 | --- | --- |
 | `/exec` | Today (Bali time). If today isn't filled in yet, the most recent day that has numbers, flagged with `usedLatestWithData: true`. |
 | `/exec?date=2026-07-30` | That exact day. Honoured even if empty (`hasData: false`) — no silent substitution. |
+| `/exec?month=2026-05` | The newest day **with data** in that month — so picking a month lands somewhere useful instead of an empty 1st. |
 | `/exec?pretty=1` | Indented JSON for eyeballing. |
 | `/exec?nocache=1` | Skip the cache and re-read the sheet. The dashboard's **Refresh data** sends this. |
 
