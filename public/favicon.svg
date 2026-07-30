@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Casa Nira">
+  <rect width="512" height="512" fill="#3a2b12"/>
+  <rect x="60" y="48" width="392" height="416" rx="100" fill="none" stroke="#a6c3ba" stroke-width="34"/>
+  <text x="256" y="262" text-anchor="middle" dominant-baseline="central"
+        font-family="Georgia, 'Times New Roman', 'Noto Serif', serif"
+        font-size="272" font-weight="500" letter-spacing="-10" fill="#a6c3ba">cn</text>
+</svg>
