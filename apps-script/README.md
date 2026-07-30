@@ -45,14 +45,16 @@ be present. If they're missing, the URL is still on old code.
 Also make sure the project holds only **one** copy of this script — a leftover
 `Code.gs` with an older `doGet()` can win over a newly added file.
 
-## Site photos (`daily-photos.gs`)
+## Site photos
 
-Add **`daily-photos.gs`** to the same Apps Script project as a second file, then:
+Photo support lives in the same `daily-labour.gs` — **one file, one paste**.
+Nothing to enable in the editor: `driveList_()` uses the advanced Drive service
+when it happens to be on, and otherwise calls the Drive REST API with the
+script's own OAuth token. `forceDriveScope_()` is never executed; it exists so
+Apps Script's static scan puts Drive on the authorisation prompt.
 
-> Apps Script editor → **Services (+)** → **Drive API** (v3) → **Add**
-
-`daily-labour.gs` routes `?photos=YYYY-MM-DD` to it, so there is still one
-deployment and one `DAILY_FEED` URL. Re-deploy after adding it.
+You will be asked to **re-authorise** on first run, because the script now wants
+Drive read access. That is expected.
 
 It reads `Rekap / <UNIT> / <MM YYYY> / <DD MM YYYY> / *`, e.g.
 `Rekap / A1 / 07 2026 / 30 07 2026 / IMG_8893.HEIC`. Folder names that differ from

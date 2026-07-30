@@ -71,7 +71,7 @@ var EMPTY_CACHE_SEC = 600;// 10min while the requested day still has no numbers
 var CACHE_VER = 'v3';     // bump to invalidate every cached entry
 // Shown in every response as `scriptVersion`, so you can tell at a glance which
 // code the /exec URL is actually serving after a re-deploy.
-var SCRIPT_VERSION = 'v3-series-months';
+var SCRIPT_VERSION = 'v4-photos';
 var MONTHS_ID = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
@@ -464,3 +464,129 @@ function out(body, pretty) {
   if (pretty) { try { text = JSON.stringify(JSON.parse(body), null, 2); } catch (ignore) {} }
   return ContentService.createTextOutput(text).setMimeType(ContentService.MimeType.JSON);
 }
+
+/* ==================================================================
+   SITE PHOTOS — Rekap Drive folder
+   Reads Rekap / <UNIT> / <MM YYYY> / <DD MM YYYY> / *. Routed from doGet above
+   via ?photos=YYYY-MM-DD.
+   ================================================================== */
+
+var REKAP_FOLDER_ID = '1x_VL0b99xelLk5ON9jaRR5tbo8S1lhfl';
+var PHOTO_CACHE_SEC = 21600;   // 6h, same as the labour answers
+var MAX_PER_UNIT = 12;         // cards show a handful; keep the payload small
+
+// The Drive folder names that do not match the spreadsheet's block names.
+// "Infra" holds both Infrastruktur and Fabrikasi work.
+var FOLDER_ALIAS = { Infrastruktur: 'Infra', Fabrikasi: 'Infra' };
+
+/** `photos=YYYY-MM-DD` -> { date, photos: {unit: [{id,name}]}, ... } */
+function photosFor(dateParam) {
+  var want = parseYMD(dateParam);
+  if (!want) throw new Error('bad date "' + dateParam + '" — use YYYY-MM-DD');
+  var monthName = pad(want.m) + ' ' + want.y;                      // "07 2026"
+  var dayName = pad(want.d) + ' ' + pad(want.m) + ' ' + want.y;    // "30 07 2026"
+
+  // 1. unit folders under Rekap
+  var units = listChildren_("'" + REKAP_FOLDER_ID + "' in parents", { folders: true });
+  if (!units.length) return { date: ymd(want), photos: {}, folders: {}, note: 'Rekap folder is empty' };
+  var unitById = {};
+  units.forEach(function (f) { unitById[f.id] = f.name; });
+
+  // 2. that month's folder inside each unit
+  var months = listChildren_(parentsClause_(units), { folders: true, name: monthName });
+  var unitOfMonth = {};
+  months.forEach(function (f) { unitOfMonth[f.id] = unitById[(f.parents || [])[0]]; });
+
+  // 3. that day's folder inside each month
+  var daysF = months.length ? listChildren_(parentsClause_(months), { folders: true, name: dayName }) : [];
+  var unitOfDay = {};
+  daysF.forEach(function (f) { unitOfDay[f.id] = unitOfMonth[(f.parents || [])[0]]; });
+
+  // 4. the images themselves
+  var photos = {}, files = daysF.length ? listChildren_(parentsClause_(daysF), { images: true }) : [];
+  files.forEach(function (f) {
+    var unit = unitOfDay[(f.parents || [])[0]];
+    if (!unit) return;
+    (photos[unit] = photos[unit] || []).push({ id: f.id, name: f.name, mime: f.mimeType });
+  });
+  Object.keys(photos).forEach(function (u) {
+    photos[u].sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+    if (photos[u].length > MAX_PER_UNIT) photos[u] = photos[u].slice(0, MAX_PER_UNIT);
+  });
+
+  return {
+    date: ymd(want),
+    scriptVersion: SCRIPT_VERSION,
+    rekapFolder: REKAP_FOLDER_ID,
+    alias: FOLDER_ALIAS,
+    folders: unitById,          // unit -> folder id, so a card can link to Drive
+    dayFolders: invert_(unitOfDay),
+    photos: photos,
+    counts: countOf_(photos),
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+/** One Drive query for every child of a set of parents. */
+function listChildren_(parentClause, opt) {
+  var q = [parentClause, 'trashed = false'];
+  if (opt.folders) q.push("mimeType = 'application/vnd.google-apps.folder'");
+  if (opt.images) q.push("(mimeType contains 'image/' or mimeType contains 'video/')");
+  if (opt.name) q.push("name = '" + String(opt.name).replace(/'/g, "\\'") + "'");
+  var out = [], token = null, guard = 0;
+  do {
+    var r = driveList_({
+      q: q.join(' and '),
+      fields: 'nextPageToken, files(id,name,mimeType,parents)',
+      pageSize: 1000,
+      pageToken: token || undefined,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    });
+    (r.files || []).forEach(function (f) { out.push(f); });
+    token = r.nextPageToken;
+  } while (token && ++guard < 10);
+  return out;
+}
+
+function parentsClause_(items) {
+  return '(' + items.map(function (f) { return "'" + f.id + "' in parents"; }).join(' or ') + ')';
+}
+function invert_(map) {
+  var out = {};
+  Object.keys(map).forEach(function (id) { if (map[id]) out[map[id]] = id; });
+  return out;
+}
+function countOf_(photos) {
+  var out = {};
+  Object.keys(photos).forEach(function (u) { out[u] = photos[u].length; });
+  return out;
+}
+
+/**
+ * Drive files.list. Uses the advanced "Drive" service when it has been enabled,
+ * and otherwise calls the REST API with the script's own OAuth token — so this
+ * works on a fresh paste with nothing to switch on in the editor.
+ */
+function driveList_(params) {
+  if (typeof Drive !== 'undefined' && Drive.Files && Drive.Files.list) return Drive.Files.list(params);
+  var qs = Object.keys(params)
+    .filter(function (k) { return params[k] !== undefined && params[k] !== null; })
+    .map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); })
+    .join('&');
+  var res = UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/files?' + qs, {
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+    muteHttpExceptions: true,
+  });
+  if (res.getResponseCode() !== 200) {
+    throw new Error('Drive API ' + res.getResponseCode() + ' — ' + res.getContentText().slice(0, 180));
+  }
+  return JSON.parse(res.getContentText());
+}
+
+/**
+ * Never called. Apps Script decides which permissions to request by scanning the
+ * source, so naming DriveApp here is what gets the Drive scope onto the
+ * authorisation prompt — which is what driveList_'s REST path needs.
+ */
+function forceDriveScope_() { return DriveApp.getRootFolder(); }
