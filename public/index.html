@@ -155,28 +155,84 @@
     .chart-title{font-size:10px;}
     .chart-sel{font-size:11.5px;}.chart-sel select{font-size:12px;padding:5px 8px;}
     .chart-legend{gap:8px 12px;}
-    .tabs{margin:16px 0 18px;}.tab{padding:10px 12px 11px;font-size:12.5px;}
-    button.print{padding:9px 12px;font-size:12.5px;}
+    .tabs{margin:16px 0 18px;}.tab{padding:12px 14px;font-size:13px;}
     .sec{margin:22px 0 10px;}
     .twoup,.twoup.even,.wx-row{grid-template-columns:minmax(0,1fr);}
-    .dbar{padding:10px 11px;gap:6px;}.dbar-h{margin-left:0;flex-basis:100%;}
     .pnl{padding:13px 14px;}
     .wx{padding:15px;}.wx-now .t{font-size:29px;}.wx-note{max-width:none;}
     .pgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
     .uc .ft{flex-direction:column;align-items:flex-start;gap:4px;}
+
+    /* Touch targets: 40px min, and 16px inputs so iOS does not zoom on focus. */
+    button.refresh,button.print{min-height:44px;padding:10px 16px;font-size:13px;}
+    .dbar{padding:10px;gap:8px;}
+    .dbar-f{flex:1 1 100%;justify-content:space-between;}
+    .dbar-f input,.dbar-f select{flex:1;min-height:44px;font-size:16px;}
+    .dnav{min-height:44px;min-width:44px;font-size:16px;}
+    .dnav.wide{flex:1;}
+    .dbar-h{margin-left:0;flex-basis:100%;}
+    .chart-sel{flex:1 1 100%;justify-content:space-between;}
+    .chart-sel select{flex:1;min-height:44px;font-size:16px;}
+    .uc .ft a{padding:8px 0;}
+
+    /* The chart is unreadable squeezed into 390px — let it keep its width and
+       scroll sideways, the way the audit chart already does. */
+    #mpchart{min-width:620px;}
+    .chart-scroll{position:relative;}
+    .chart-scroll::after{content:"";position:absolute;top:0;right:0;bottom:0;width:26px;
+      background:linear-gradient(90deg,rgba(255,253,248,0),var(--card));pointer-events:none;}
+    .chart-card .hint{font-size:11px;}
+    /* Labels wrap at this width, so give every card the same box and centre it
+       — a ragged 2x2 grid reads as broken rather than dense. */
+    .card{min-height:84px;display:flex;flex-direction:column;justify-content:center;}
+    .card-l{font-size:9px;letter-spacing:.05em;line-height:1.3;}
+    .card-n{font-size:21px;}
   }
   @media print{
-    body{background:#fff;overflow:visible;}
-    .wrap{max-width:none;padding:0 0 12px;}
-    .tabs,.acts,.note,.chart-sel,.hint,.dnav{display:none!important;}
-    .dbar{border:none;padding:0;box-shadow:none;}
+    /* A daily report that runs to five pages does not get read. Target three:
+       numbers and chart, the labour table, then photos. */
+    @page{ size:A4; margin:11mm; }
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    html,body{background:#fff;}
+    body{font-size:9.5pt;overflow:visible;}
+    .wrap{max-width:none;padding:0;}
+    /* Controls, hints and source notes are screen furniture. The date is already
+       in the sub-heading, so the picker adds nothing on paper. */
+    .tabs,.acts,.note,.dbar,.chart-sel,.hint,.src,.chart-scroll::after{display:none!important;}
     .tabpanel[hidden]{display:none!important;}
     .card,.pnl,.uc,.tbl-wrap,.wx,.chart-card{box-shadow:none;}
-    .pnl,.uc,.wx,.nbox,tr{break-inside:avoid;}
-    .sec{break-after:avoid;}
+    .pnl,.uc,.wx,.nbox,tr,.chart-card{break-inside:avoid;}
+    .sec{break-after:avoid;margin:12px 0 7px;}
+    h1{font-size:19pt;margin:4px 0 3px;}
+    .sub-h{font-size:9pt;}
+    .eyebrow{font-size:7.5pt;}
     .tbl-wrap,.chart-scroll{overflow:visible;}
     #panel-harian .tbl-wrap table,#panel-audit table{min-width:0;}
-    .wx{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    #mpchart,#chart{min-width:0;width:100%;}
+    .cards{gap:7px;margin-bottom:12px;}
+    .card{padding:8px 10px;}.card-n{font-size:15pt;}.card-l{font-size:6.5pt;margin-top:3px;}
+    .chart-card{padding:8px 10px;margin-bottom:10px;}
+    .chart-legend{gap:6px 10px;margin-top:5px;}.chart-legend .lg{font-size:7pt;}
+    .wx-row{gap:8px;}
+    .wx{padding:10px;}.wx-now .t{font-size:17pt;}.wx-slots{margin-top:8px;padding-top:8px;}
+    .wx-slot .i{width:15px;height:15px;}.wx-slot .v{font-size:10pt;}
+    .leg .r{font-size:7.5pt;}.wx-dom{font-size:7.5pt;}
+    .cal .c{font-size:6.5pt;border-radius:3px;}
+    table{font-size:8pt;}
+    thead th{padding:6px 7px;font-size:6.5pt;position:static;}
+    tbody td{padding:4px 7px;}
+    td.wtxt{min-width:0;}
+    /* Photos start a fresh page and print six-up — a contact sheet, not a gallery. */
+    #secFoto{break-before:page;}
+    .pgrid{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;}
+    .uc .bd{padding:5px 6px;gap:1px;}
+    .uc .ty{font-size:6pt;}
+    .uc .ft{padding-top:4px;}
+    .uc .ft a{display:none;}
+    .uc .pct{font-size:7pt;}
+    .pbadge,.wbadge{font-size:6.5pt;padding:2px 5px;}
+    .nshot{font-size:6.5pt;padding:2px 5px;}
+    .nbox{padding:7px 10px;font-size:8pt;margin-bottom:6px;}
     a{color:inherit;}
   }
 </style>
@@ -268,7 +324,7 @@
     <div class="tbl-wrap"><table><thead id="wkHead"></thead><tbody id="wkBody"></tbody></table></div>
     <p class="src" id="wkSrc"></p>
 
-    <div class="sec"><h2>Dokumentasi Foto per Unit</h2><div class="rule"></div><span class="hint" id="phHint">terhubung ke Google Drive</span></div>
+    <div class="sec" id="secFoto"><h2>Dokumentasi Foto per Unit</h2><div class="rule"></div><span class="hint" id="phHint">terhubung ke Google Drive</span></div>
     <div class="pgrid" id="pgrid"></div>
 
     <div class="sec"><h2>Catatan &amp; Kendala</h2><div class="rule"></div></div>
