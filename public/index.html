@@ -656,7 +656,12 @@
     yms.sort();
     sel.innerHTML = yms.map(ym=>`<option value="${ym}">${ymLabel(ym)}</option>`).join("");
     sel.value = here;
-    $("dMonths").textContent = d.live ? "" : "Snapshot satu hari — sambungkan DAILY_FEED untuk memilih tanggal lain.";
+    // An older daily-labour.gs sends no `months`, so the dropdown can only offer
+    // the month on screen — say so rather than look broken. Typing a date works.
+    $("dMonths").textContent = !d.live
+      ? "Snapshot satu hari — sambungkan DAILY_FEED untuk memilih tanggal lain."
+      : (d.months && d.months.length) ? ""
+      : "Daftar bulan belum dikirim feed — ketik tanggal mana pun, atau perbarui daily-labour.gs lalu deploy ulang.";
     const off = !d.live;                     // snapshot can only answer its one day
     ["dPrev","dNext","dToday"].forEach(id=>{ $(id).disabled = off; });
     inp.disabled = off; sel.disabled = off;
