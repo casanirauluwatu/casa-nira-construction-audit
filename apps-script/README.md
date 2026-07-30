@@ -31,6 +31,7 @@ new version — the `/exec` URL stays the same.
 | `/exec` | Today (Bali time). If today isn't filled in yet, the most recent day that has numbers, flagged with `usedLatestWithData: true`. |
 | `/exec?date=2026-07-30` | That exact day. Honoured even if empty (`hasData: false`) — no silent substitution. |
 | `/exec?pretty=1` | Indented JSON for eyeballing. |
+| `/exec?nocache=1` | Skip the cache and re-read the sheet. The dashboard's **Refresh data** sends this. |
 
 ## Response
 
@@ -50,9 +51,20 @@ new version — the `/exec` URL stays the same.
   "other": [ { "id": "Utilities", "plan": 7, "workers": 6, "comp": "STR 6" } ],
   "totals": { "villaPlan": 310, "villaWorkers": 112,
               "otherPlan": 15, "otherWorkers": 11,
-              "sheetPlan": 325, "sheetWorkers": 123 }
+              "sheetPlan": 325, "sheetWorkers": 123 },
+  "series": {
+    "month": "Juli 2026",
+    "dates": ["2026-07-01", "…"],
+    "total": { "plan": [195, "…"], "workers": [0, 67, "…"] },
+    "units": { "A1": { "plan": [12, "…"], "workers": [0, 5, "…"] } }
+  },
+  "months": ["April 2026", "Mei 2026", "Juli 2026", "Agustus 2026"]
 }
 ```
+
+`series` is the whole month's day-by-day head-count, feeding the Manpower Harian
+chart and its unit selector; `months` fills the date picker's hint. Both come out
+of the same read as the day itself, so they cost nothing extra.
 
 `units` is the 19 villas (`A1`…`D1`); `other` is Utilities / Infrastruktur /
 Fabrikasi, split out so the villa figures stay clean while
@@ -75,6 +87,26 @@ stays in one place.
 Verified against the workbook: all 123 dated columns across the four tabs parse,
 and 30 Jul 2026 reproduces 310 planned / 112 actual across 19 villas.
 
+## Speed
+
+A cold read opens the workbook and takes seconds, so:
+
+| | Effect |
+| --- | --- |
+| **CacheService**, 6h (10 min while a day is still empty) | a hit answers in milliseconds and never touches the spreadsheet |
+| **month tab tried by name first** | reads one tab's header row instead of all of them |
+| **row window capped at `MAX_SCAN_ROWS`** (420; blocks end ~320, the sheet runs to ~1200) | ~3x fewer cells, re-reading wider only if a block starts near the window edge |
+| **one wide read** for the day *and* the month series | 1 read instead of 31 |
+
+Measured against the previous version on the real workbook: **17 → 8 API calls
+and 6,523 → 2,202 cells** on a cold bare `/exec`, with byte-identical output
+across all 128 date cases. A cache hit is **1 call, 0 cells**.
+
+**Run `installWarmup()` once** (open it in the editor, press Run) to add an
+hourly trigger that refreshes the cached answer in the background — after that
+visitors effectively never pay the cold cost. Remove it under Triggers (clock
+icon) if you'd rather not.
+
 ## Troubleshooting
 
 | Symptom | Cause |
@@ -82,4 +114,5 @@ and 30 Jul 2026 reproduces 310 planned / 112 actual across 19 villas.
 | `{"error":"no column for … — sheet covers …"}` | That date has no column — e.g. a month tab doesn't exist yet. |
 | `{"error":"spreadsheet not found — set SHEET_ID"}` | Wrong `SHEET_ID`, or the deploying account can't open it. |
 | Dashboard still shows the snapshot | `DAILY_FEED` unset, or set but not redeployed. The page's note line says which source it used. |
+| Edited the sheet but the JSON is stale | The 6h cache. Hit **Refresh data** (sends `?nocache=1`), or wait it out. |
 | `hasData: false` | The day's `Jumlah Aktual` column is genuinely empty. |

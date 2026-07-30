@@ -5,9 +5,10 @@ Two tabs on one page for the Casa Nira Uluwatu build:
 - **Construction Audit** — the **Time Schedule** feeds across all villas:
   progress, weekly pace, deviation, and target-vs-projected delivery. Reads the
   same `CONSTRUCTION_FEEDS` the main dashboard uses, so figures match.
-- **Laporan Harian** — the daily site report: field weather (live from
-  Open-Meteo), head-count per unit vs plan, per-block attendance, photo links,
-  and auto-generated notes.
+- **Laporan Harian** — the daily site report: a date picker for any day the sheet
+  covers, day-by-day manpower charted per unit or across all 19 villas, field
+  weather (live from Open-Meteo), head-count per unit vs plan, per-block
+  attendance, photo links, and auto-generated notes.
 
 **Zero dependencies** (Node 18+). Three ways to run it: **CLI** (audit only), a
 **plain Node server**, or **Vercel**.
@@ -98,7 +99,10 @@ cached rather than refetched on every open:
 - **Node server** — an in-memory cache per endpoint (`CACHE_TTL_MIN`, default 360 = 6h).
 
 The **Refresh data** button requests `?fresh=1` for the active tab, which
-bypasses both and re-pulls. Weather is fetched by the browser directly from
+bypasses both and re-pulls — and for the daily tab it propagates as `?nocache=1`
+to the Apps Script, so Refresh really means refresh all the way down. The Apps
+Script caches its own answers too; see
+[`apps-script/README.md`](apps-script/README.md#speed). Weather is fetched by the browser directly from
 Open-Meteo (no key, no proxy) and degrades to a clear "unavailable" state offline
 — the rest of the daily report still renders.
 

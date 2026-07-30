@@ -26,28 +26,43 @@ function fromFeed(data) {
   const units = (data.units || []).filter((u) => isVilla(u.id)).map(mergeUnit);
   return {
     ...DAILY,          // project name, photosFolder, labourSource defaults
-    ...data,           // date, sheet, totals, flags from the feed
+    ...data,           // date, sheet, totals, series, months, flags from the feed
     units,
     other: data.other || [],
     live: true,
   };
 }
 
-export async function getDaily() {
+// A requested date the snapshot can't answer: say so rather than silently
+// serving the one day it does have.
+function offline(note, date) {
+  const out = { ...DAILY, live: false };
+  if (note) out.note = note;
+  if (date && date !== DAILY.date) {
+    out.requestedDate = date;
+    out.unavailableDate = true;
+  }
+  return out;
+}
+
+export async function getDaily({ date = null, fresh = false } = {}) {
   const feed = process.env.DAILY_FEED;
-  if (!feed) return { ...DAILY, live: false };
+  if (!feed) return offline(null, date);
+  const url = new URL(feed);
+  if (date) url.searchParams.set("date", date);
+  if (fresh) url.searchParams.set("nocache", "1");
   try {
-    const res = await fetch(feed, { signal: AbortSignal.timeout(TIMEOUT_MS) });
-    if (!res.ok) return { ...DAILY, live: false, note: `feed HTTP ${res.status}` };
+    const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+    if (!res.ok) return offline(`feed HTTP ${res.status}`, date);
     const data = await res.json();
     // The Apps Script reports its own failures as {error}, with HTTP 200.
-    if (data && data.error) return { ...DAILY, live: false, note: `feed: ${data.error}` };
+    if (data && data.error) return offline(`feed: ${data.error}`, date);
     if (!Array.isArray(data?.units) || !data.units.some((u) => isVilla(u.id))) {
-      return { ...DAILY, live: false, note: "feed returned no villa rows" };
+      return offline("feed returned no villa rows", date);
     }
     return fromFeed(data);
   } catch (err) {
     const why = err.name === "TimeoutError" ? "timeout" : err.message || "fetch failed";
-    return { ...DAILY, live: false, note: `feed ${why}` };
+    return offline(`feed ${why}`, date);
   }
 }

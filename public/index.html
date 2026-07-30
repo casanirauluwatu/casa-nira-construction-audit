@@ -72,39 +72,43 @@
   .src{margin:8px 0 0;font-size:11.5px;color:var(--muted);}
   .twoup{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;align-items:start;}
   .twoup.even{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .wx-row{display:grid;grid-template-columns:1.3fr 1fr .92fr;gap:14px;align-items:stretch;}
+  .dbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:11px 14px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 2px rgba(43,38,32,.05);}
+  .dbar-f{font:600 11px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:inline-flex;align-items:center;gap:8px;}
+  .dbar-f input{font:600 13px ui-monospace,Menlo,monospace;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 9px;}
+  .dnav{font:600 14px -apple-system,sans-serif;line-height:1;color:var(--olive);background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 11px;cursor:pointer;}
+  .dnav.wide{font-size:12px;padding:7px 12px;}
+  .dnav:hover{background:#f1ede2;}.dnav:disabled{opacity:.45;cursor:default;}
+  .dbar-h{margin-left:auto;font-size:11.5px;color:var(--muted);}
   .pnl{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:0 1px 2px rgba(43,38,32,.05);}
   .pnl-t{font:600 10.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
-  .wx{background:linear-gradient(135deg,#6f7043,#54552f);color:#f3efe4;border-radius:12px;padding:18px;}
+  .wx{background:linear-gradient(135deg,#6f7043,#54552f);color:#f3efe4;border-radius:12px;padding:15px 16px;display:flex;flex-direction:column;}
   .wx-top{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;}
   .wx-loc{font:600 9.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.2em;text-transform:uppercase;opacity:.72;}
-  .wx-now{display:flex;align-items:center;gap:12px;margin-top:9px;}
-  .wx-now .t{font-size:34px;font-weight:600;line-height:1;}
+  .wx-now{display:flex;align-items:center;gap:11px;margin-top:7px;}
+  .wx-now .t{font-size:30px;font-weight:600;line-height:1;}
   .wx-now .c{font-size:12px;opacity:.9;margin-top:3px;}
   .wx-ic{width:34px;height:34px;flex:none;}
   .flag{font:600 11px -apple-system,sans-serif;padding:5px 11px;border-radius:999px;border:1px solid rgba(243,239,228,.28);display:inline-block;white-space:nowrap;}
   .flag.ok{background:rgba(63,125,79,.36);}.flag.warn{background:rgba(181,132,44,.38);}.flag.bad{background:rgba(180,71,46,.4);}
-  .wx-note{font-size:11.5px;opacity:.85;margin-top:7px;max-width:230px;}
-  .wx-slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:15px;padding-top:13px;border-top:1px solid rgba(243,239,228,.18);}
+  .wx-note{font-size:11px;opacity:.85;margin-top:6px;max-width:210px;}
+  .wx-slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:auto;padding-top:11px;border-top:1px solid rgba(243,239,228,.18);}
   .wx-slot{text-align:center;}
   .wx-slot .n{font:600 9.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase;opacity:.7;}
-  .wx-slot .i{width:22px;height:22px;margin:7px auto 4px;}
-  .wx-slot .v{font-size:16px;font-weight:600;}
+  .wx-slot .i{width:20px;height:20px;margin:5px auto 3px;}
+  .wx-slot .v{font-size:15px;font-weight:600;}
   .wx-slot .c{font-size:10.5px;opacity:.8;}
-  .wxt{font-size:12.5px;}
-  .wxt th{padding:0 6px 8px!important;position:static!important;background:none!important;}
-  .wxt td{padding:8px 6px!important;}
-  .wxt .ico{width:15px;height:15px;display:inline-block;vertical-align:-3px;margin-right:6px;}
   .stack{display:flex;height:14px;border-radius:6px;overflow:hidden;border:1px solid var(--line);margin-bottom:12px;}
-  .leg{display:flex;flex-direction:column;gap:7px;}
-  .leg .r{display:flex;align-items:center;gap:8px;font-size:12.5px;}
+  .leg{display:flex;flex-direction:column;gap:6px;}
+  .leg .r{display:flex;align-items:center;gap:8px;font-size:12px;}
   .leg .sw{width:10px;height:10px;border-radius:3px;flex:none;}
   .leg .lab{flex:1;}
   .leg .pc{font-family:ui-monospace,Menlo,monospace;font-weight:600;}
   .leg .ct{color:var(--muted);font-size:11px;width:48px;text-align:right;}
-  .wx-dom{margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);line-height:1.55;}
+  .wx-dom{margin-top:10px;padding-top:9px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);line-height:1.55;}
   .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;}
   .cal .dw{font:600 9px/1 ui-monospace,Menlo,monospace;text-align:center;color:var(--muted);text-transform:uppercase;padding-bottom:4px;}
-  .cal .c{aspect-ratio:1;border-radius:5px;display:flex;align-items:center;justify-content:center;font:600 10px ui-monospace,Menlo,monospace;}
+  .cal .c{aspect-ratio:1;border-radius:4px;display:flex;align-items:center;justify-content:center;font:600 10px ui-monospace,Menlo,monospace;}
   .cal .c.today{box-shadow:0 0 0 2px var(--ink);}
   #panel-harian .tbl-wrap table{min-width:820px;}
   tr.blkhdr td{background:#f4efe3;color:var(--gold);font:600 10px ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;padding:7px 12px;}
@@ -162,7 +166,8 @@
     .tabs{margin:16px 0 18px;}.tab{padding:10px 12px 11px;font-size:12.5px;}
     button.print{padding:9px 12px;font-size:12.5px;}
     .sec{margin:22px 0 10px;}
-    .twoup,.twoup.even{grid-template-columns:minmax(0,1fr);}
+    .twoup,.twoup.even,.wx-row{grid-template-columns:minmax(0,1fr);}
+    .dbar{padding:10px 11px;gap:6px;}.dbar-h{margin-left:0;flex-basis:100%;}
     .pnl{padding:13px 14px;}
     .wx{padding:15px;}.wx-now .t{font-size:29px;}.wx-note{max-width:none;}
     .pgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
@@ -171,7 +176,8 @@
   @media print{
     body{background:#fff;overflow:visible;}
     .wrap{max-width:none;padding:0 0 12px;}
-    .tabs,.acts,.note,.chart-sel,.hint{display:none!important;}
+    .tabs,.acts,.note,.chart-sel,.hint,.dnav{display:none!important;}
+    .dbar{border:none;padding:0;box-shadow:none;}
     .tabpanel[hidden]{display:none!important;}
     .card,.pnl,.uc,.tbl-wrap,.wx,.chart-card{box-shadow:none;}
     .pnl,.uc,.wx,.nbox,.blk,.alist li,tr{break-inside:avoid;}
@@ -235,17 +241,32 @@
   </section>
 
   <section class="tabpanel" id="panel-harian" role="tabpanel" aria-labelledby="tab-harian" hidden>
+    <div class="dbar">
+      <label class="dbar-f">Tanggal <input type="date" id="dDate"></label>
+      <button type="button" class="dnav" id="dPrev" title="Hari sebelumnya" aria-label="Hari sebelumnya">‹</button>
+      <button type="button" class="dnav" id="dNext" title="Hari berikutnya" aria-label="Hari berikutnya">›</button>
+      <button type="button" class="dnav wide" id="dToday">Hari ini</button>
+      <span class="dbar-h" id="dMonths"></span>
+    </div>
     <div class="note" id="dnote">Memuat laporan harian…</div>
     <div class="cards" id="dcards"></div>
 
-    <div class="sec"><h2>Cuaca Lapangan</h2><div class="rule"></div><span class="hint">Uluwatu, Bali · Open-Meteo</span></div>
-    <div class="twoup">
-      <div class="wx" id="wxCard"></div>
-      <div class="pnl"><div class="pnl-t">Cuaca hari ini</div><table class="wxt" id="wxToday"></table></div>
+    <div class="sec"><h2>Manpower Harian</h2><div class="rule"></div><span class="hint" id="mpHint"></span></div>
+    <div class="chart-card">
+      <div class="chart-head">
+        <span class="chart-title" id="mpTitle">Jumlah pekerja per hari</span>
+        <label class="chart-sel">Unit <select id="mpSel"></select></label>
+      </div>
+      <div class="chart-scroll"><svg id="mpchart" viewBox="0 0 960 250" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Manpower harian"></svg></div>
+      <div class="chart-legend" id="mpLegend"></div>
+      <div class="hint" id="mpFoot"></div>
     </div>
-    <div class="twoup even" style="margin-top:14px">
-      <div class="pnl"><div class="pnl-t">Rekap cuaca — <span id="wxMonth">bulan ini</span></div><div id="wxRecap"></div></div>
-      <div class="pnl"><div class="pnl-t">Kalender cuaca — <span id="wxMonth2">bulan ini</span></div><div id="wxCal"></div></div>
+
+    <div class="sec"><h2>Cuaca Lapangan</h2><div class="rule"></div><span class="hint">Uluwatu, Bali · Open-Meteo</span></div>
+    <div class="wx-row">
+      <div class="wx" id="wxCard"></div>
+      <div class="pnl"><div class="pnl-t">Rekap — <span id="wxMonth">bulan ini</span></div><div id="wxRecap"></div></div>
+      <div class="pnl"><div class="pnl-t">Kalender</div><div id="wxCal"></div></div>
     </div>
     <p class="src" id="wxSrc"></p>
 
@@ -465,13 +486,15 @@
   const wmo = (c) => { c=+c; if(c<=1) return "cerah"; if(c===2) return "berawan"; if(c===3||c===45||c===48) return "mendung"; return "hujan"; };
   const cIco = (c) => c==="cerah"?"sun":c==="berawan"?"partly":c==="mendung"?"cloud":"rain";
   const DOW = ["Sen","Sel","Rab","Kam","Jum","Sab","Min"];
-  let WX = null;
+  let WX = null, D_DATE = null, MP_SEL = "ALL";
 
-  async function loadDaily(fresh){
+  async function loadDaily(fresh, date){
     LOADING_DAILY = true;
+    if(date!==undefined) D_DATE = date;
     const btn=$("refresh"); btn.disabled=true; btn.innerHTML='<span class="spin"></span> Memuat…';
     try{
-      const url="/api/daily/report"+(fresh?"?fresh=1":"");
+      const qs=[]; if(fresh) qs.push("fresh=1"); if(D_DATE) qs.push("date="+encodeURIComponent(D_DATE));
+      const url="/api/daily/report"+(qs.length?"?"+qs.join("&"):"");
       const res=await fetch(url, fresh?{cache:"no-store"}:{});
       if(!res.ok){let m;try{m=(await res.json()).error;}catch{}throw new Error(m||`Gagal memuat data harian (HTTP ${res.status}).`);}
       DAILY = await res.json();
@@ -496,12 +519,21 @@
 
     SUBH.harian = `${units.length} villa · ${fmtID(rd)} · ${d.live?"feed harian tersambung":"snapshot tenaga kerja"}`;
     if(TAB==="harian") applyHead();
-    $("dnote").innerHTML = d.live
-      ? 'Data pekerja ditarik langsung dari feed harian. Klik <strong>Refresh data</strong> untuk memuat ulang.'
-      : `Data pekerja adalah snapshot <strong>${fmtID(rd)}</strong> dari “${esc(d.labourSource||"Daily Mapping Labour on Site")}”. Progres, deviasi &amp; proyeksi per unit ada di tab <strong>Construction Audit</strong>.`;
+    if(d.unavailableDate){
+      $("dnote").className="note err";
+      $("dnote").innerHTML = `Tanggal <strong>${esc(d.requestedDate)}</strong> tidak tersedia tanpa feed harian — menampilkan snapshot <strong>${fmtID(rd)}</strong>.`;
+    }else{
+      $("dnote").className="note";
+      $("dnote").innerHTML = d.live
+        ? `Data pekerja ditarik langsung dari feed harian${d.sheet?` (tab ${esc(d.sheet)})`:""}.`
+          + (d.usedLatestWithData?` Hari ini belum diisi — menampilkan hari terakhir yang berisi data.`:"")
+          + (d.hasData===false?` <strong>Belum ada data</strong> untuk tanggal ini.`:"")
+          + ` Klik <strong>Refresh data</strong> untuk memuat ulang.`
+        : `Data pekerja adalah snapshot <strong>${fmtID(rd)}</strong> dari “${esc(d.labourSource||"Daily Mapping Labour on Site")}”. Progres, deviasi &amp; proyeksi per unit ada di tab <strong>Construction Audit</strong>.`;
+    }
 
     $("dcards").innerHTML =
-      card(totalW, "Pekerja di lapangan", "") +
+      card(`${totalW}<span style="font-size:16px;color:var(--muted)"> / ${totalP}</span>`, "Pekerja · rencana", "") +
       card(hadir+"%", "Kehadiran vs rencana", hadir>=75?"pos":hadir<50?"neg":"") +
       card(`${aktif.length}<span style="font-size:16px;color:var(--muted)"> / ${units.length}</span>`, "Unit aktif", "") +
       card(kosong.length, "Unit tanpa pekerja", kosong.length?"neg":"pos");
@@ -553,6 +585,8 @@
           : "");
 
     paintPhotos(d);
+    syncDateBar(d);
+    buildManpower(d);
 
     // --- catatan (dari tenaga kerja + cuaca; progres sengaja tidak diulang) ---
     const notes=[];
@@ -586,6 +620,102 @@
         + `<div class="ft">${folder?`<a href="${folder}" target="_blank" rel="noopener">Buka folder ↗</a>`:`<span class="pct">—</span>`}`
         + `<span class="pct">${p!=null?p.toFixed(1)+"%":"—"}</span></div></div></div>`;
     }).join("");
+  }
+
+  /* ---------- pemilih tanggal ---------- */
+  const dstr = (dt) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+  const shiftDay = (iso, by) => { const t=new Date(iso+"T00:00:00"); t.setDate(t.getDate()+by); return dstr(t); };
+
+  function syncDateBar(d){
+    const dates = d.series && d.series.dates ? d.series.dates : [];
+    const inp = $("dDate");
+    inp.value = d.date || "";
+    // Bound the picker to the month on screen; the arrows step past its edges.
+    if(dates.length){ inp.min = dates[0]; inp.max = dates[dates.length-1]; }
+    $("dMonths").textContent = (d.months && d.months.length)
+      ? `Bulan tersedia: ${d.months.join(" · ")}`
+      : (d.live ? "" : "Snapshot satu hari — sambungkan DAILY_FEED untuk memilih tanggal lain.");
+    const off = !d.live;                     // snapshot can only answer its one day
+    ["dPrev","dNext","dToday"].forEach(id=>{ $(id).disabled = off; });
+    inp.disabled = off;
+  }
+  $("dDate").addEventListener("change", e=>{ if(e.target.value) loadDaily(false, e.target.value); });
+  $("dPrev").addEventListener("click", ()=>loadDaily(false, shiftDay(($("dDate").value)||dstr(new Date()), -1)));
+  $("dNext").addEventListener("click", ()=>loadDaily(false, shiftDay(($("dDate").value)||dstr(new Date()), 1)));
+  $("dToday").addEventListener("click", ()=>loadDaily(false, null));
+
+  /* ---------- grafik manpower harian ---------- */
+  function buildManpower(d){
+    const sr = d.series;
+    const sel = $("mpSel");
+    const ids = sr && sr.units ? Object.keys(sr.units) : (d.units||[]).map(u=>u.id);
+    sel.innerHTML = `<option value="ALL">Semua unit · ${ids.length} villa</option>`
+      + ids.map(id=>`<option value="${esc(id)}">${esc(id)}</option>`).join("");
+    if(MP_SEL!=="ALL" && !ids.includes(MP_SEL)) MP_SEL="ALL";
+    sel.value = MP_SEL;
+    drawManpower(d);
+  }
+  $("mpSel").addEventListener("change", e=>{ MP_SEL=e.target.value; if(DAILY) drawManpower(DAILY); });
+
+  function drawManpower(d){
+    const svg=$("mpchart"), sr=d.series;
+    if(!sr || !sr.dates || !sr.dates.length){
+      svg.innerHTML=`<text x="16" y="28" font-size="12" fill="#8f887c">Rangkaian harian tidak tersedia.</text>`;
+      $("mpLegend").innerHTML=""; $("mpFoot").textContent=""; $("mpHint").textContent="";
+      return;
+    }
+    const one = MP_SEL!=="ALL" ? sr.units[MP_SEL] : null;
+    const plan = one ? one.plan : sr.total.plan;
+    const act  = one ? one.workers : sr.total.workers;
+    const dates = sr.dates;
+    $("mpTitle").textContent = `Jumlah pekerja per hari · ${MP_SEL==="ALL"?"semua unit":MP_SEL} · ${sr.month||""}`;
+
+    const W=960,H=250,PL=38,PR=14,PT=16,PB=34,iw=W-PL-PR,ih=H-PT-PB;
+    const n=dates.length;
+    const top=Math.max(4,...plan,...act), step=top>120?40:top>60?20:top>24?10:5;
+    const ymax=Math.ceil(top/step)*step;
+    const xF=i=>PL+(n===1?iw/2:iw*i/(n-1));
+    const yF=v=>PT+ih*(1-(ymax?v/ymax:0));
+    let g="";
+    for(let v=0;v<=ymax;v+=step){const y=yF(v);g+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="#e6dfd1"/><text x="${PL-7}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9.5" fill="#8f887c" ${MONO}>${v}</text>`;}
+    // day ticks; Sundays get a faint band since head-count legitimately drops to 0
+    for(let i=0;i<n;i++){
+      const x=xF(i), dow=new Date(dates[i]+"T00:00:00").getDay();
+      if(dow===0) g+=`<rect x="${(x-iw/n/2).toFixed(1)}" y="${PT}" width="${(iw/n).toFixed(1)}" height="${ih}" fill="#b4472e" opacity="0.045"/>`;
+      const dnum=+dates[i].slice(8,10);
+      if(n<=16||dnum%3===1||i===n-1) g+=`<text x="${x.toFixed(1)}" y="${H-14}" text-anchor="middle" font-size="9" fill="#8f887c" ${MONO}>${dnum}</text>`;
+    }
+    const line=(arr)=>arr.map((v,i)=>[xF(i),yF(v)]);
+    let s2=g;
+    // filled area under actual
+    const pts=line(act);
+    s2+=`<polygon points="${pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ")} ${xF(n-1).toFixed(1)},${yF(0).toFixed(1)} ${xF(0).toFixed(1)},${yF(0).toFixed(1)}" fill="#6f7043" opacity="0.10"/>`;
+    s2+=poly(line(plan),"#a9822f","5 4",2);
+    s2+=poly(pts,"#6f7043",null,2.4);
+    for(let i=0;i<n;i++) s2+=`<circle cx="${xF(i).toFixed(1)}" cy="${yF(act[i]).toFixed(1)}" r="2.2" fill="#6f7043"/>`;
+    // marker on the day being reported
+    const at=dates.indexOf(d.date);
+    if(at>=0){
+      const x=xF(at);
+      s2+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#b4472e" stroke-width="1.4" stroke-dasharray="3 2"/>`
+        + `<circle cx="${x.toFixed(1)}" cy="${yF(act[at]).toFixed(1)}" r="4.2" fill="#b4472e"/>`
+        + `<text x="${x.toFixed(1)}" y="${(yF(act[at])-9).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="#b4472e" ${MONO}>${act[at]}</text>`;
+    }
+    // click a day to load it
+    let hits="";
+    for(let i=0;i<n;i++) hits+=`<rect x="${(xF(i)-iw/n/2).toFixed(1)}" y="${PT}" width="${(iw/n).toFixed(1)}" height="${ih}" fill="transparent" style="cursor:pointer" data-d="${dates[i]}"><title>${dates[i]} — ${act[i]} dari ${plan[i]} pekerja</title></rect>`;
+    svg.innerHTML=s2+hits;
+    if(d.live) svg.querySelectorAll("[data-d]").forEach(el=>el.addEventListener("click",()=>loadDaily(false,el.dataset.d)));
+
+    const worked=act.filter(v=>v>0), avg=worked.length?worked.reduce((a,b)=>a+b,0)/worked.length:0;
+    const peak=Math.max(...act), peakAt=dates[act.indexOf(peak)];
+    $("mpLegend").innerHTML = `<span class="lg"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#a9822f" stroke-width="2" stroke-dasharray="5 4"/></svg> Rencana</span>`
+      + `<span class="lg"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#6f7043" stroke-width="2.4"/></svg> Aktual</span>`
+      + `<span class="lg" style="color:#b4472e">| tanggal laporan</span>`
+      + `<span class="lg" style="color:var(--muted)">▮ Minggu</span>`;
+    $("mpHint").textContent = `${sr.month||""} · ${MP_SEL==="ALL"?"19 villa":MP_SEL}`;
+    $("mpFoot").innerHTML = `Rata-rata <strong>${avg.toFixed(1)}</strong> pekerja pada ${worked.length} hari kerja · puncak <strong>${peak}</strong> (${peakAt||"—"}) · ${n-worked.length} hari tanpa pekerja.`
+      + (d.live?` Klik salah satu hari untuk membuka laporannya.`:"");
   }
 
   /* Cuaca realtime dari Open-Meteo (tanpa API key, CORS aktif) — dipanggil dari
@@ -647,12 +777,11 @@
 
   function renderWeather(w){
     const ml = w ? w.monthLabel : `${BULAN[new Date().getMonth()]} ${new Date().getFullYear()}`;
-    $("wxMonth").textContent = ml; $("wxMonth2").textContent = ml;
+    $("wxMonth").textContent = ml;
 
     if(!w){
       $("wxCard").innerHTML = `<div class="wx-top"><div><div class="wx-loc">Uluwatu, Bali · Hari Ini</div>`
         + `<div class="wx-now"><div><span class="t">—°</span><div class="c">Data cuaca tidak tersedia</div></div></div></div></div>`;
-      $("wxToday").innerHTML = `<tbody><tr><td class="dim">Cuaca tidak dapat dimuat.</td></tr></tbody>`;
       $("wxRecap").innerHTML = `<div class="dim" style="font-size:12px">Rekap cuaca belum tersedia.</div>`;
       $("wxCal").innerHTML = `<div class="dim" style="font-size:12px">Kalender cuaca belum tersedia.</div>`;
       $("wxSrc").textContent = "Sumber cuaca: Open-Meteo — tidak dapat dijangkau dari perangkat ini (luring atau diblokir jaringan).";
@@ -669,10 +798,6 @@
     </div>` + (w.slots&&w.slots.length ? `<div class="wx-slots">${w.slots.map(s=>
         `<div class="wx-slot"><div class="n">${s.name}</div><div class="i">${WI[s.icon]||WI.cloud}</div><div class="v">${s.temp}°</div><div class="c">${s.cond}</div></div>`
       ).join("")}</div>` : "");
-
-    $("wxToday").innerHTML = `<thead><tr><th class="l">Waktu</th><th class="l">Kondisi</th><th>Suhu</th></tr></thead><tbody>`
-      + (w.slots||[]).map(s=>`<tr><td><b>${s.name}</b></td><td><span class="ico" style="color:${(WXC[Object.keys(WXC).find(k=>WXC[k].l===s.cond)]||{}).c||"var(--gold)"}">${WI[s.icon]||WI.cloud}</span>${s.cond}</td><td class="mono">${s.temp}°</td></tr>`).join("")
-      + `</tbody>`;
 
     // rekap bulanan
     const known = (w.days||[]).filter(Boolean);

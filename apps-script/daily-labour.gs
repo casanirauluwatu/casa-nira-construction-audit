@@ -10,12 +10,27 @@
  *                Non-date junk in that row (stray 0 values) is ignored.
  *   row 4        repeating [Jumlah Rencana, Jumlah Aktual, Status] under each date.
  *   row 5        "Total" (col C) — includes non-villa categories.
+ *   col B / C    B = block number (only on unit rows), C = unit or trade name.
  *   unit blocks  a row with a NUMBER in col B and a name in col C starts a block
  *                (A1…D1, then Utilities / Infrastruktur / Fabrikasi). The block
  *                row carries the unit's own plan/actual; the rows beneath it,
  *                until the next numbered row, are its trades (STR, ARS Sipil, …).
- *   tabs         one per month ("Juli 2026"). Months can be missing — this scans
- *                every tab's row 3 for the date rather than trusting tab names.
+ *   tabs         one per month ("Juli 2026"). Months can be missing (there is no
+ *                "Juni 2026"), so the month tab is only ever a first guess — if
+ *                it is absent or renamed this falls back to scanning every tab.
+ *
+ * SPEED — a cold read opens the workbook and costs seconds, so:
+ *   1. responses are cached in CacheService for 6h (10 min while a day is still
+ *      empty, so the first entries show up promptly). A hit skips the
+ *      spreadsheet entirely and answers in milliseconds.
+ *   2. the month tab is tried by name first, so the usual request reads one
+ *      tab's header row instead of all of them.
+ *   3. only the first MAX_SCAN_ROWS rows are pulled (blocks end around row 320,
+ *      the sheet runs to ~1200), re-reading wider only if a block starts near
+ *      the bottom of that window.
+ *   4. run installWarmup() once to refresh the cache hourly in the background,
+ *      so visitors effectively never pay the cold cost.
+ * Add ?nocache=1 to bypass the cache (the dashboard's Refresh button does this).
  *
  * DEPLOY
  *   Extensions → Apps Script, paste this file, Save.
@@ -28,107 +43,208 @@
  * ENDPOINTS
  *   /exec                     today (Bali time), or the latest day that has data
  *   /exec?date=2026-07-30     one specific day
+ *   /exec?nocache=1           skip the cache and re-read the sheet
  *   /exec?pretty=1            indented JSON, for eyeballing in a browser
  */
 
-// Leave blank to use the spreadsheet this script is bound to.
+// Leave blank to use the spreadsheet this script is bound to (slightly faster).
 var SHEET_ID = '1i9dq7BTK69Bz-2sUg5isBFyC48a6jgAEDGNSVgEqQFM';
 
-var DATE_ROW = 3;        // row holding the per-day Date cells
-var FIRST_ROW = 5;       // "Total" row; unit blocks start below it
-var ID_COL = 3;          // col C — unit / trade name
-var NO_COL = 2;          // col B — block number (only unit rows have it)
-var TZ = 'Asia/Makassar';// WITA
-var MAX_LOOKBACK = 45;   // days to walk back when today has no data yet
+var DATE_ROW = 3;         // row holding the per-day Date cells
+var FIRST_ROW = 5;        // "Total" row; unit blocks start below it
+var NO_COL = 2;           // col B — block number (only unit rows have it); C follows
+var TZ = 'Asia/Makassar'; // WITA
+var MAX_LOOKBACK = 45;    // days to walk back when today has no data yet
+var MAX_SCAN_ROWS = 420;  // rows pulled per read; blocks end ~320
+var BLOCK_TAIL = 20;      // if a block starts this close to the window end, re-read wider
+var CACHE_SEC = 21600;    // 6h — matches the dashboard's edge cache
+var EMPTY_CACHE_SEC = 600;// 10min while the requested day still has no numbers
+var CACHE_VER = 'v2';     // bump to invalidate every cached entry
+var MONTHS_ID = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
 function doGet(e) {
   var p = (e && e.parameter) || {};
+  var skip = (p.nocache != null) || (p.fresh != null);
   try {
-    return json(build(p.date), p.pretty);
+    var key = cacheKey(p.date);
+    var cache = tryCache();
+    if (cache && !skip) {
+      var hit = cache.get(key);
+      // generatedAt in the payload shows how old a cached answer is.
+      if (hit) return out(hit, p.pretty);
+    }
+    var data = build(p.date);
+    var body = JSON.stringify(data);
+    if (cache) {
+      try { cache.put(key, body, data.hasData ? CACHE_SEC : EMPTY_CACHE_SEC); } catch (ignore) {}
+    }
+    return out(body, p.pretty);
   } catch (err) {
-    return json({ error: String((err && err.message) || err) }, p.pretty);
+    return out(JSON.stringify({ error: String((err && err.message) || err) }), p.pretty);
   }
+}
+
+/** Install once (or run from the editor) to keep the cache warm hourly. */
+function installWarmup() {
+  var existing = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < existing.length; i++) {
+    if (existing[i].getHandlerFunction() === 'warmup') ScriptApp.deleteTrigger(existing[i]);
+  }
+  ScriptApp.newTrigger('warmup').timeBased().everyHours(1).create();
+  return 'warmup trigger installed (hourly)';
+}
+
+/** Refreshes the cached "today" answer in the background. */
+function warmup() {
+  var data = build(null);
+  var cache = tryCache();
+  if (cache) cache.put(cacheKey(null), JSON.stringify(data), data.hasData ? CACHE_SEC : EMPTY_CACHE_SEC);
+  return data.date + ' warmed (' + data.totals.villaWorkers + '/' + data.totals.villaPlan + ')';
 }
 
 function build(dateParam) {
   var ss = SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('spreadsheet not found — set SHEET_ID');
 
-  var days = indexDays(ss);
-  if (!days.length) throw new Error('no date cells found on row ' + DATE_ROW + ' of any tab');
-
-  var want = dateParam ? parseYMD(dateParam) : null;
-  if (dateParam && !want) throw new Error('bad date "' + dateParam + '" — use YYYY-MM-DD');
-
-  var picked, fellBack = false;
-  if (want) {
-    picked = findDay(days, want);
-    if (!picked) {
-      throw new Error('no column for ' + dateParam + ' — sheet covers ' +
-        ymd(days[0]) + ' to ' + ymd(days[days.length - 1]));
+  if (dateParam) {
+    var want = parseYMD(dateParam);
+    if (!want) throw new Error('bad date "' + dateParam + '" — use YYYY-MM-DD');
+    var days = daysFor(ss, want);
+    var day = findDay(days, want);
+    if (!day) {
+      var all = days.full ? days : allDays(ss);
+      day = findDay(all, want);
+      if (!day) {
+        if (!all.length) throw new Error('no date cells found on row ' + DATE_ROW + ' of any tab');
+        throw new Error('no column for ' + dateParam + ' — sheet covers ' +
+          ymd(all[0]) + ' to ' + ymd(all[all.length - 1]));
+      }
     }
-    picked.data = readDay(picked);
-  } else {
-    // Prefer today; before the sheet is filled in, fall back to the most recent
-    // day that actually has numbers rather than reporting a site of zero people.
-    var today = todayYMD();
-    var at = lastIndexNotAfter(days, today);
-    if (at < 0) at = days.length - 1;
-    for (var i = at, n = 0; i >= 0 && n < MAX_LOOKBACK; i--, n++) {
-      var cand = days[i];
-      cand.data = readDay(cand);
-      if (cand.data.hasData) { picked = cand; fellBack = (i !== at); break; }
-      if (!picked) picked = cand;   // keep the first (today) as a last resort
-    }
-    if (!picked.data) picked.data = readDay(picked);
-    fellBack = fellBack || !picked.data.hasData;
+    return payload(ss, day, readDay(day, sameMonth(days, day)), dateParam, false);
   }
 
-  var d = picked.data;
+  // No date given: today, else the most recent day that actually has numbers —
+  // called before the sheet is filled in, reporting an empty site would be wrong.
+  var today = todayYMD();
+  var list = daysFor(ss, today);
+  var got = pickWithData(list, today);
+  if (!got && !list.full) { list = allDays(ss); got = pickWithData(list, today); }
+  if (got) return payload(ss, got.day, got.data, null, got.fellBack);
+
+  // Nothing in range has numbers — answer for today's column (or the last one).
+  if (!list.length) list = allDays(ss);
+  if (!list.length) throw new Error('no date cells found on row ' + DATE_ROW + ' of any tab');
+  var at = lastIndexNotAfter(list, today);
+  if (at < 0) at = list.length - 1;
+  return payload(ss, list[at], readDay(list[at], sameMonth(list, list[at])), null, false);
+}
+
+function payload(ss, day, d, requested, fellBack) {
   return {
     project: 'Casa Nira Uluwatu',
-    date: ymd(picked),
+    date: ymd(day),
     labourSource: 'Daily Mapping Labour on Site',
-    sheet: picked.sheet.getName(),
-    requestedDate: dateParam || null,
-    isToday: sameYMD(picked, todayYMD()),
-    usedLatestWithData: fellBack,
+    sheet: day.sheet.getName(),
+    requestedDate: requested || null,
+    isToday: sameYMD(day, todayYMD()),
+    usedLatestWithData: !!fellBack,
     hasData: d.hasData,
     generatedAt: new Date().toISOString(),
     units: d.units,          // villas: A1…D1
     other: d.other,          // Utilities / Infrastruktur / Fabrikasi
     totals: d.totals,        // villa-only, other-only, and the sheet's own Total row
+    series: d.series || null,// day-by-day manpower for the month, for the chart
+    months: tabNames(ss),    // month tabs available, for the date picker
   };
 }
 
-/** Every (tab, date) pair on row 3, sorted by date. */
-function indexDays(ss) {
+/** The day entries that live on the same tab as `day` (one month's columns). */
+function sameMonth(days, day) {
+  var name = day.sheet.getName(), out = [];
+  for (var i = 0; i < days.length; i++) if (days[i].sheet.getName() === name) out.push(days[i]);
+  out.sort(function (a, b) { return a.col - b.col; });
+  return out.length ? out : [day];
+}
+
+function tabNames(ss) {
   var out = [], sheets = ss.getSheets();
-  for (var s = 0; s < sheets.length; s++) {
-    var sh = sheets[s], lastCol = sh.getLastColumn();
-    if (lastCol < 4 || sh.getLastRow() < FIRST_ROW) continue;
-    var row = sh.getRange(DATE_ROW, 1, 1, lastCol).getValues()[0];
-    for (var c = 0; c < row.length; c++) {
-      var v = row[c];
-      // Only real Date cells — row 3 also holds stray numeric junk past the month.
-      if (v instanceof Date && !isNaN(v.getTime()) && v.getFullYear() > 2000) {
-        out.push({ sheet: sh, col: c + 1, y: v.getFullYear(), m: v.getMonth() + 1, d: v.getDate() });
-      }
-    }
-  }
-  out.sort(function (a, b) { return key(a) - key(b); });
+  for (var i = 0; i < sheets.length; i++) out.push(sheets[i].getName());
   return out;
 }
 
-/** Read one day: [plan, actual, status] at col..col+2 for every block. */
-function readDay(day) {
-  var sh = day.sheet;
-  var lastRow = sh.getLastRow();
-  var n = lastRow - FIRST_ROW + 1;
-  if (n <= 0) return { units: [], other: [], totals: empties(), hasData: false };
+/** Walk back from `today` to the newest day that has numbers. */
+function pickWithData(days, today) {
+  var at = lastIndexNotAfter(days, today);
+  if (at < 0) return null;
+  for (var i = at, n = 0; i >= 0 && n < MAX_LOOKBACK; i--, n++) {
+    var data = readDay(days[i], sameMonth(days, days[i]));
+    if (data.hasData) return { day: days[i], data: data, fellBack: i !== at };
+  }
+  return null;
+}
 
-  var ids = sh.getRange(FIRST_ROW, NO_COL, n, 2).getValues();      // [B, C]
-  var vals = sh.getRange(FIRST_ROW, day.col, n, 3).getValues();     // [plan, actual, status]
+/** Dates on one tab's row 3. */
+function datesOf(sh) {
+  var out = [], lastCol = sh.getLastColumn();
+  if (lastCol < 4) return out;
+  var row = sh.getRange(DATE_ROW, 1, 1, lastCol).getValues()[0];
+  for (var c = 0; c < row.length; c++) {
+    var v = row[c];
+    // Only real Date cells — row 3 also holds stray numeric junk past the month.
+    if (v instanceof Date && !isNaN(v.getTime()) && v.getFullYear() > 2000) {
+      out.push({ sheet: sh, col: c + 1, y: v.getFullYear(), m: v.getMonth() + 1, d: v.getDate() });
+    }
+  }
+  return out;
+}
+
+/** Try the tab named for that month ("Juli 2026") before reading every tab. */
+function daysFor(ss, want) {
+  if (want) {
+    var sh = ss.getSheetByName(MONTHS_ID[want.m - 1] + ' ' + want.y);
+    if (sh) {
+      var ds = datesOf(sh);
+      if (findDay(ds, want)) return ds;   // not .full — caller may escalate
+    }
+  }
+  return allDays(ss);
+}
+
+/** Every (tab, date) pair across the workbook, sorted by date. */
+function allDays(ss) {
+  var out = [], sheets = ss.getSheets();
+  for (var s = 0; s < sheets.length; s++) {
+    var ds = datesOf(sheets[s]);
+    for (var i = 0; i < ds.length; i++) out.push(ds[i]);
+  }
+  out.sort(function (a, b) { return key(a) - key(b); });
+  out.full = true;
+  return out;
+}
+
+/**
+ * Read one day, plus the whole month's day-by-day series for the manpower chart.
+ * Both come out of a single wide getValues covering every day column on the tab —
+ * one read for 31 days beats 31 reads, and the series is then free.
+ */
+function readDay(day, monthDays) {
+  var avail = day.sheet.getLastRow() - FIRST_ROW + 1;
+  if (avail <= 0) return { units: [], other: [], totals: empties(), hasData: false, series: null };
+  var days = monthDays && monthDays.length ? monthDays : [day];
+  var n = Math.min(avail, MAX_SCAN_ROWS);
+  var got = scan(day.sheet, day, days, n);
+  // A block starting near the bottom of the window means there may be more below.
+  if (n < avail && got.lastStart >= n - BLOCK_TAIL) got = scan(day.sheet, day, days, avail);
+  return got.data;
+}
+
+function scan(sh, pick, days, n) {
+  var ids = sh.getRange(FIRST_ROW, NO_COL, n, 2).getValues();          // [B, C]
+  var first = days[0].col;
+  var width = days[days.length - 1].col + 2 - first + 1;
+  var grid = sh.getRange(FIRST_ROW, first, n, width).getValues();      // every day on this tab
+  var at = pick.col - first;                                          // picked day's offset
 
   // Block starts: a number in col B plus a name in col C.
   var starts = [];
@@ -138,38 +254,56 @@ function readDay(day) {
   }
 
   var units = [], other = [], hasData = false;
+  var sDates = [], sTotalP = [], sTotalA = [], sUnits = {};
+  for (var k = 0; k < days.length; k++) { sDates.push(ymd(days[k])); sTotalP.push(0); sTotalA.push(0); }
+
   for (var i = 0; i < starts.length; i++) {
     var st = starts[i];
     var end = (i + 1 < starts.length) ? starts[i + 1].r : n;
-    var plan = num(vals[st.r][0]), workers = num(vals[st.r][1]);
-    var status = String(vals[st.r][2] == null ? '' : vals[st.r][2]).trim();
+    var plan = num(grid[st.r][at]), workers = num(grid[st.r][at + 1]);
+    var status = String(grid[st.r][at + 2] == null ? '' : grid[st.r][at + 2]).trim();
+    var villa = isVilla(st.id);
 
     var comp = [], trades = [];
     for (var r2 = st.r + 1; r2 < end; r2++) {
       var tname = String(ids[r2][1] == null ? '' : ids[r2][1]).trim();
       if (!tname) continue;
-      var tp = num(vals[r2][0]), ta = num(vals[r2][1]);
+      var tp = num(grid[r2][at]), ta = num(grid[r2][at + 1]);
       if (tp === 0 && ta === 0) continue;
       trades.push({ name: tname, plan: tp, workers: ta });
       if (ta > 0) comp.push(tname + ' ' + ta);
     }
     if (workers > 0) hasData = true;
 
+    // Day-by-day head-count for this block, straight off the wide read.
+    var sp = [], sa = [];
+    for (var k2 = 0; k2 < days.length; k2++) {
+      var o = days[k2].col - first;
+      var dp = num(grid[st.r][o]), da = num(grid[st.r][o + 1]);
+      sp.push(dp); sa.push(da);
+      if (villa) { sTotalP[k2] += dp; sTotalA[k2] += da; }
+    }
+
     var row = {
       id: st.id, plan: plan, workers: workers,
       comp: comp.join(' · '), status: status, trades: trades,
     };
-    if (isVilla(st.id)) { row.block = st.id.charAt(0); units.push(row); }
+    if (villa) { row.block = st.id.charAt(0); units.push(row); sUnits[st.id] = { plan: sp, workers: sa }; }
     else other.push(row);
   }
 
   return {
-    units: units, other: other, hasData: hasData,
-    totals: {
-      villaPlan: sum(units, 'plan'), villaWorkers: sum(units, 'workers'),
-      otherPlan: sum(other, 'plan'), otherWorkers: sum(other, 'workers'),
-      // The sheet's own "Total" row (row 5) — villas + Utilities/Infrastruktur/Fabrikasi.
-      sheetPlan: num(vals[0][0]), sheetWorkers: num(vals[0][1]),
+    lastStart: starts.length ? starts[starts.length - 1].r : -1,
+    data: {
+      units: units, other: other, hasData: hasData,
+      totals: {
+        villaPlan: sum(units, 'plan'), villaWorkers: sum(units, 'workers'),
+        otherPlan: sum(other, 'plan'), otherWorkers: sum(other, 'workers'),
+        // The sheet's own "Total" row (row 5) — villas + Utilities/Infrastruktur/Fabrikasi.
+        sheetPlan: num(grid[0][at]), sheetWorkers: num(grid[0][at + 1]),
+      },
+      // 19-villa daily manpower for the month shown on this tab.
+      series: { month: sh.getName(), dates: sDates, total: { plan: sTotalP, workers: sTotalA }, units: sUnits },
     },
   };
 }
@@ -194,10 +328,7 @@ function parseYMD(s) {
   var m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(s).trim());
   return m ? { y: +m[1], m: +m[2], d: +m[3] } : null;
 }
-function todayYMD() {
-  var s = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
-  return parseYMD(s);
-}
+function todayYMD() { return parseYMD(Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd')); }
 function findDay(days, want) {
   for (var i = 0; i < days.length; i++) if (sameYMD(days[i], want)) return days[i];
   return null;
@@ -207,7 +338,14 @@ function lastIndexNotAfter(days, want) {
   for (var i = 0; i < days.length; i++) if (key(days[i]) <= k) at = i;
   return at;
 }
-function json(obj, pretty) {
-  var body = pretty ? JSON.stringify(obj, null, 2) : JSON.stringify(obj);
-  return ContentService.createTextOutput(body).setMimeType(ContentService.MimeType.JSON);
+function cacheKey(dateParam) {
+  return 'daily:' + CACHE_VER + (dateParam ? ':d:' + dateParam : ':today:' + ymd(todayYMD()));
+}
+function tryCache() {
+  try { return CacheService.getScriptCache(); } catch (ignore) { return null; }
+}
+function out(body, pretty) {
+  var text = body;
+  if (pretty) { try { text = JSON.stringify(JSON.parse(body), null, 2); } catch (ignore) {} }
+  return ContentService.createTextOutput(text).setMimeType(ContentService.MimeType.JSON);
 }

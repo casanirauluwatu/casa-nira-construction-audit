@@ -1,13 +1,24 @@
 import { getDaily } from "../../daily-core.mjs";
 
 // Vercel serverless function for the Laporan Harian tab: the day's labour
-// snapshot per villa. Cached at the edge like the audit — labour changes once a
-// day at most. `?fresh=1` (the page's Refresh button) bypasses the cache.
-export const maxDuration = 15;
+// snapshot per villa, plus the month's day-by-day series for the manpower chart.
+// Cached at the edge like the audit — labour changes once a day at most, and each
+// requested date caches separately. `?fresh=1` (the page's Refresh button)
+// bypasses this cache and the Apps Script's own.
+export const maxDuration = 30;
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default async function handler(req, res) {
-  const fresh = req.query && req.query.fresh != null;
-  const data = await getDaily();
+  const q = req.query || {};
+  const fresh = q.fresh != null;
+  const date = typeof q.date === "string" && DATE_RE.test(q.date) ? q.date : null;
+  if (q.date && !date) {
+    res.setHeader("cache-control", "no-store");
+    res.status(400).json({ error: "bad date — use YYYY-MM-DD" });
+    return;
+  }
+  const data = await getDaily({ date, fresh });
   res.setHeader(
     "cache-control",
     fresh ? "no-store" : "public, max-age=300, s-maxage=21600, stale-while-revalidate=86400"
