@@ -7,6 +7,11 @@ import { getDaily } from "../../daily-core.mjs";
 // bypasses this cache and the Apps Script's own.
 export const maxDuration = 30;
 
+// Stamped into every response. Vercel can serve current static files alongside a
+// stale function bundle, which looks like the page ignoring the date picker —
+// this says which function build is actually answering.
+const API_VERSION = "v2-date-month";
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_RE = /^\d{4}-\d{2}$/;
 
@@ -25,5 +30,5 @@ export default async function handler(req, res) {
     "cache-control",
     fresh ? "no-store" : "public, max-age=300, s-maxage=21600, stale-while-revalidate=86400"
   );
-  res.status(200).json(data);
+  res.status(200).json({ ...data, apiVersion: API_VERSION });
 }

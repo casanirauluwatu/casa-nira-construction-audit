@@ -155,3 +155,4 @@ icon) if you'd rather not.
 | `hasData: false` | The day's `Jumlah Aktual` column is genuinely empty. |
 | Re-deployed but `series` / `months` still missing | The `/exec` URL is on an old version — see [Re-deploying after an edit](#re-deploying-after-an-edit). Check `scriptVersion` in the response. |
 | Only one month in the dropdown, no chart | Same cause: an older script sends no `months` / `series`. Typing a date still works. |
+| Months listed but selecting one does nothing | The **Vercel function** is stale, not the script — it drops `?date=`/`?month=`. Check `apiVersion` in `/api/daily/report`; it should read `v2-date-month`. Redeploy on Vercel with **Use existing Build Cache** unchecked. |
