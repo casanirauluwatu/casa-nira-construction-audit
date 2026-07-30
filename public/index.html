@@ -39,8 +39,10 @@
   thead th.l{text-align:left;}
   tbody td{padding:11px 12px;text-align:right;border-bottom:1px solid #f0eadd;white-space:nowrap;}
   tbody tr:last-child td{border-bottom:none;}td.u{text-align:left;font-weight:600;}
-  .mono{font-family:ui-monospace,Menlo,monospace;}.dim{color:var(--muted);}.pos{color:var(--green);}.neg{color:var(--red);}
+  .mono{font-family:ui-monospace,Menlo,monospace;}.dim{color:var(--muted);}.pos{color:var(--green);}.neg{color:var(--red);}.zero{color:#c07a1e;font-weight:600;}
   .req-ok{color:var(--green);}.req-risk{color:var(--red);font-weight:600;}.sub{font:600 10.5px ui-monospace,Menlo,monospace;color:var(--muted);}
+  .uflag{background:#ffe4a1;color:#8a5300;border-radius:5px;padding:2px 7px;font-weight:700;box-shadow:inset 0 0 0 1px #e8b95a;}
+  .due-sub{display:block;font:600 10px ui-monospace,Menlo,monospace;color:#c07a1e;margin-top:4px;letter-spacing:.02em;}
   .badge{display:inline-block;padding:3px 9px;border-radius:999px;font:600 11px/1.4 -apple-system,sans-serif;white-space:nowrap;}
   .badge.on-track,.badge.complete{background:#e7f1e9;color:var(--green);}.badge.behind{background:#f7e8e1;color:var(--red);}.badge.stale{background:#f6ecd6;color:var(--amber);}.badge.unreachable{background:#eee;color:#777;}
   tr.row-stale{background:#fdf7ea;}tr.row-down{background:#faf3f0;}.down-note{text-align:left;color:var(--red);font-family:ui-monospace,Menlo,monospace;font-size:12.5px;}
@@ -105,7 +107,15 @@
 <script>
   const $ = (id) => document.getElementById(id);
   const sgn = (v) => (v == null ? "—" : (v >= 0 ? "+" : "") + v.toFixed(1) + "%");
+  // Delta color: no progress (rounds to +0.0%) = orange, gain = green, loss = red.
+  const dCls = (v) => (v == null ? "dim" : Math.abs(v) < 0.05 ? "zero" : v > 0 ? "pos" : "neg");
   let CHART_OK = [], CHART_SEL = new URLSearchParams(location.search).get("unit") || "ALL", CHART_NOW = new Date();
+
+  // Confirmed / committed delivery dates supplied by ops — the real deadlines,
+  // separate from the feed's extrapolated target. Flagged in orange everywhere.
+  const COMMITTED = { A1:"1-Nov-26", A2:"30-Sep-26", B1:"31-Aug-26", C1:"31-Aug-26", C3:"15-Sep-26", C5:"30-Sep-26", C7:"16-Sep-26" };
+  const commitOf = (u) => COMMITTED[u] || null;
+  const uName = (u) => commitOf(u) ? `<span class="uflag">${u}</span>` : u;
 
   const MON3 = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const MONI = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 };
@@ -130,18 +140,19 @@
     const okD = rows.filter(r=>r.ok&&r.d0!=null);
     const avgD = okD.length ? okD.reduce((s,r)=>s+r.d0,0)/okD.length : 0;
     let onTrack=0; for(const r of rows){const st=statusOf(r,staleDays);if(st==="on-track"||st==="complete")onTrack++;}
-    $("cards").innerHTML = card(overall.toFixed(1)+"%","Overall complete","")+card(sgn(avgD),"Avg Δ this week",avgD>=0?"pos":"neg")+card(rows.length,"Feeds","")+card(onTrack,"On track","pos");
+    $("cards").innerHTML = card(overall.toFixed(1)+"%","Overall complete","")+card(sgn(avgD),"Avg Δ this week",dCls(avgD))+card(rows.length,"Feeds","")+card(onTrack,"On track","pos");
 
-    const dcell = (v)=> v==null ? '<td class="mono dim">—</td>' : `<td class="mono ${v>=0?"pos":"neg"}">${sgn(v)}</td>`;
+    const dcell = (v)=> v==null ? '<td class="mono dim">—</td>' : `<td class="mono ${dCls(v)}">${sgn(v)}</td>`;
+    const uCell = (u)=>{const c=commitOf(u);return `<td class="u">${uName(u)}${c?`<span class="due-sub">due ${c}</span>`:""}</td>`;};
     $("body").innerHTML = rows.map(r=>{
       const st = statusOf(r,staleDays);
-      if(!r.ok) return `<tr class="row-down"><td class="u">${r.unit}</td><td colspan="13" class="down-note">feed unreachable</td><td><span class="badge unreachable">Unreachable</span></td></tr>`;
+      if(!r.ok) return `<tr class="row-down">${uCell(r.unit)}<td colspan="13" class="down-note">feed unreachable</td><td><span class="badge unreachable">Unreachable</span></td></tr>`;
       const reqTxt = r.reqPace==null?"past due":r.reqPace.toFixed(1);
       const reqCls = r.reqPace==null?"req-risk":(r.d0!=null&&r.reqPace>r.d0?"req-risk":"req-ok");
-      const gapCls = r.paceGap==null?"dim":r.paceGap>=0?"pos":"neg";
+      const gapCls = dCls(r.paceGap);
       const tw=r.targetInWeeks, tSub=tw==null?"":tw<0?`${-tw}w overdue`:`+${tw}w`;
       const pMain=r.projDate==null?"—":r.projDate, pSub=r.projInWeeks==null?"":`+${r.projInWeeks}w`;
-      return `<tr class="row-${st}"><td class="u">${r.unit}</td><td class="mono dim">${r.week}</td><td class="mono">${r.lastReported}</td><td class="mono">${r.actual==null?"—":r.actual.toFixed(1)}</td><td class="mono dim">${r.planned.toFixed(1)}</td><td class="mono ${r.deviation<0?"neg":"pos"}">${sgn(r.deviation)}</td>${dcell(r.d0)}${dcell(r.d1)}${dcell(r.d2)}<td class="mono ${r.avg3==null?"dim":r.avg3>=0?"pos":"neg"}">${sgn(r.avg3)}</td><td class="mono ${reqCls}">${reqTxt}</td><td class="mono ${gapCls}">${sgn(r.paceGap)}</td><td>${r.target}${tSub?` <span class="sub">${tSub}</span>`:""}</td><td>${pMain}${pSub?` <span class="sub">${pSub}</span>`:""}</td><td><span class="badge ${st}">${BADGE[st]}</span></td></tr>`;
+      return `<tr class="row-${st}">${uCell(r.unit)}<td class="mono dim">${r.week}</td><td class="mono">${r.lastReported}</td><td class="mono">${r.actual==null?"—":r.actual.toFixed(1)}</td><td class="mono dim">${r.planned.toFixed(1)}</td><td class="mono ${r.deviation<0?"neg":"pos"}">${sgn(r.deviation)}</td>${dcell(r.d0)}${dcell(r.d1)}${dcell(r.d2)}<td class="mono ${dCls(r.avg3)}">${sgn(r.avg3)}</td><td class="mono ${reqCls}">${reqTxt}</td><td class="mono ${gapCls}">${sgn(r.paceGap)}</td><td>${r.target}${tSub?` <span class="sub">${tSub}</span>`:""}</td><td>${pMain}${pSub?` <span class="sub">${pSub}</span>`:""}</td><td><span class="badge ${st}">${BADGE[st]}</span></td></tr>`;
     }).join("");
 
     const when = new Date(data.generatedAt);
@@ -152,7 +163,7 @@
   function buildChart(rows){
     CHART_OK = rows.filter(r=>r.ok && Array.isArray(r.series) && r.series.length);
     const sel = $("unitSel");
-    sel.innerHTML = '<option value="ALL">All units · delivery timeline</option>' + CHART_OK.map(r=>`<option value="${r.unit}">${r.unit} · S-curve</option>`).join("");
+    sel.innerHTML = '<option value="ALL">All units · delivery timeline</option>' + CHART_OK.map(r=>`<option value="${r.unit}">${r.unit} · S-curve${commitOf(r.unit)?` · due ${commitOf(r.unit)}`:""}</option>`).join("");
     if(!(CHART_SEL==="ALL"||CHART_OK.some(r=>r.unit===CHART_SEL))) CHART_SEL="ALL";
     sel.value = CHART_SEL;
     drawChart(CHART_SEL);
@@ -162,13 +173,13 @@
   function drawSCurve(which){
     const svg=$("chart"); svg.setAttribute("viewBox","0 0 960 380");
     const r=CHART_OK.find(x=>x.unit===which);
-    $("chartTitle").textContent = `S-curve · ${which} · planned vs actual`;
+    $("chartTitle").innerHTML = `S-curve · ${uName(which)} · planned vs actual`;
     if(!r){svg.innerHTML="";return;}
     const W=960,H=380,PL=42,PR=16,PT=20,PB=44,iw=W-PL-PR,ih=H-PT-PB;
     const pts=r.series.map(w=>({t:pW(w.d),p:w.p,a:w.a})).filter(x=>x.t);
     if(!pts.length){svg.innerHTML=`<text x="16" y="30" font-size="12" fill="#8f887c">No dated schedule for ${which}.</text>`;$("chartLegend").innerHTML="";$("chartHint").textContent="";return;}
-    const target=pW(r.target), proj=projDate(r), now=CHART_NOW;
-    const t0=pts[0].t; let t1=pts[pts.length-1].t; [target,proj,now].forEach(d=>{if(d&&d>t1)t1=d;});
+    const target=pW(r.target), proj=projDate(r), now=CHART_NOW, committed=pW(commitOf(which));
+    const t0=pts[0].t; let t1=pts[pts.length-1].t; [target,proj,now,committed].forEach(d=>{if(d&&d>t1)t1=d;});
     t1=new Date(t1.getTime()+10*864e5); const span=(t1-t0)||1;
     const xF=d=>PL+((d-t0)/span)*iw, yF=v=>PT+(1-Math.max(0,Math.min(100,v))/100)*ih;
     let s="";
@@ -181,9 +192,10 @@
     if(proj&&upto.length){const last=upto[upto.length-1];s+=`<line x1="${xF(last.t).toFixed(1)}" y1="${yF(last.a).toFixed(1)}" x2="${xF(proj).toFixed(1)}" y2="${yF(100).toFixed(1)}" stroke="#6f7043" stroke-width="1.4" stroke-dasharray="2 3" opacity="0.7"/><circle cx="${xF(proj).toFixed(1)}" cy="${yF(100).toFixed(1)}" r="4" fill="var(--bg)" stroke="#6f7043" stroke-width="2"/>`;}
     if(target){const x=xF(target);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#a9822f" stroke-width="1.2" stroke-dasharray="4 3"/>`+diamond(x,yF(100),5,"#a9822f")+`<text x="${x.toFixed(1)}" y="${PT-6}" text-anchor="middle" font-size="9" fill="#a9822f" font-weight="600" ${MONO}>TARGET</text>`;}
     if(now){const x=xF(now);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#b4472e" stroke-width="1" stroke-dasharray="2 2" opacity="0.7"/><text x="${x.toFixed(1)}" y="${PT-6}" text-anchor="middle" font-size="9" fill="#b4472e" ${MONO}>today</text>`;}
+    if(committed){const x=xF(committed);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#d9791a" stroke-width="2"/><path d="M ${(x-4).toFixed(1)} ${PT} L ${(x+4).toFixed(1)} ${PT} L ${x.toFixed(1)} ${(PT+6).toFixed(1)} Z" fill="#d9791a"/><text x="${x.toFixed(1)}" y="${PT-6}" text-anchor="middle" font-size="9.5" fill="#d9791a" font-weight="700" ${MONO}>DUE ${committed.getUTCDate()} ${MON3[committed.getUTCMonth()]}</text>`;}
     if(upto.length){const last=upto[upto.length-1];const lx=xF(last.t),ly=yF(last.a);s+=`<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.6" fill="#6f7043"/><text x="${(lx-7).toFixed(1)}" y="${(ly-7).toFixed(1)}" text-anchor="end" font-size="11.5" font-weight="600" fill="#6f7043" ${MONO}>${last.a.toFixed(1)}%</text>`;}
     svg.innerHTML=s;
-    $("chartLegend").innerHTML = `<span class="lg"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#a9822f" stroke-width="2" stroke-dasharray="5 4"/></svg> Planned</span><span class="lg"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#6f7043" stroke-width="2.6"/></svg> Actual</span><span class="lg" style="color:#a9822f">◆ target</span><span class="lg" style="color:#6f7043">◇ projected</span><span class="lg" style="color:#b4472e">| today</span>`;
+    $("chartLegend").innerHTML = `<span class="lg"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#a9822f" stroke-width="2" stroke-dasharray="5 4"/></svg> Planned</span><span class="lg"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#6f7043" stroke-width="2.6"/></svg> Actual</span><span class="lg" style="color:#a9822f">◆ target</span><span class="lg" style="color:#6f7043">◇ projected</span><span class="lg" style="color:#b4472e">| today</span>${committed?`<span class="lg" style="color:#d9791a">▮ due (committed)</span>`:""}`;
     const slip = (target&&proj)? Math.round((proj-target)/(7*864e5)) : null;
     $("chartHint").innerHTML = `Actual ${r.actual.toFixed(1)}% vs planned ${r.planned.toFixed(1)}%. Target ${r.target}${r.projDate&&r.projDate!=="done"?`, projected ${r.projDate}`:""}${slip!=null?` — <strong style="color:${slip>2?'#b4472e':'#3f7d4f'}">${slip<=0?Math.abs(slip)+" wk ahead of target":slip+" wk behind target"}</strong>`:""}.`;
   }
@@ -196,7 +208,7 @@
     const W=960,PL=54,PR=56,PT=42,PB=14,rowH=26,H=PT+ok.length*rowH+PB;
     svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
     const now=CHART_NOW, ds=[now];
-    ok.forEach(r=>{const t=pW(r.target);if(t)ds.push(t);const p=projDate(r);if(p)ds.push(p);});
+    ok.forEach(r=>{const t=pW(r.target);if(t)ds.push(t);const p=projDate(r);if(p)ds.push(p);const c=pW(commitOf(r.unit));if(c)ds.push(c);});
     let t0=new Date(Math.min(...ds.map(d=>d.getTime()))), t1=new Date(Math.max(...ds.map(d=>d.getTime())));
     t0=new Date(Date.UTC(t0.getUTCFullYear(),t0.getUTCMonth(),1)); t1=new Date(Date.UTC(t1.getUTCFullYear(),t1.getUTCMonth()+1,1));
     const iw=W-PL-PR, span=(t1-t0)||1, xF=d=>PL+((d-t0)/span)*iw;
@@ -209,18 +221,21 @@
       const t=pW(r.target), p=projDate(r), done=(r.projDate==="done"||r.actual>=100);
       const late = t&&p ? p.getTime()>t.getTime() : false;
       const col = done?"#3f7d4f":late?"#b4472e":"#3f7d4f";
+      const cm=pW(commitOf(r.unit));
       s+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="#f2ecdf"/>`;
-      s+=`<text x="8" y="${(y+3).toFixed(1)}" font-size="11" font-weight="600" fill="#2b2620" ${MONO}>${r.unit}</text>`;
+      if(cm)s+=`<rect x="3" y="${(y-9).toFixed(1)}" width="32" height="18" rx="4" fill="#ffe4a1"/><text x="8" y="${(y+3).toFixed(1)}" font-size="11" font-weight="700" fill="#8a5300" ${MONO}>${r.unit}</text>`;
+      else s+=`<text x="8" y="${(y+3).toFixed(1)}" font-size="11" font-weight="600" fill="#2b2620" ${MONO}>${r.unit}</text>`;
       if(t&&p){const a=Math.min(xF(t),xF(p)),b=Math.max(xF(t),xF(p));s+=`<line x1="${a.toFixed(1)}" y1="${y.toFixed(1)}" x2="${b.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${col}" stroke-width="2.4" opacity="0.4"/>`;}
       if(t)s+=diamond(xF(t),y,4.5,"var(--card)","#a9822f");
       if(p)s+=`<circle cx="${xF(p).toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${col}"/>`;
       else if(done)s+=`<circle cx="${xF(t||now).toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="#3f7d4f"/>`;
+      if(cm){const cx=xF(cm);s+=`<line x1="${cx.toFixed(1)}" y1="${(y-8).toFixed(1)}" x2="${cx.toFixed(1)}" y2="${(y+8).toFixed(1)}" stroke="#d9791a" stroke-width="2.6"/>`;}
       s+=`<text x="${W-8}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="10.5" font-weight="600" fill="#6f7043" ${MONO}>${Math.round(r.actual)}%</text>`;
-      rects+=`<rect x="0" y="${(PT+i*rowH).toFixed(1)}" width="${W}" height="${rowH}" fill="transparent" style="cursor:pointer" data-u="${r.unit}"><title>${r.unit}: target ${r.target}${p?", projected "+r.projDate:""}</title></rect>`;
+      rects+=`<rect x="0" y="${(PT+i*rowH).toFixed(1)}" width="${W}" height="${rowH}" fill="transparent" style="cursor:pointer" data-u="${r.unit}"><title>${r.unit}: target ${r.target}${p?", projected "+r.projDate:""}${commitOf(r.unit)?", due "+commitOf(r.unit):""}</title></rect>`;
     });
     svg.innerHTML = s + rects;
     svg.querySelectorAll("[data-u]").forEach(el=>el.addEventListener("click",()=>{$("unitSel").value=el.dataset.u;drawChart(el.dataset.u);}));
-    $("chartLegend").innerHTML = `<span class="lg" style="color:#a9822f">◇ target date</span><span class="lg" style="color:#3f7d4f">● projected · on time</span><span class="lg" style="color:#b4472e">● projected · late</span><span class="lg" style="color:#b4472e">| today</span>`;
+    $("chartLegend").innerHTML = `<span class="lg" style="color:#a9822f">◇ target date</span><span class="lg" style="color:#3f7d4f">● projected · on time</span><span class="lg" style="color:#b4472e">● projected · late</span><span class="lg" style="color:#b4472e">| today</span><span class="lg" style="color:#d9791a">▮ due (committed)</span>`;
     const late=ok.filter(r=>{const t=pW(r.target),p=projDate(r);return t&&p&&p>t;}).length;
     $("chartHint").innerHTML = `Rows sorted by target date. <strong>${late}</strong> of ${ok.length} units project past their target. Click a row to open its S-curve.`;
   }
