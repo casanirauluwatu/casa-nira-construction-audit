@@ -47,7 +47,7 @@ function photosFor(dateParam) {
   var dayName = pad(want.d) + ' ' + pad(want.m) + ' ' + want.y;    // "30 07 2026"
 
   // 1. unit folders under Rekap
-  var units = listChildren_("'" + REKAP_FOLDER_ID + "' as parent", { folders: true });
+  var units = listChildren_("'" + REKAP_FOLDER_ID + "' in parents", { folders: true });
   if (!units.length) return { date: ymd(want), photos: {}, folders: {}, note: 'Rekap folder is empty' };
   var unitById = {};
   units.forEach(function (f) { unitById[f.id] = f.name; });
