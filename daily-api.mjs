@@ -22,9 +22,11 @@ export default async function handleDaily(req, res) {
     return;
   }
   const data = await getDaily({ date, month, fresh });
-  res.setHeader(
-    "cache-control",
-    fresh ? "no-store" : "public, max-age=300, s-maxage=21600, stale-while-revalidate=86400"
-  );
+  // Only cache a real answer. A snapshot fallback cached for 6h would pin the
+  // wrong data at the edge long after the feed recovered.
+  const cache = fresh ? "no-store"
+    : data.live ? "public, max-age=300, s-maxage=21600, stale-while-revalidate=86400"
+    : "public, max-age=0, s-maxage=60";
+  res.setHeader("cache-control", cache);
   res.status(200).json({ ...data, apiVersion: API_VERSION });
 }

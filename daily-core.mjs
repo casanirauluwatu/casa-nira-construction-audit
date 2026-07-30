@@ -10,7 +10,8 @@
 // Shared by the Node server and the Vercel function. Node 18+, zero deps.
 import { DAILY } from "./daily-data.mjs";
 
-const TIMEOUT_MS = 15000;
+const TIMEOUT_MS = 20000;   // Apps Script cold reads run ~7s; the function allows 30s
+const TRIES = 2;            // one retry: a warm serverless instance can abort spuriously
 const META = new Map(DAILY.units.map((u) => [u.id, u]));
 const isVilla = (id) => /^[A-D]\d+$/.test(String(id || ""));
 
@@ -51,6 +52,27 @@ function offline(note, date) {
   return out;
 }
 
+// One fetch with an explicit controller. AbortSignal.timeout() has been seen
+// firing almost immediately on a reused serverless instance, which surfaced as a
+// "timeout" 0.5s into a call the feed answers in ~7s — an explicit timer plus a
+// retry rides that out.
+async function fetchFeed(url, ms) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), ms);
+  const started = Date.now();
+  try {
+    return { res: await fetch(url, { signal: ctl.signal }) };
+  } catch (err) {
+    const aborted = err.name === "AbortError" || err.name === "TimeoutError";
+    const elapsed = Date.now() - started;
+    // Distinguish a real timeout from an abort that fired far too early.
+    const why = aborted ? (elapsed < ms * 0.5 ? `aborted after ${elapsed}ms` : "timeout") : err.message || "fetch failed";
+    return { why };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function getDaily({ date = null, month = null, fresh = false } = {}) {
   const feed = process.env.DAILY_FEED;
   if (!feed) return offline(null, date || month);
@@ -58,18 +80,23 @@ export async function getDaily({ date = null, month = null, fresh = false } = {}
   if (date) url.searchParams.set("date", date);
   else if (month) url.searchParams.set("month", month);
   if (fresh) url.searchParams.set("nocache", "1");
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
-    if (!res.ok) return offline(`feed HTTP ${res.status}`, date || month);
-    const data = await res.json();
-    // The Apps Script reports its own failures as {error}, with HTTP 200.
-    if (data && data.error) return offline(`feed: ${data.error}`, date || month);
-    if (!Array.isArray(data?.units) || !data.units.some((u) => isVilla(u.id))) {
-      return offline("feed returned no villa rows", date || month);
+
+  let last = "fetch failed";
+  for (let i = 1; i <= TRIES; i++) {
+    const { res, why } = await fetchFeed(url, TIMEOUT_MS);
+    if (why) { last = why; continue; }
+    if (!res.ok) { last = `HTTP ${res.status}`; if (res.status < 500) break; continue; }
+    try {
+      const data = await res.json();
+      // The Apps Script reports its own failures as {error}, with HTTP 200.
+      if (data && data.error) return offline(`feed: ${data.error}`, date || month);
+      if (!Array.isArray(data?.units) || !data.units.some((u) => isVilla(u.id))) {
+        return offline("feed returned no villa rows", date || month);
+      }
+      return fromFeed(data);
+    } catch (err) {
+      last = `bad JSON (${err.message})`;
     }
-    return fromFeed(data);
-  } catch (err) {
-    const why = err.name === "TimeoutError" ? "timeout" : err.message || "fetch failed";
-    return offline(`feed ${why}`, date || month);
   }
+  return offline(`feed ${last}`, date || month);
 }
