@@ -251,6 +251,7 @@
     </div>
     <div class="note" id="dnote">Memuat laporan harian…</div>
     <div class="cards" id="dcards"></div>
+    <p class="src" id="dRecon"></p>
 
     <div class="sec"><h2>Manpower Harian</h2><div class="rule"></div><span class="hint" id="mpHint"></span></div>
     <div class="chart-card">
@@ -538,6 +539,9 @@
     if(d.unavailableDate){
       $("dnote").className="note err";
       $("dnote").innerHTML = `Tanggal <strong>${esc(d.requestedDate)}</strong> tidak tersedia tanpa feed harian — menampilkan snapshot <strong>${fmtID(rd)}</strong>.`;
+    }else if(d.date > dstr(new Date())){
+      $("dnote").className="note err";
+      $("dnote").innerHTML = `<strong>${fmtID(rd)}</strong> belum terjadi — angka “aktual” pada tanggal ini tidak dapat berupa hasil pencatatan. Periksa isian pada tab ${esc(d.sheet||"")} di spreadsheet.`;
     }else{
       $("dnote").className="note";
       $("dnote").innerHTML = d.live
@@ -549,7 +553,7 @@
     }
 
     $("dcards").innerHTML =
-      card(`${totalW}<span style="font-size:16px;color:var(--muted)"> / ${totalP}</span>`, "Pekerja · rencana", "") +
+      card(`${totalW}<span style="font-size:16px;color:var(--muted)"> / ${totalP}</span>`, "Pekerja villa · rencana", "") +
       card(`<span style="color:${band(totalP?hadir:null).c}">${hadir}%</span>`, "Kehadiran vs rencana", "") +
       card(`${aktif.length}<span style="font-size:16px;color:var(--muted)"> / ${units.length}</span>`, "Unit aktif", "") +
       card(kosong.length, "Unit tanpa pekerja", kosong.length?"neg":"pos");
@@ -600,6 +604,13 @@
       + ((d.other||[]).some(o=>(o.plan||0)||(o.workers||0))
           ? `<li><span class="k">Total lapangan</span><span class="v">${totalW+(d.other||[]).reduce((s,o)=>s+(o.workers||0),0)}/${totalP+(d.other||[]).reduce((s,o)=>s+(o.plan||0),0)} · <b style="color:var(--ink)">semua kategori</b></span></li>`
           : "");
+
+    // The spreadsheet's own Total row counts Utilities/Infrastruktur/Fabrikasi as
+    // well, so state the reconciliation rather than let 112 look like it disagrees.
+    const oW=(d.other||[]).reduce((a,o)=>a+(o.workers||0),0), oP=(d.other||[]).reduce((a,o)=>a+(o.plan||0),0);
+    $("dRecon").innerHTML = oW||oP
+      ? `19 villa <strong>${totalW}/${totalP}</strong> · ${(d.other||[]).filter(o=>o.plan||o.workers).map(o=>esc(o.id).toLowerCase()).join(" &amp; ")} <strong>${oW}/${oP}</strong> · total lapangan <strong>${totalW+oW}/${totalP+oP}</strong> — sesuai baris “Total” di spreadsheet.`
+      : `19 villa ${totalW}/${totalP}.`;
 
     paintPhotos(d);
     syncDateBar(d);
@@ -708,6 +719,11 @@
     const plan = one ? one.plan : sr.total.plan;
     const act  = one ? one.workers : sr.total.workers;
     const dates = sr.dates;
+    // A day after today cannot have a recorded actual — plot plan only past that
+    // point instead of presenting placeholder numbers as measurements.
+    const todayISO = dstr(new Date());
+    const future = dates.map(x => x > todayISO);
+    const lastReal = (()=>{ for(let i=dates.length-1;i>=0;i--) if(!future[i]) return i; return -1; })();
     $("mpTitle").textContent = `Jumlah pekerja per hari · ${MP_SEL==="ALL"?"semua unit":MP_SEL} · ${sr.month||""}`;
 
     const W=960,H=250,PL=38,PR=14,PT=16,PB=34,iw=W-PL-PR,ih=H-PT-PB;
@@ -728,14 +744,21 @@
     const line=(arr)=>arr.map((v,i)=>[xF(i),yF(v)]);
     let s2=g;
     // filled area under actual
-    const pts=line(act);
-    s2+=`<polygon points="${pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ")} ${xF(n-1).toFixed(1)},${yF(0).toFixed(1)} ${xF(0).toFixed(1)},${yF(0).toFixed(1)}" fill="#6f7043" opacity="0.10"/>`;
+    const pts=line(act).slice(0, lastReal+1);
+    if(lastReal>=0)
+      s2+=`<polygon points="${pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ")} ${xF(lastReal).toFixed(1)},${yF(0).toFixed(1)} ${xF(0).toFixed(1)},${yF(0).toFixed(1)}" fill="#6f7043" opacity="0.10"/>`;
+    if(lastReal<n-1){
+      const x0=xF(lastReal+1)-iw/n/2;
+      s2+=`<rect x="${x0.toFixed(1)}" y="${PT}" width="${(W-PR-x0).toFixed(1)}" height="${ih}" fill="#8f887c" opacity="0.09"/>`
+        + `<text x="${(x0+6).toFixed(1)}" y="${(PT+12).toFixed(1)}" font-size="9" fill="#8f887c" ${MONO}>belum terjadi</text>`;
+    }
     s2+=poly(line(plan),"#a9822f","5 4",2);
     s2+=poly(pts,"#6f7043",null,2.4);
     // Points carry the attendance colour code; labels sit above each one.
     const pctAt=i=>plan[i]?act[i]/plan[i]*100:null;
     const at0=dates.indexOf(d.date);
     for(let i=0;i<n;i++){
+      if(future[i]) continue;
       s2+=`<circle cx="${xF(i).toFixed(1)}" cy="${yF(act[i]).toFixed(1)}" r="2.8" fill="${band(pctAt(i)).c}"/>`;
       if(i!==at0 && act[i]>0)
         s2+=`<text x="${xF(i).toFixed(1)}" y="${(yF(act[i])-8).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="600" fill="${band(pctAt(i)).c}" ${MONO}>${act[i]}</text>`;
@@ -747,7 +770,7 @@
     }
     // marker on the day being reported
     const at=dates.indexOf(d.date);
-    if(at>=0){
+    if(at>=0 && !future[at]){
       const x=xF(at);
       s2+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#b4472e" stroke-width="1.4" stroke-dasharray="3 2"/>`
         + `<circle cx="${x.toFixed(1)}" cy="${yF(act[at]).toFixed(1)}" r="4.2" fill="#b4472e"/>`
@@ -759,15 +782,17 @@
     svg.innerHTML=s2+hits;
     if(d.live) svg.querySelectorAll("[data-d]").forEach(el=>el.addEventListener("click",()=>loadDaily(false,el.dataset.d)));
 
-    const worked=act.filter(v=>v>0), avg=worked.length?worked.reduce((a,b)=>a+b,0)/worked.length:0;
-    const peak=Math.max(...act), peakAt=dates[act.indexOf(peak)];
+    const real=act.filter((v,i)=>!future[i]);
+    const worked=real.filter(v=>v>0), avg=worked.length?worked.reduce((a,b)=>a+b,0)/worked.length:0;
+    const peak=real.length?Math.max(...real):0, peakAt=dates[act.indexOf(peak)];
     $("mpLegend").innerHTML = `<span class="lg"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#a9822f" stroke-width="2" stroke-dasharray="5 4"/></svg> Rencana</span>`
       + `<span class="lg"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#6f7043" stroke-width="2.4"/></svg> Aktual</span>`
       + `<span class="lg" style="color:#b4472e">| tanggal laporan</span>`
       + `<span class="lg" style="color:var(--muted)">▮ Minggu</span>`
       + `<span class="lg" style="color:var(--line);user-select:none">│</span>` + bandLegend();
     $("mpHint").textContent = `${sr.month||""} · ${MP_SEL==="ALL"?"19 villa":MP_SEL}`;
-    $("mpFoot").innerHTML = `Rata-rata <strong>${avg.toFixed(1)}</strong> pekerja pada ${worked.length} hari kerja · puncak <strong>${peak}</strong> (${peakAt||"—"}) · ${n-worked.length} hari tanpa pekerja.`
+    $("mpFoot").innerHTML = `Rata-rata <strong>${avg.toFixed(1)}</strong> pekerja pada ${worked.length} hari kerja · puncak <strong>${peak}</strong> (${peakAt||"—"}) · ${real.length-worked.length} hari tanpa pekerja.`
+      + (lastReal<n-1?` ${n-1-lastReal} hari setelah hari ini dikecualikan.`:"")
       + (d.live?` Klik salah satu hari untuk membuka laporannya.`:"");
   }
 
