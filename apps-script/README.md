@@ -47,11 +47,18 @@ Also make sure the project holds only **one** copy of this script — a leftover
 
 ## Site photos
 
-Photo support lives in the same `daily-labour.gs` — **one file, one paste**.
-Nothing to enable in the editor: `driveList_()` uses the advanced Drive service
-when it happens to be on, and otherwise calls the Drive REST API with the
-script's own OAuth token. `forceDriveScope_()` is never executed; it exists so
-Apps Script's static scan puts Drive on the authorisation prompt.
+Photo support lives in the same `daily-labour.gs` — one file to paste — plus
+**one click** in the editor:
+
+> **Services (+)** → **Drive API** → v3 → **Add**
+
+That is required. `driveList_()` does fall back to the Drive REST API with the
+script's own OAuth token, but that path still needs the Drive API enabled on the
+Cloud project behind the script, which returns
+`Google Drive API has not been used in project … or it is disabled` until it is.
+Adding the advanced service enables the API *and* provides the faster in-process
+path, so it settles both at once. `forceDriveScope_()` is never executed; it
+names DriveApp so Apps Script's static scan puts Drive on the consent prompt.
 
 You will be asked to **re-authorise** on first run, because the script now wants
 Drive read access. That is expected.

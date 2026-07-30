@@ -579,7 +579,14 @@ function driveList_(params) {
     muteHttpExceptions: true,
   });
   if (res.getResponseCode() !== 200) {
-    throw new Error('Drive API ' + res.getResponseCode() + ' — ' + res.getContentText().slice(0, 180));
+    var body = res.getContentText();
+    // The REST path also needs the Drive API switched on for the Cloud project
+    // behind this script. Adding the advanced service does both at once, so say
+    // that rather than pass along Google's console URL.
+    if (/has not been used in project|accessDisabled|SERVICE_DISABLED/.test(body)) {
+      throw new Error('Drive API is off for this script. Apps Script editor → Services (+) → Drive API → v3 → Add, then re-deploy. (One click; it enables the API and makes the faster path available.)');
+    }
+    throw new Error('Drive API ' + res.getResponseCode() + ' — ' + body.slice(0, 180));
   }
   return JSON.parse(res.getContentText());
 }
