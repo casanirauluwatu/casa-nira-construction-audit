@@ -1,16 +1,42 @@
-# Casa Nira — Construction Feed Audit
+# Casa Nira — Construction Report
 
-A standalone audit of the Casa Nira Uluwatu construction **Time Schedule** feeds
-across all villas — progress, weekly pace, and target-vs-projected delivery.
-**Zero dependencies** (Node 18+). Reads the same `CONSTRUCTION_FEEDS` the main
-dashboard uses, so figures match.
+Two tabs on one page for the Casa Nira Uluwatu build:
 
-Three ways to run it: **CLI**, a **plain Node server**, or **Vercel**.
+- **Construction Audit** — the **Time Schedule** feeds across all villas:
+  progress, weekly pace, deviation, and target-vs-projected delivery. Reads the
+  same `CONSTRUCTION_FEEDS` the main dashboard uses, so figures match.
+- **Laporan Harian** — the daily site report: field weather (live from
+  Open-Meteo), head-count per unit vs plan, per-block attendance, photo links,
+  and auto-generated notes.
 
-## The one variable it needs
+**Zero dependencies** (Node 18+). Three ways to run it: **CLI** (audit only), a
+**plain Node server**, or **Vercel**.
 
-`CONSTRUCTION_FEEDS` — a JSON map of villa → Apps Script `/exec` URL. Keep it out
-of git (those URLs are effectively credentials). See `.env.example`.
+### One source per figure
+
+Progress percentages, deviation, target and projected dates live **only** in the
+audit tab — they are never restated in the daily report. Where the daily report
+needs a unit's progress (the photo cards), it reads the audit data already loaded
+in the page, so the two tabs cannot disagree. The daily report owns labour,
+weather, photos and notes; the audit owns everything schedule-derived.
+
+## Variables
+
+| Variable | Required | Meaning |
+| --- | --- | --- |
+| `CONSTRUCTION_FEEDS` | yes | JSON map of villa → Apps Script `/exec` URL. Keep it out of git — those URLs are effectively credentials. |
+| `DAILY_FEED` | no | Apps Script `/exec` URL returning the daily labour JSON. Unset = serve the snapshot committed in `daily-data.mjs`. |
+| `STALE_DAYS` | no | Staleness threshold in days (default 10). |
+| `CACHE_TTL_MIN` | no | Node-server in-memory cache, minutes (default 360). |
+
+See `.env.example`.
+
+## Updating the daily labour numbers
+
+Without `DAILY_FEED` the head-counts come from the snapshot in
+**`daily-data.mjs`** (`plan`, `workers`, `comp` per unit, plus `date`). Edit that
+file and redeploy to publish a new day, or point `DAILY_FEED` at an Apps Script
+endpoint returning the same shape to make it live.
 
 ## CLI
 
@@ -38,23 +64,28 @@ Import this repo as a Vercel project and add one Environment Variable:
 
 - **`CONSTRUCTION_FEEDS`** = the JSON map (paste the `{…}` only, no quotes).
 
-Deploy. Vercel serves `public/index.html` at `/` and runs
-`api/construction/audit.js` as a serverless function. Open the site root — the
-page pulls every feed and re-pulls on **Refresh data**. No token required.
+Deploy. Vercel serves `public/index.html` at `/` and runs the two serverless
+functions, `api/construction/audit.js` and `api/daily/report.js`. Open the site
+root — the page pulls the feeds and re-pulls on **Refresh data**. No token
+required. Deep links: `/#audit` and `/#harian`.
 
-> The report shows every unit and is public to anyone with the URL. If you want
-> it locked down, put it behind Vercel's password protection (Project → Settings
-> → Deployment Protection) or a reverse proxy.
-
+> The report shows every unit — including the Drive photo-folder links — and is
+> public to anyone with the URL. If you want it locked down, put it behind
+> Vercel's password protection (Project → Settings → Deployment Protection) or a
+> reverse proxy.
 
 ## Caching
 
-Construction data moves ~weekly, so the audit is cached rather than refetched on every open:
+Construction data moves ~weekly and labour once a day, so both endpoints are
+cached rather than refetched on every open:
 
 - **Vercel** — responses carry `s-maxage=21600` (6h edge cache) + stale-while-revalidate, so most opens are served from the CDN without invoking the function.
-- **Node server** — an in-memory cache (`CACHE_TTL_MIN`, default 360 = 6h).
+- **Node server** — an in-memory cache per endpoint (`CACHE_TTL_MIN`, default 360 = 6h).
 
-The **Refresh data** button requests `?fresh=1`, which bypasses both and re-pulls all feeds.
+The **Refresh data** button requests `?fresh=1` for the active tab, which
+bypasses both and re-pulls. Weather is fetched by the browser directly from
+Open-Meteo (no key, no proxy) and degrades to a clear "unavailable" state offline
+— the rest of the daily report still renders.
 
 ## Column reference
 
