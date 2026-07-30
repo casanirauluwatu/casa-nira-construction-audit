@@ -9,7 +9,10 @@
 // code alone labelled 23 of 31 July days as rain when only 5 saw 2mm or more —
 // badly misleading on a report where rain means concrete pours stop.
 
-const LAT = -8.829, LON = 115.088;          // Uluwatu, Bali
+// Casa Nira Uluwatu — Jl. Pura Selonding, Pecatu, Kuta Sel., Badung, Bali 80361.
+// Open-Meteo snaps to a ~11km grid, so the cell it answers from is reported in
+// the payload as `grid` rather than left implicit.
+const LAT = -8.8383801, LON = 115.1208256;
 const TZ = "Asia/Makassar";                 // WITA
 const TIMEOUT_MS = 12000;
 
@@ -123,7 +126,7 @@ export async function getWeather(now = new Date()) {
     ok: true,
     source: "Open-Meteo",
     legend: COND,          // key -> {label, colour}, so the page has one source
-    location: "Uluwatu, Bali",
+    location: "Casa Nira Uluwatu, Pecatu",
     grid: { lat: j.latitude, lon: j.longitude, elevation: j.elevation },
     updated: cur.time || null,
     now: {
