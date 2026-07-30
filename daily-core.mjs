@@ -29,6 +29,12 @@ function fromFeed(data) {
     ...data,           // date, sheet, totals, series, months, flags from the feed
     units,
     other: data.other || [],
+    // Never inherit the bundled snapshot's series/months here: they describe one
+    // fixed day in July and villa-only totals, so blending them with live labour
+    // would put a chart and a scorecard that disagree on the same screen. A feed
+    // running an older daily-labour.gs simply reports no series.
+    series: data.series || null,
+    months: data.months || null,
     live: true,
   };
 }

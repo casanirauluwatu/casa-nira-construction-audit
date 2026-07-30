@@ -695,8 +695,13 @@
   function drawManpower(d){
     const svg=$("mpchart"), sr=d.series;
     if(!sr || !sr.dates || !sr.dates.length){
+      // A feed running an older daily-labour.gs returns no series.
       svg.innerHTML=`<text x="16" y="28" font-size="12" fill="#8f887c">Rangkaian harian tidak tersedia.</text>`;
-      $("mpLegend").innerHTML=""; $("mpFoot").textContent=""; $("mpHint").textContent="";
+      $("mpLegend").innerHTML="";
+      $("mpFoot").innerHTML = d.live
+        ? `Feed harian belum mengirim data per hari — perbarui <strong>daily-labour.gs</strong> di Apps Script lalu deploy ulang.`
+        : `Tersedia setelah <strong>DAILY_FEED</strong> tersambung.`;
+      $("mpHint").textContent="";
       return;
     }
     const one = MP_SEL!=="ALL" ? sr.units[MP_SEL] : null;
