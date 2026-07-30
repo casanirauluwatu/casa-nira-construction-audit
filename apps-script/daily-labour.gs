@@ -68,7 +68,7 @@ var MAX_SCAN_ROWS = 420;  // rows pulled per read; blocks end ~320
 var BLOCK_TAIL = 20;      // if a block starts this close to the window end, re-read wider
 var CACHE_SEC = 21600;    // 6h — matches the dashboard's edge cache
 var EMPTY_CACHE_SEC = 600;// 10min while the requested day still has no numbers
-var CACHE_VER = 'v3';     // bump to invalidate every cached entry
+var CACHE_VER = 'v4';     // bump to invalidate every cached entry
 // Shown in every response as `scriptVersion`, so you can tell at a glance which
 // code the /exec URL is actually serving after a re-deploy.
 var SCRIPT_VERSION = 'v4-photos';
