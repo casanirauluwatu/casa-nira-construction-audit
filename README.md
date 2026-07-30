@@ -107,13 +107,29 @@ cached rather than refetched on every open:
 - **Vercel** — responses carry `s-maxage=21600` (6h edge cache) + stale-while-revalidate, so most opens are served from the CDN without invoking the function.
 - **Node server** — an in-memory cache per endpoint (`CACHE_TTL_MIN`, default 360 = 6h).
 
+Weather is served from `/api/weather` (Open-Meteo, no API key) with a 15-minute
+edge cache, rather than fetched by each visitor — so it is consistent for everyone
+and still works on networks that block third-party calls.
+
 The **Refresh data** button requests `?fresh=1` for the active tab, which
 bypasses both and re-pulls — and for the daily tab it propagates as `?nocache=1`
 to the Apps Script, so Refresh really means refresh all the way down. The Apps
 Script caches its own answers too; see
-[`apps-script/README.md`](apps-script/README.md#speed). Weather is fetched by the browser directly from
-Open-Meteo (no key, no proxy) and degrades to a clear "unavailable" state offline
-— the rest of the daily report still renders.
+[`apps-script/README.md`](apps-script/README.md#speed). A weather outage degrades to a clear "unavailable" state; the rest of the daily
+report still renders.
+
+### Rain classification
+
+Open-Meteo reports WMO code 51 ("light drizzle") for any trace of precipitation,
+so classifying days on the code alone marked **23 of 31 July days as rain when
+only 5 saw 2mm or more**. Days are classified on measured rainfall instead:
+
+| | |
+| --- | --- |
+| ≥ 10mm | work stops (`bad`) |
+| ≥ 2mm | **Hujan** — pours at risk (`warn`) |
+| ≥ 0.2mm | **Gerimis** — drizzle, work continues |
+| below that | classified by cloud cover: Cerah / Cerah Berawan / Mendung |
 
 ## Column reference
 

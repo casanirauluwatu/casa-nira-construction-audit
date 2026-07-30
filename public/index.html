@@ -470,10 +470,6 @@
     rain:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15h11a3.6 3.6 0 0 0 .3-7.2A5.2 5.2 0 0 0 7.5 8 3.8 3.8 0 0 0 6 15z"/><path d="M9 18.5l-.8 2M13 18.5l-.8 2M17 18.5l-.8 2"/></svg>',
     cam:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2l1-2h9l1 2h2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"/><circle cx="12" cy="12.5" r="3.2"/></svg>'
   };
-  const WXC = { cerah:{l:"Cerah",c:"#a9822f"}, berawan:{l:"Cerah Berawan",c:"#c2a05c"}, mendung:{l:"Mendung",c:"#8f887c"}, hujan:{l:"Hujan",c:"#5f7d8c"} };
-  const WX_LAT=-8.829, WX_LON=115.088;   // Uluwatu, Bali
-  const wmo = (c) => { c=+c; if(c<=1) return "cerah"; if(c===2) return "berawan"; if(c===3||c===45||c===48) return "mendung"; return "hujan"; };
-  const cIco = (c) => c==="cerah"?"sun":c==="berawan"?"partly":c==="mendung"?"cloud":"rain";
   const DOW = ["Sen","Sel","Rab","Kam","Jum","Sab","Min"];
   let WX = null, D_DATE = null, D_MONTH = null, MP_SEL = "ALL";
 
@@ -802,65 +798,24 @@
       + (d.live?` Klik salah satu hari untuk membuka laporannya.`:"");
   }
 
-  /* Cuaca realtime dari Open-Meteo (tanpa API key, CORS aktif) — dipanggil dari
-     browser pengguna. Satu permintaan mencakup kondisi sekarang, jam-jaman hari
-     ini, dan harian sepanjang bulan (past_days + forecast_days, bukan rentang
-     tanggal, agar tidak ditolak untuk tanggal di luar jangkauan prakiraan). */
+  /* Cuaca lapangan dari /api/weather (Open-Meteo di sisi server, di-cache 15
+     menit). Ditarik server-side agar konsisten untuk semua penonton dan tetap
+     jalan di jaringan yang memblokir panggilan pihak ketiga. */
   async function fetchWeather(){
     try{
-      const pad=x=>String(x).padStart(2,"0");
-      const now=new Date(), y=now.getFullYear(), m0=now.getMonth(), dnum=now.getDate();
-      const last=new Date(y,m0+1,0).getDate();
-      const past=Math.min(92,dnum-1), fwd=Math.min(16,last-dnum+1);
-      const url=`https://api.open-meteo.com/v1/forecast?latitude=${WX_LAT}&longitude=${WX_LON}&timezone=Asia%2FMakassar`
-        +`&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m`
-        +`&hourly=temperature_2m,weather_code&daily=weather_code&past_days=${past}&forecast_days=${fwd}`;
-      const res=await fetch(url,{signal:AbortSignal.timeout(12000)});
-      if(!res.ok) throw new Error("HTTP "+res.status);
-      const j=await res.json();
-
-      const days=new Array(last).fill(null);
-      (j.daily?.time||[]).forEach((iso,i)=>{
-        if(+iso.slice(0,4)!==y || +iso.slice(5,7)!==m0+1) return;
-        const dd=+iso.slice(8,10);
-        if(dd>=1&&dd<=last) days[dd-1]=wmo((j.daily.weather_code||[])[i]);
-      });
-
-      const cur=j.current||{}, cc=wmo(cur.weather_code);
-      const ht=j.hourly?.time||[], htemp=j.hourly?.temperature_2m||[], hcode=j.hourly?.weather_code||[];
-      const todayISO=`${y}-${pad(m0+1)}-${pad(dnum)}`;
-      const slotAt=hh=>{
-        const i=ht.findIndex(t=>t.startsWith(todayISO)&&t.slice(11,13)===hh);
-        if(i<0) return null;
-        const c=wmo(hcode[i]);
-        return { temp:Math.round(htemp[i]), cond:WXC[c].l, icon:cIco(c) };
-      };
-      const slots=[];
-      for(const [n,hh] of [["Pagi","07"],["Siang","13"],["Sore","16"]]){ const s=slotAt(hh); if(s) slots.push({name:n,...s}); }
-
-      const storm=+cur.weather_code>=95;
-      const work = cc==="hujan" ? (storm?"bad":"warn") : "ok";
-      const workNote = cc==="hujan"
-        ? (storm?"Hujan petir — hentikan pekerjaan luar & pengecoran":"Hujan — pekerjaan luar & pengecoran berisiko tertunda")
-        : cc==="mendung" ? "Berawan tebal — tetap dapat bekerja, pantau potensi hujan"
-        : "Kondisi baik untuk pekerjaan luar & pengecoran";
-
-      renderWeather({
-        temp:Math.round(cur.temperature_2m), cond:WXC[cc].l, icon:cIco(cc),
-        humidity:Math.round(cur.relative_humidity_2m), wind:Math.round(cur.wind_speed_10m),
-        work, workNote, slots, days, today:dnum,
-        year:y, month0:m0, monthLabel:`${BULAN[m0]} ${y}`, monthDays:last,
-        updated:`${dnum} ${BULAN[m0]} ${y}, ${pad(now.getHours())}.${pad(now.getMinutes())}`
-      });
-      if(DAILY) renderDaily(DAILY);   // catatan cuaca ikut diperbarui
+      const res = await fetch("/api/weather");
+      const w = await res.json();
+      if(!res.ok || !w.ok) throw new Error(w.error || `HTTP ${res.status}`);
+      renderWeather(w);
     }catch(e){
-      console.warn("Cuaca realtime gagal:",e);
-      renderWeather(null);
+      console.warn("Cuaca gagal:", e);
+      renderWeather(null, e.message);
     }
   }
 
-  function renderWeather(w){
-    const ml = w ? w.monthLabel : `${BULAN[new Date().getMonth()]} ${new Date().getFullYear()}`;
+  function renderWeather(w, why){
+    const ml = w ? `${BULAN[w.month.month0]} ${w.month.year}`
+                 : `${BULAN[new Date().getMonth()]} ${new Date().getFullYear()}`;
     $("wxMonth").textContent = ml;
 
     if(!w){
@@ -868,24 +823,28 @@
         + `<div class="wx-now"><div><span class="t">—°</span><div class="c">Data cuaca tidak tersedia</div></div></div></div></div>`;
       $("wxRecap").innerHTML = `<div class="dim" style="font-size:12px">Rekap cuaca belum tersedia.</div>`;
       $("wxCal").innerHTML = `<div class="dim" style="font-size:12px">Kalender cuaca belum tersedia.</div>`;
-      $("wxSrc").textContent = "Sumber cuaca: Open-Meteo — tidak dapat dijangkau dari perangkat ini (luring atau diblokir jaringan).";
+      $("wxSrc").textContent = `Sumber cuaca: Open-Meteo — tidak dapat dimuat${why?` (${why})`:""}.`;
       return;
     }
     WX = w;
-
+    const L = w.legend || {};
     const wl = w.work==="bad"?"Tidak Kondusif":w.work==="warn"?"Perlu Perhatian":"Kondusif";
+    const rain = w.now.rainToday;
     $("wxCard").innerHTML = `<div class="wx-top">
-      <div><div class="wx-loc">Uluwatu, Bali · Hari Ini</div>
-        <div class="wx-now"><span class="wx-ic">${WI[w.icon]||WI.partly}</span>
-        <div><span class="t">${w.temp}°</span><div class="c">${w.cond} · Lembap ${w.humidity}% · Angin ${w.wind} km/j</div></div></div></div>
-      <div style="text-align:right"><span class="flag ${w.work}">Kelayakan kerja: ${wl}</span><div class="wx-note">${w.workNote}</div></div>
+      <div><div class="wx-loc">${esc(w.location)} · Hari Ini</div>
+        <div class="wx-now"><span class="wx-ic">${WI[w.now.icon]||WI.partly}</span>
+        <div><span class="t">${w.now.temp}°</span><div class="c">${esc(w.now.cond)} · Lembap ${w.now.humidity}% · Angin ${w.now.wind} km/j`
+        + (rain!=null?` · Hujan ${rain.toFixed(1)}mm${w.now.rainChance!=null?` (${w.now.rainChance}%)`:""}`:"")
+        + `</div></div></div></div>
+      <div style="text-align:right"><span class="flag ${w.work}">Kelayakan kerja: ${wl}</span><div class="wx-note">${esc(w.workNote)}</div></div>
     </div>` + (w.slots&&w.slots.length ? `<div class="wx-slots">${w.slots.map(s=>
-        `<div class="wx-slot"><div class="n">${s.name}</div><div class="i">${WI[s.icon]||WI.cloud}</div><div class="v">${s.temp}°</div><div class="c">${s.cond}</div></div>`
+        `<div class="wx-slot"><div class="n">${esc(s.name)}</div><div class="i">${WI[s.icon]||WI.cloud}</div><div class="v">${s.temp}°</div><div class="c">${esc(s.cond)}</div></div>`
       ).join("")}</div>` : "");
 
-    // rekap bulanan
-    const known = (w.days||[]).filter(Boolean);
-    const order = ["cerah","berawan","mendung","hujan"];
+    // Rekap bulanan — hitung dari hari yang sudah tercatat saja.
+    const conds = w.month.conds || [], mm = w.month.rainMm || [];
+    const known = conds.filter(Boolean);
+    const order = ["cerah","berawan","mendung","gerimis","hujan"];
     const keys = order.filter(k=>known.includes(k));
     const cnt = {}; keys.forEach(k=>cnt[k]=0); known.forEach(c=>cnt[c]++);
     const tot = known.length||1;
@@ -893,24 +852,30 @@
       $("wxRecap").innerHTML = `<div class="dim" style="font-size:12px">Rekap cuaca belum tersedia.</div>`;
     }else{
       const dom = keys.reduce((a,k)=>cnt[k]>cnt[a]?k:a, keys[0]);
-      const rain = cnt.hujan||0;
-      $("wxRecap").innerHTML = `<div class="stack">${keys.map(k=>`<span style="width:${(cnt[k]/tot*100).toFixed(1)}%;background:${WXC[k].c}"></span>`).join("")}</div>`
-        + `<div class="leg">${keys.map(k=>`<div class="r"><span class="sw" style="background:${WXC[k].c}"></span><span class="lab">${WXC[k].l}</span><span class="pc">${(cnt[k]/tot*100).toFixed(1)}%</span><span class="ct">${cnt[k]} hari</span></div>`).join("")}</div>`
-        + `<div class="wx-dom">Dominan: <b style="color:var(--ink)">${WXC[dom].l}</b> · ${tot} hari tercatat`
-        + (rain?` · hari hujan ${rain} (${Math.round(rain/tot*100)}%) berpotensi mengganggu pekerjaan luar &amp; pengecoran`:"")
-        + (tot<(w.monthDays||31)?` · ${(w.monthDays||31)-tot} hari belum masuk jangkauan prakiraan`:"")+`</div>`;
+      const wet = mm.filter(v=>v!=null);
+      const totalMm = wet.reduce((a,b)=>a+b,0);
+      const heavy = wet.filter(v=>v>=2).length;
+      $("wxRecap").innerHTML = `<div class="stack">${keys.map(k=>`<span style="width:${(cnt[k]/tot*100).toFixed(1)}%;background:${(L[k]||{}).colour||"#ccc"}"></span>`).join("")}</div>`
+        + `<div class="leg">${keys.map(k=>`<div class="r"><span class="sw" style="background:${(L[k]||{}).colour}"></span><span class="lab">${esc((L[k]||{}).label||k)}</span><span class="pc">${(cnt[k]/tot*100).toFixed(1)}%</span><span class="ct">${cnt[k]} hari</span></div>`).join("")}</div>`
+        + `<div class="wx-dom">Dominan <b style="color:var(--ink)">${esc((L[dom]||{}).label||dom)}</b> · ${tot} hari tercatat · curah <b style="color:var(--ink)">${totalMm.toFixed(1)}mm</b>`
+        + (heavy?` · <b style="color:var(--ink)">${heavy} hari ≥2mm</b> berpotensi menunda pengecoran`:` · tidak ada hari ≥2mm`)
+        + (tot<w.month.days?` · ${w.month.days-tot} hari belum masuk prakiraan`:"")+`</div>`;
     }
 
-    // kalender
+    // Kalender
     let cal = `<div class="cal">` + DOW.map(d=>`<div class="dw">${d}</div>`).join("");
-    const start = (new Date(w.year,w.month0,1).getDay()+6)%7;
+    const start = (new Date(w.month.year, w.month.month0, 1).getDay()+6)%7;
     for(let i=0;i<start;i++) cal += `<div></div>`;
-    for(let d=1;d<=w.monthDays;d++){
-      const c=(w.days||[])[d-1];
-      cal += `<div class="c ${d===w.today?"today":""}" style="background:${c?WXC[c].c:"#ede7da"};color:${c?"#fff":"var(--muted)"}" title="${d} ${w.monthLabel} — ${c?WXC[c].l:"belum tersedia"}">${d}</div>`;
+    for(let d=1;d<=w.month.days;d++){
+      const c=conds[d-1], r=mm[d-1];
+      const tip = `${d} ${ml} — ${c?((L[c]||{}).label||c):"belum tersedia"}${r!=null?` · ${r.toFixed(1)}mm`:""}`;
+      cal += `<div class="c ${d===w.month.today?"today":""}" style="background:${c?(L[c]||{}).colour:"#ede7da"};color:${c?"#fff":"var(--muted)"}" title="${esc(tip)}">${d}</div>`;
     }
     $("wxCal").innerHTML = cal + `</div>`;
-    $("wxSrc").textContent = `Sumber cuaca: Open-Meteo (realtime · Uluwatu, Bali) — diperbarui ${w.updated} WITA.`;
+    const up = w.updated ? w.updated.replace("T"," ") : "";
+    $("wxSrc").textContent = `Sumber cuaca: ${w.source} · ${w.location} (grid ${w.grid.lat.toFixed(3)}, ${w.grid.lon.toFixed(3)} · ${Math.round(w.grid.elevation)}m)`
+      + (up?` — diperbarui ${up} WITA.`:".")
+      + ` Hari diklasifikasikan dari curah hujan terukur, bukan kode cuaca saja.`;
   }
 
   /* ==================== boot ==================== */

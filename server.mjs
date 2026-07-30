@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join, normalize } from "node:path";
 import { auditAll, feedsFromEnv } from "./audit-core.mjs";
 import { getDaily } from "./daily-core.mjs";
+import { getWeather } from "./weather-core.mjs";
 
 const PORT = Number(process.env.PORT || 3000);
 const STALE_DAYS = Number(process.env.STALE_DAYS || 10);
@@ -64,6 +65,11 @@ const server = http.createServer(async (req, res) => {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get("date") || "") ? url.searchParams.get("date") : null;
     const month = /^\d{4}-\d{2}$/.test(url.searchParams.get("month") || "") ? url.searchParams.get("month") : null;
     await serveJson(res, `daily:${date || month || "today"}`, fresh, () => getDaily({ date, month, fresh }));
+    return;
+  }
+
+  if (url.pathname === "/api/weather") {
+    await serveJson(res, "weather", fresh, getWeather);
     return;
   }
 
