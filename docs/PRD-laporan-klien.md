@@ -7,6 +7,15 @@
 > headers). The per-unit "Pekerjaan hari ini" summary is replaced by an
 > editable **Highlight & Lowlight** section. Unit pages carry: progress stats,
 > S-curve, Highlight/Lowlight, photos.
+>
+> **Rev 3 (2026-07-31):** unit selection is a **dropdown** ("Semua unit" + one
+> entry per unit, mirroring the audit tab's chart selector), not multi-select
+> chips. No cover page. The report is **one compact page per unit**: a project
+> strip (Casa Nira · Laporan Harian · date), unit id/type with inline stats
+> (Progres, Rencana, Deviasi, Δ minggu ini, Serah terima/Target), a compact
+> S-curve, Highlight/Lowlight, then photos (3-up in print). The print button is
+> **"Cetak untuk Owner"**. Selecting one unit prints one A4 page; "Semua unit"
+> prints one page per unit for distributing to each owner.
 
 ## 1. Background
 

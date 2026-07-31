@@ -151,50 +151,37 @@
   .nbox{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--olive);border-radius:8px;padding:11px 14px;font-size:12.5px;margin-bottom:9px;}
   .nbox .nl{display:block;font:600 9.5px ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;}
 
-  /* ---------- laporan klien ---------- */
+  /* ---------- laporan klien (owner report) ---------- */
   .kbar{align-items:center;}
-  .kchips{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:200px;}
-  .kchip{display:inline-flex;align-items:center;gap:6px;font:600 12px ui-monospace,Menlo,monospace;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 11px;cursor:pointer;user-select:none;}
-  .kchip:hover{border-color:var(--olive);color:var(--ink);}
-  .kchip input{display:none;}
-  .kchip.on{color:#fff;background:var(--olive);border-color:var(--olive);}
-  .kchip .kn{font:600 10px ui-monospace,Menlo,monospace;background:#efe9dd;color:var(--muted);border-radius:999px;padding:1px 6px;}
-  .kchip.on .kn{background:rgba(255,255,255,.22);color:#fff;}
   button.kexp{padding:9px 16px;}
-  .kcover{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-bottom:16px;box-shadow:0 1px 2px rgba(43,38,32,.05);}
-  .kchead{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px;}
-  .kchead h2{margin:8px 0 4px;font-size:22px;font-weight:600;letter-spacing:-.01em;}
-  .kdate{color:var(--muted);font-size:13px;}
-  .kmeta{text-align:right;font-size:12.5px;color:var(--muted);line-height:1.6;}
-  .kmeta b{color:var(--ink);font-family:ui-monospace,Menlo,monospace;}
-  .kcover .tbl-wrap{border-radius:10px;box-shadow:none;}
-  .kunit{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 2px rgba(43,38,32,.05);}
-  .kuhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:14px;}
-  .kuid{font:700 20px ui-monospace,Menlo,monospace;letter-spacing:.02em;}
-  .kuty{margin-left:10px;font:600 11px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);}
-  .kudue{margin-left:10px;font:600 10.5px ui-monospace,Menlo,monospace;color:#c07a1e;}
-  .kustats{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);}
+  .kunit{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(43,38,32,.05);}
+  .kutop{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font:600 9.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:10px;}
+  .kutop .kd{color:var(--muted);letter-spacing:.04em;}
+  .kuhead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+  .kuid{font:700 19px ui-monospace,Menlo,monospace;letter-spacing:.02em;}
+  .kuty{margin-left:9px;font:600 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);}
+  .kustats{display:flex;gap:13px;flex-wrap:wrap;font-size:12px;color:var(--muted);}
   .kustats b{color:var(--ink);font-family:ui-monospace,Menlo,monospace;font-weight:600;}
   .kustats .pos b{color:var(--green);}.kustats .neg b{color:var(--red);}
-  .ksec{font:600 10.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:16px 0 9px;}
+  .ksec{font:600 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:12px 0 7px;}
   .kcurve svg{width:100%;height:auto;display:block;}
-  .khint{font-size:11.5px;color:var(--muted);margin-top:4px;}
-  .kdesc{background:#faf7ef;border:1px solid var(--line);border-left:3px solid var(--olive);border-radius:8px;padding:10px 13px;font-size:13px;line-height:1.55;}
-  .kdesc .kdl{display:block;font:600 9.5px ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--olive);margin-bottom:4px;}
-  .khl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start;}
+  .khint{font-size:11px;color:var(--muted);margin-top:2px;}
+  .kdesc{background:#faf7ef;border:1px solid var(--line);border-left:3px solid var(--olive);border-radius:8px;padding:8px 11px;font-size:12.5px;line-height:1.5;}
+  .kdesc .kdl{display:block;font:600 9px ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--olive);margin-bottom:3px;}
+  .khl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start;margin-top:10px;}
   .kdesc.kh{border-left-color:var(--green);}
   .kdesc.kh .kdl{color:var(--green);}
   .kdesc.kl{border-left-color:var(--amber);}
   .kdesc.kl .kdl{color:var(--amber);}
-  .kphotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;}
-  .kph{margin:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;display:flex;flex-direction:column;}
+  .kphotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
+  .kph{margin:0;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff;display:flex;flex-direction:column;}
   .kph .ph{position:relative;aspect-ratio:4/3;background:#ede7da;overflow:hidden;}
   .kph .ph img{width:100%;height:100%;object-fit:cover;display:block;}
   .kph .ph .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);text-align:center;padding:8px;}
   .kph .ph .empty[hidden]{display:none;}
   .kph .ph .empty svg{width:24px;height:24px;opacity:.5;}
   .kph .ph .empty span{font-size:10.5px;}
-  .kph figcaption{padding:8px 11px 9px;font-size:12px;line-height:1.45;min-height:35px;}
+  .kph figcaption{padding:6px 9px 7px;font-size:11.5px;line-height:1.45;min-height:30px;}
   [data-ck]{outline:none;border-radius:6px;cursor:text;}
   [data-ck]:hover{background:#f7f1e2;}
   [data-ck]:focus{background:#faf3df;box-shadow:0 0 0 2px #e8dcbd;}
@@ -235,11 +222,9 @@
     .chart-sel{flex:1 1 100%;justify-content:space-between;}
     .chart-sel select{flex:1;min-height:44px;font-size:16px;}
     .uc .ft a{padding:8px 0;}
-    .kchips{flex-basis:100%;}
-    .kchip{min-height:38px;}
-    .kmeta{text-align:left;}
     button.kexp{flex:1;min-height:44px;}
     .khl{grid-template-columns:minmax(0,1fr);}
+    .kphotos{grid-template-columns:repeat(2,minmax(0,1fr));}
 
     /* The chart is unreadable squeezed into 390px — let it keep its width and
        scroll sideways, the way the audit chart already does. */
@@ -310,36 +295,32 @@
     .nbox{padding:7px 10px;font-size:8pt;margin-bottom:6px;}
     a{color:inherit;}
 
-    /* ---------- laporan klien: the PDF the client receives ---------- */
-    /* The cover block carries the title, so the page header would print twice. */
+    /* ---------- laporan klien: one compact page per unit for the owner ---------- */
+    /* Each unit strip carries the project name + date, so the page header would
+       print twice. */
     body.print-klien .top{display:none!important;}
-    .kcover,.kunit{border:none;border-radius:0;padding:0;margin:0;box-shadow:none;}
-    .kcover .kchead h2{font-size:20pt;margin:5px 0 3px;}
-    .kchead{margin-bottom:12px;padding-bottom:10px;border-bottom:1.5px solid var(--line);}
-    .kdate{font-size:10pt;}
-    .kmeta{font-size:8.5pt;}
-    .kcover .tbl-wrap{border-radius:8px;}
-    .kunit{break-before:page;}
-    .kuhead{padding-bottom:8px;margin-bottom:10px;}
-    .kuid{font-size:15pt;}
-    .kuty{font-size:8pt;}
-    .kudue{font-size:7.5pt;}
-    .kustats{font-size:8.5pt;gap:12px;}
-    .ksec{margin:10px 0 6px;font-size:7pt;}
-    .khint{font-size:7.5pt;}
-    .kdesc{padding:7px 10px;font-size:8.5pt;}
-    .khl{gap:8px;}
+    .kunit{border:none;border-radius:0;padding:0;margin:0;box-shadow:none;}
+    .kunit:not(:first-child){break-before:page;}
+    .kutop{font-size:7pt;padding-bottom:4px;margin-bottom:7px;}
+    .kuhead{margin-bottom:5px;}
+    .kuid{font-size:14pt;}
+    .kuty{font-size:7.5pt;}
+    .kustats{font-size:8pt;gap:10px;}
+    .ksec{margin:7px 0 4px;font-size:6.5pt;}
+    .khint{font-size:7pt;margin-top:1px;}
+    .kdesc{padding:5px 9px;font-size:8pt;}
+    .khl{gap:6px;margin-top:6px;}
     /* An untouched Highlight/Lowlight box prints as nothing; if both are empty
-       the whole section, heading included, stays off the PDF. */
+       the whole row stays off the page. */
     .khl .kdesc:not(:has([data-ck]:not(:empty))){display:none;}
     .khlwrap:not(:has([data-ck]:not(:empty))){display:none;}
-    .kphotos{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
-    .kph{break-inside:avoid;border-radius:8px;}
-    .kph figcaption{font-size:8pt;padding:5px 8px;min-height:0;}
+    .kphotos{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+    .kph{break-inside:avoid;border-radius:6px;}
+    .kph figcaption{font-size:7pt;padding:3px 6px;min-height:0;}
     /* Edit affordances are screen furniture; an untouched placeholder prints as nothing. */
     [data-ck]:hover,[data-ck]:focus{background:none;box-shadow:none;}
     [data-ck]:empty{display:none;}
-    .kempty{padding:10px;font-size:8pt;}
+    .kempty{padding:8px;font-size:8pt;}
   }
 </style>
 </head>
@@ -448,10 +429,9 @@
   <section class="tabpanel" id="panel-klien" role="tabpanel" aria-labelledby="tab-klien" hidden>
     <div class="dbar kbar">
       <label class="dbar-f">Tanggal <input type="date" id="kDate"></label>
-      <div class="kchips" id="kUnits" aria-label="Pilih unit"></div>
-      <button type="button" class="dnav wide" id="kAll">Semua</button>
-      <button type="button" class="dnav wide" id="kNone">Kosongkan</button>
-      <button type="button" class="refresh kexp" id="kExport">Export PDF</button>
+      <label class="dbar-f">Unit <select id="kUnit"></select></label>
+      <button type="button" class="refresh kexp" id="kPrint">Cetak untuk Owner</button>
+      <span class="dbar-h" id="kHint"></span>
     </div>
     <div class="note" id="knote">Memuat laporan klien…</div>
     <div id="kreport"></div>
@@ -1103,30 +1083,22 @@
   }
 
   /* ==================== laporan klien ====================
-     Client-facing daily report: photos with editable descriptions plus one
-     S-curve per selected unit, laid out for Export PDF (window.print).
+     Owner-facing daily report: pick one unit (or all) from a dropdown, get a
+     compact one-page report — photos with editable descriptions, the S-curve,
+     highlight & lowlight — and print it for the owner (window.print).
      Reads the same DAILY / PHOTOS / AUDIT state as the other tabs — no data of
      its own except the captions, which live in localStorage on this device. */
-  let KSEL = null;   // Set of unit ids included in the report
+  let KUNIT = null;   // "ALL" or one unit id
 
   const kcapKey = (date) => "kcap:" + date;
   function kcaps(date){ try{ return JSON.parse(localStorage.getItem(kcapKey(date))||"{}"); }catch{ return {}; } }
   function kcapSave(date, o){ try{ localStorage.setItem(kcapKey(date), JSON.stringify(o)); }catch{} }
-  function kselInit(ids){
-    if(KSEL) return KSEL;
-    try{
-      const s = JSON.parse(localStorage.getItem("klienUnits")||"null");
-      if(Array.isArray(s)) return (KSEL = new Set(s.filter(id=>ids.includes(id))));
-    }catch{}
-    return (KSEL = new Set(ids));
-  }
-  const kselSave = () => { try{ localStorage.setItem("klienUnits", JSON.stringify([...KSEL])); }catch{} };
   // "IMG_20260730_A1-kolam_renang.HEIC" → "IMG 20260730 A1 kolam renang"
   const nameCap = (n) => String(n||"").replace(/\.[A-Za-z0-9]{2,5}$/,"").replace(/[_\-]+/g," ").replace(/\s+/g," ").trim();
 
   // Standalone S-curve for one unit, same visual language as the audit chart.
   function kcurve(r){
-    const W=960,H=330,PL=42,PR=16,PT=24,PB=40,iw=W-PL-PR,ih=H-PT-PB;
+    const W=960,H=250,PL=42,PR=16,PT=22,PB=36,iw=W-PL-PR,ih=H-PT-PB;
     const pts=(r.series||[]).map(w=>({t:pW(w.d),p:w.p,a:w.a})).filter(x=>x.t);
     if(!pts.length) return `<div class="kempty">Jadwal S-curve tidak tersedia untuk ${esc(r.unit)}.</div>`;
     const target=pW(r.target), proj=projDate(r), now=CHART_NOW, committed=pW(commitOf(r.unit));
@@ -1157,6 +1129,44 @@
       + `Target ${esc(r.target)}${r.projDate&&r.projDate!=="done"?`, proyeksi ${esc(r.projDate)}`:""}${slipTxt}.</div></div>`;
   }
 
+  // One compact unit page: project strip, unit + progress stats, S-curve,
+  // highlight/lowlight, then the photos. Progress figures only — labour and
+  // manpower stay on the internal tabs; this page goes to the owner.
+  function kunitSec(u, r, rd, caps){
+    const due=commitOf(u.id), shots=shotsFor(u.id);
+    const hl = caps["h:"+u.id] != null ? caps["h:"+u.id] : "";
+    const ll = caps["l:"+u.id] != null ? caps["l:"+u.id] : "";
+    // Committed hand-over date wins over the feed's extrapolated target — it is
+    // the date that was promised.
+    const stats = r
+      ? `<span>Progres <b>${r.actual.toFixed(1)}%</b></span><span>Rencana <b>${r.planned.toFixed(1)}%</b></span>`
+        + `<span class="${r.deviation<0?"neg":"pos"}">Deviasi <b>${sgn(r.deviation)}</b></span>`
+        + (r.d0!=null?`<span>Minggu ini <b class="${dCls(r.d0)}">${sgn(r.d0)}</b></span>`:"")
+        + `<span>${due?"Serah terima":"Target"} <b>${esc(due||r.target)}</b></span>`
+      : (due?`<span>Serah terima <b>${esc(due)}</b></span>`:"");
+    const curve = r ? kcurve(r)
+      : `<div class="kempty">${AUDIT?`Data S-curve tidak tersedia untuk ${esc(u.id)}.`:"Memuat data progres…"}</div>`;
+    const photos = shots.length
+      ? `<div class="kphotos">` + shots.map((s,i)=>{
+          const key="p:"+s.id;
+          const cap = caps[key] != null ? caps[key] : (nameCap(s.name) || `Foto ${i+1} — ${u.id}`);
+          return `<figure class="kph"><div class="ph">${shotImg(s.id, `Foto ${esc(u.id)}`)}</div>`
+            + `<figcaption contenteditable="true" data-ck="${esc(key)}" data-ph="Tulis keterangan foto…">${esc(cap)}</figcaption></figure>`;
+        }).join("") + `</div>`
+      : `<div class="kempty">${PHOTOS===null?"Memuat foto…":"Belum ada foto untuk tanggal ini."}</div>`;
+    return `<section class="kunit">`
+      + `<div class="kutop"><span>Casa Nira Uluwatu · Laporan Harian</span><span class="kd">${fmtID(rd)}</span></div>`
+      + `<div class="kuhead"><div><span class="kuid">${esc(u.id)}</span><span class="kuty">${esc(u.type||"")}</span></div>`
+      + `<div class="kustats">${stats}</div></div>`
+      + curve
+      + `<div class="khlwrap"><div class="khl">`
+      + `<div class="kdesc kh"><span class="kdl">Highlight</span><div contenteditable="true" data-ck="h:${esc(u.id)}" data-ph="Capaian penting hari ini…">${esc(hl)}</div></div>`
+      + `<div class="kdesc kl"><span class="kdl">Lowlight</span><div contenteditable="true" data-ck="l:${esc(u.id)}" data-ph="Kendala / perlu perhatian…">${esc(ll)}</div></div>`
+      + `</div></div>`
+      + `<div class="ksec">Dokumentasi Foto${shots.length?` · ${shots.length}`:""}</div>${photos}`
+      + `</section>`;
+  }
+
   function renderKlien(){
     if(TAB!=="klien") return;
     const kn=$("knote"), rep=$("kreport");
@@ -1166,88 +1176,38 @@
     }
     const d=DAILY, rd=new Date(d.date+"T00:00:00");
     const units=d.units||[], ids=units.map(u=>u.id);
-    const sel=kselInit(ids);
+    if(KUNIT==null){ try{ KUNIT=localStorage.getItem("klienUnit")||"ALL"; }catch{ KUNIT="ALL"; } }
+    if(KUNIT!=="ALL" && !ids.includes(KUNIT)) KUNIT="ALL";
     $("kDate").value = d.date||"";
     $("kDate").disabled = !d.live;   // snapshot mode answers exactly one day
 
-    $("kUnits").innerHTML = units.map(u=>{
+    $("kUnit").innerHTML = `<option value="ALL">Semua unit · halaman per unit</option>` + units.map(u=>{
       const n=shotsFor(u.id).length;
-      return `<label class="kchip${sel.has(u.id)?" on":""}"><input type="checkbox" value="${esc(u.id)}"${sel.has(u.id)?" checked":""}>${esc(u.id)}${n?`<span class="kn">${n}</span>`:""}</label>`;
+      return `<option value="${esc(u.id)}">${esc(u.id)} · ${esc((u.type||"").replace(/^The /,""))}${n?` · ${n} foto`:""}</option>`;
     }).join("");
+    $("kUnit").value = KUNIT;
 
-    const chosen=units.filter(u=>sel.has(u.id));
-    SUBH.klien = `${chosen.length} dari ${units.length} unit · ${fmtID(rd)}`;
+    const chosen = KUNIT==="ALL" ? units : units.filter(u=>u.id===KUNIT);
+    const totF = chosen.reduce((s,u)=>s+shotsFor(u.id).length,0);
+    $("kHint").textContent = `${chosen.length} unit · ${totF} foto`;
+    SUBH.klien = `${KUNIT==="ALL"?"Semua unit":"Unit "+KUNIT} · ${fmtID(rd)}`;
     applyHead();
     kn.className="note";
-    kn.innerHTML = `Laporan untuk klien — pilih unit di atas, lalu <strong>Export PDF</strong> membuka dialog cetak (pilih “Save as PDF”). `
-      + `Keterangan foto &amp; ringkasan pekerjaan dapat diklik untuk diedit; tersimpan di perangkat ini.`;
-
-    if(!chosen.length){
-      rep.innerHTML = `<div class="kempty">Belum ada unit dipilih — centang minimal satu unit di atas.</div>`;
-      return;
-    }
+    kn.innerHTML = `Laporan ringkas untuk owner — pilih unit, lalu <strong>Cetak untuk Owner</strong> (dialog cetak; pilih “Save as PDF” untuk dikirim). `
+      + `Keterangan foto, highlight &amp; lowlight dapat diklik untuk diedit; tersimpan di perangkat ini.`;
 
     const am={}; if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok) am[r.unit]=r;
     const caps=kcaps(d.date);
-    const totF=chosen.reduce((s,u)=>s+shotsFor(u.id).length,0);
-
-    // Cover: title + one summary row per unit. Progress figures only — labour
-    // and manpower stay on the internal tabs; this report goes to the client.
-    // Committed due date wins over the feed's extrapolated target — it is the
-    // date that was promised.
-    const sumRows = chosen.map(u=>{
-      const r=am[u.id], due=commitOf(u.id);
-      return `<tr><td class="u">${esc(u.id)}</td><td class="dim">${esc((u.type||"").replace(/^The /,""))}</td>`
-        + (r ? `<td class="mono">${r.actual.toFixed(1)}%</td><td class="mono dim">${r.planned.toFixed(1)}%</td><td class="mono ${r.deviation<0?"neg":"pos"}">${sgn(r.deviation)}</td>`
-             : `<td class="mono dim">—</td><td class="mono dim">—</td><td class="mono dim">—</td>`)
-        + `<td class="mono">${esc(due || (r?r.target:"—"))}</td></tr>`;
-    }).join("");
-    const cover = `<div class="kcover"><div class="kchead">`
-      + `<div><div class="eyebrow">Casa Nira Uluwatu</div><h2>Laporan Harian Proyek</h2><div class="kdate">${fmtID(rd)}</div></div>`
-      + `<div class="kmeta"><b>${chosen.length}</b> unit dalam laporan · <b>${totF}</b> foto dokumentasi</div>`
-      + `</div><div class="tbl-wrap"><table><thead><tr><th class="l">Unit</th><th class="l">Tipe</th><th>Progres</th><th>Rencana</th><th>Deviasi</th><th>Target selesai</th></tr></thead>`
-      + `<tbody>${sumRows}</tbody></table></div></div>`;
-
-    const secs = chosen.map(u=>{
-      const r=am[u.id], due=commitOf(u.id), shots=shotsFor(u.id);
-      const hl = caps["h:"+u.id] != null ? caps["h:"+u.id] : "";
-      const ll = caps["l:"+u.id] != null ? caps["l:"+u.id] : "";
-      const stats = r ? `<span>Progres <b>${r.actual.toFixed(1)}%</b></span><span>Rencana <b>${r.planned.toFixed(1)}%</b></span>`
-          + `<span class="${r.deviation<0?"neg":"pos"}">Deviasi <b>${sgn(r.deviation)}</b></span>` : "";
-      const curve = r ? kcurve(r)
-        : `<div class="kempty">${AUDIT?`Data S-curve tidak tersedia untuk ${esc(u.id)}.`:"Memuat data progres…"}</div>`;
-      const photos = shots.length
-        ? `<div class="kphotos">` + shots.map((s,i)=>{
-            const key="p:"+s.id;
-            const cap = caps[key] != null ? caps[key] : (nameCap(s.name) || `Foto ${i+1} — ${u.id}`);
-            return `<figure class="kph"><div class="ph">${shotImg(s.id, `Foto ${esc(u.id)}`)}</div>`
-              + `<figcaption contenteditable="true" data-ck="${esc(key)}" data-ph="Tulis keterangan foto…">${esc(cap)}</figcaption></figure>`;
-          }).join("") + `</div>`
-        : `<div class="kempty">${PHOTOS===null?"Memuat foto…":"Belum ada foto untuk tanggal ini."}</div>`;
-      return `<section class="kunit">`
-        + `<div class="kuhead"><div><span class="kuid">${esc(u.id)}</span><span class="kuty">${esc(u.type||"")}</span>${due?`<span class="kudue">serah terima ${esc(due)}</span>`:""}</div>`
-        + `<div class="kustats">${stats}</div></div>`
-        + `<div class="ksec">Kurva-S Progres</div>${curve}`
-        + `<div class="khlwrap"><div class="ksec">Highlight &amp; Lowlight</div><div class="khl">`
-        + `<div class="kdesc kh"><span class="kdl">Highlight</span><div contenteditable="true" data-ck="h:${esc(u.id)}" data-ph="Capaian penting hari ini…">${esc(hl)}</div></div>`
-        + `<div class="kdesc kl"><span class="kdl">Lowlight</span><div contenteditable="true" data-ck="l:${esc(u.id)}" data-ph="Kendala / perlu perhatian…">${esc(ll)}</div></div>`
-        + `</div></div>`
-        + `<div class="ksec">Dokumentasi Foto${shots.length?` · ${shots.length}`:""}</div>${photos}`
-        + `</section>`;
-    }).join("");
-
-    rep.innerHTML = cover + secs;
+    rep.innerHTML = chosen.map(u=>kunitSec(u, am[u.id], rd, caps)).join("");
   }
 
   $("kDate").addEventListener("change", e=>{ if(e.target.value) loadDaily(false, e.target.value); });
-  $("kUnits").addEventListener("change", e=>{
-    const cb=e.target; if(!cb || cb.tagName!=="INPUT" || !KSEL) return;
-    cb.checked ? KSEL.add(cb.value) : KSEL.delete(cb.value);
-    kselSave(); renderKlien();
+  $("kUnit").addEventListener("change", e=>{
+    KUNIT=e.target.value;
+    try{ localStorage.setItem("klienUnit", KUNIT); }catch{}
+    renderKlien();
   });
-  $("kAll").addEventListener("click", ()=>{ if(!DAILY) return; KSEL=new Set((DAILY.units||[]).map(u=>u.id)); kselSave(); renderKlien(); });
-  $("kNone").addEventListener("click", ()=>{ KSEL=new Set(); kselSave(); renderKlien(); });
-  $("kExport").addEventListener("click", ()=>window.print());
+  $("kPrint").addEventListener("click", ()=>window.print());
   // Captions save as they are typed; the report only re-renders on data or
   // selection changes, so an edit in progress is never wiped mid-keystroke.
   $("kreport").addEventListener("input", e=>{
