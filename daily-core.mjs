@@ -82,30 +82,50 @@ const AREA_FOLDERS = {
   communal: "10qb-SF-dz5cZZAcfu4yFargvgdDirrm9",
 };
 
+// One embedded-folder-view read, split into files and subfolders. A folder
+// entry's link points at /drive/folders/, a file's at /file/d/ — that is the
+// only reliable tell the view offers. Drive rate-limits this endpoint with
+// stray 503s, so retry with a short pause.
+async function listDriveFolder(folderId) {
+  const url = `https://drive.google.com/embeddedfolderview?id=${folderId}`;
+  let res, why;
+  for (let i = 0; i < 3; i++) {
+    if (i) await new Promise((ok) => setTimeout(ok, 700 * i));
+    ({ res, why } = await fetchFeed(url, TIMEOUT_MS));
+    if (!why && res.ok) break;
+  }
+  if (why || !res.ok) throw new Error(why || `HTTP ${res.status}`);
+  const html = await res.text();
+  const out = { files: [], folders: [] };
+  const re = /id="entry-([-\w]+)"[\s\S]*?href="([^"]+)"[\s\S]*?flip-entry-title">([^<]*)</g;
+  let m;
+  while ((m = re.exec(html)) && out.files.length + out.folders.length < 300) {
+    (m[2].includes("/folders/") ? out.folders : out.files).push({ id: m[1], name: m[3] });
+  }
+  return out;
+}
+
 /** Current photos in the fixed common-area folders (Amenities, Communal). */
 export async function getAreaPhotos() {
   const out = { ok: true, areas: {}, folders: { ...AREA_FOLDERS } };
   await Promise.all(Object.entries(AREA_FOLDERS).map(async ([key, folderId]) => {
-    const url = `https://drive.google.com/embeddedfolderview?id=${folderId}`;
-    // Drive rate-limits this view with stray 503s — retry with a short pause.
-    let res, why;
-    for (let i = 0; i < 3; i++) {
-      if (i) await new Promise((ok) => setTimeout(ok, 700 * i));
-      ({ res, why } = await fetchFeed(url, TIMEOUT_MS));
-      if (!why && res.ok) break;
-    }
-    if (why || !res.ok) {
+    try {
+      const top = await listDriveFolder(folderId);
+      const shots = [...top.files];
+      // Pictures are sometimes grouped one level down ("Pohon palem",
+      // "Signage") — flatten those in, keeping the subfolder name as `group`
+      // so the report can use the human-written label as a default caption.
+      await Promise.all(top.folders.slice(0, 12).map(async (f) => {
+        try {
+          const sub = await listDriveFolder(f.id);
+          shots.push(...sub.files.map((s) => ({ ...s, group: f.name })));
+        } catch { /* an unreadable subfolder skips; the rest still show */ }
+      }));
+      out.areas[key] = shots.slice(0, 200);
+    } catch (e) {
       out.areas[key] = [];
-      out.errors = { ...(out.errors || {}), [key]: why || `HTTP ${res.status}` };
-      return;
+      out.errors = { ...(out.errors || {}), [key]: e.message };
     }
-    const html = await res.text();
-    // Grid entries look like: id="entry-<fileId>" … class="flip-entry-title">name.jpg<
-    const shots = [];
-    const re = /id="entry-([-\w]+)"[\s\S]*?flip-entry-title">([^<]*)</g;
-    let m;
-    while ((m = re.exec(html)) && shots.length < 200) shots.push({ id: m[1], name: m[2] });
-    out.areas[key] = shots;
   }));
   return out;
 }

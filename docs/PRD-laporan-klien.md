@@ -8,6 +8,15 @@
 > editable **Highlight & Lowlight** section. Unit pages carry: progress stats,
 > S-curve, Highlight/Lowlight, photos.
 >
+> **Rev 7 (2026-07-31):** the print **flows like the dashboard** — no forced
+> page break per section; a one-unit report fits on one or two pages. The
+> "Open folder" link is removed. The common-area lister now **recurses one
+> level into subfolders** (Communal keeps photos inside "Pohon palem" /
+> "Signage"), and a subfolder's name becomes the default caption for its
+> photos — it is a human-written label, unlike camera file names. Chart
+> top-row labels anchor inward near the edges so "HANDOVER 30 Sep" never
+> clips.
+>
 > **Rev 6 (2026-07-31):** photo captions no longer default to the file name
 > ("IMG 8841" told an owner nothing) — they start empty and empty stays off the
 > print. Highlights & Next Week Focus are **one centralized section at the top
