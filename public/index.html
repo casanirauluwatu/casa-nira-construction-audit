@@ -154,7 +154,11 @@
   /* ---------- laporan klien (owner report) ---------- */
   .kbar{align-items:center;}
   button.kexp{padding:9px 16px;}
-  .kunit{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(43,38,32,.05);}
+  .kunit,.krep{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(43,38,32,.05);}
+  .krep .khl{margin-top:0;}
+  .krep+.kunit .kutop{display:none;}
+  .klink a{font:600 11px -apple-system,sans-serif;color:var(--olive);text-decoration:none;}
+  .klink a:hover{text-decoration:underline;}
   .kutop{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font:600 9.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:10px;}
   .kutop .kd{color:var(--muted);letter-spacing:.04em;}
   .kuhead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
@@ -306,8 +310,13 @@
     /* Each unit strip carries the project name + date, so the page header would
        print twice. */
     body.print-klien .top{display:none!important;}
-    .kunit{border:none;border-radius:0;padding:0;margin:0;box-shadow:none;}
-    .kunit:not(:first-child){break-before:page;}
+    .kunit,.krep{border:none;border-radius:0;padding:0;box-shadow:none;}
+    .kunit{margin:0;}
+    .krep{margin:0 0 7px;}
+    /* .krep is a div, the pages are <section>s — the first section shares
+       page 1 with the Highlights block, every later one starts fresh. */
+    .kunit:not(:first-of-type){break-before:page;}
+    .klink{display:none;}
     .kutop{font-size:7pt;padding-bottom:4px;margin-bottom:7px;}
     .kuhead{margin-bottom:5px;}
     .kuid{font-size:14pt;}
@@ -636,7 +645,7 @@
   $("refresh").addEventListener("click", ()=>{
     if(TAB==="audit") load(true);
     else if(TAB==="harian") loadDaily(true);
-    else { loadDaily(true); load(true); }
+    else { loadDaily(true); load(true); loadAreas(true); }
   });
   $("unitSel").addEventListener("change", e=>drawChart(e.target.value));
 
@@ -1098,8 +1107,6 @@
   const kcapKey = (date) => "kcap:" + date;
   function kcaps(date){ try{ return JSON.parse(localStorage.getItem(kcapKey(date))||"{}"); }catch{ return {}; } }
   function kcapSave(date, o){ try{ localStorage.setItem(kcapKey(date), JSON.stringify(o)); }catch{} }
-  // "IMG_20260730_A1-kolam_renang.HEIC" → "IMG 20260730 A1 kolam renang"
-  const nameCap = (n) => String(n||"").replace(/\.[A-Za-z0-9]{2,5}$/,"").replace(/[_\-]+/g," ").replace(/\s+/g," ").trim();
 
   // Standalone S-curve for one unit, same visual language as the audit chart.
   function kcurve(r){
@@ -1135,8 +1142,6 @@
   // manpower stay on the internal tabs; this page goes to the owner.
   function kunitSec(u, r, rd, caps){
     const due=commitOf(u.id), shots=shotsFor(u.id);
-    const hl = caps["h:"+u.id] != null ? caps["h:"+u.id] : "";
-    const nf = caps["f:"+u.id] != null ? caps["f:"+u.id] : "";
     // Committed hand-over date wins over the feed's extrapolated target — it is
     // the date that was promised.
     const stats = r
@@ -1147,10 +1152,13 @@
       : (due?`<span>Handover <b>${esc(due)}</b></span>`:"");
     const curve = r ? kcurve(r)
       : `<div class="kempty">${AUDIT?`No S-curve data available for ${esc(u.id)}.`:"Loading progress data…"}</div>`;
+    // Captions start empty on purpose: camera file names ("IMG 8841",
+    // "WhatsApp Image …") say nothing to an owner, and an empty caption
+    // simply stays off the print.
     const photos = shots.length
-      ? `<div class="kphotos">` + shots.map((s,i)=>{
+      ? `<div class="kphotos">` + shots.map((s)=>{
           const key="p:"+s.id;
-          const cap = caps[key] != null ? caps[key] : (nameCap(s.name) || `Photo ${i+1} — ${u.id}`);
+          const cap = caps[key] != null ? caps[key] : "";
           return `<figure class="kph"><div class="ph">${shotImg(s.id, `Photo ${esc(u.id)}`)}</div>`
             + `<figcaption contenteditable="true" data-ck="${esc(key)}" data-ph="Add photo description…">${esc(cap)}</figcaption></figure>`;
         }).join("") + `</div>`
@@ -1160,49 +1168,49 @@
       + `<div class="kuhead"><div><span class="kuid">${esc(u.id)}</span><span class="kuty">${esc(u.type||"")}</span></div>`
       + `<div class="kustats">${stats}</div></div>`
       + curve
-      + `<div class="khlwrap"><div class="khl">`
-      + `<div class="kdesc kh"><span class="kdl">Highlights</span><div contenteditable="true" data-ck="h:${esc(u.id)}" data-ph="Key achievements today…">${esc(hl)}</div></div>`
-      + `<div class="kdesc kl"><span class="kdl">Next Week Focus</span><div contenteditable="true" data-ck="f:${esc(u.id)}" data-ph="Planned works for next week…">${esc(nf)}</div></div>`
-      + `</div></div>`
       + `<div class="ksec">Photo Documentation${shots.length?` · ${shots.length}`:""}</div>${photos}`
       + `</section>`;
   }
 
-  // Site-wide sections on every owner report, whatever unit is chosen. The
-  // matching Drive folders exist by default; photos land in any folder whose
-  // name matches `re`. Folder names as they are on Drive: "Infra" (also carries
-  // Infrastruktur / Fabrikasi), "amenities", and "communcal" [sic] — the
-  // regexes are loose so a later folder rename to the full/corrected word
-  // still matches.
+  // Common-area pages on every owner report. These photos live in two fixed
+  // Drive folders — flat, no per-date subfolder — so they come from
+  // /api/daily/areas (server-side folder listing), not the daily photo feed.
+  // Their captions are keyed "a:<id>" and stored dateless: the pictures are
+  // date-independent, so a description written once should stay.
   const KAREAS = [
-    { id:"INFRA",     title:"Infrastructure", re:/infra/i  },
-    { id:"AMENITIES", title:"Amenities",      re:/amenit/i },
-    { id:"COMMUNAL",  title:"Communal",       re:/commun/i },
+    { id:"AMENITIES", title:"Amenities", key:"amenities" },
+    { id:"COMMUNAL",  title:"Communal",  key:"communal"  },
   ];
-  function kareaShots(re){
-    if(!PHOTOS || !PHOTOS.ok) return [];
-    const p = PHOTOS.photos || {};
-    return Object.keys(p).filter(k=>re.test(k)).flatMap(k=>p[k]||[]);
+  let AREAS = null, LOADING_AREAS = false;
+  async function loadAreas(fresh){
+    if(LOADING_AREAS) return;
+    LOADING_AREAS = true;
+    try{
+      const res = await fetch("/api/daily/areas"+(fresh?"?fresh=1":""), fresh?{cache:"no-store"}:{});
+      const j = await res.json();
+      AREAS = j && j.ok ? j : { ok:false, error:(j&&j.error)||`HTTP ${res.status}`, areas:{} };
+    }catch(e){ AREAS = { ok:false, error:e.message, areas:{} }; }
+    LOADING_AREAS = false;
+    renderKlien();
   }
-  function kareaSec(a, rd, caps){
-    const shots = kareaShots(a.re);
-    const hl = caps["h:"+a.id] != null ? caps["h:"+a.id] : "";
-    const nf = caps["f:"+a.id] != null ? caps["f:"+a.id] : "";
+  const kareaShots = (a) => AREAS && AREAS.ok ? (AREAS.areas[a.key]||[]) : [];
+  function kareaSec(a, rd){
+    const shots = kareaShots(a);
+    const acaps = kcaps("areas");
+    const folder = AREAS && AREAS.folders ? AREAS.folders[a.key] : null;
     const photos = shots.length
-      ? `<div class="kphotos">` + shots.map((s,i)=>{
-          const key="p:"+s.id;
-          const cap = caps[key] != null ? caps[key] : (nameCap(s.name) || `Photo ${i+1} — ${a.title}`);
+      ? `<div class="kphotos">` + shots.map((s)=>{
+          const key="a:"+s.id;
+          const cap = acaps[key] != null ? acaps[key] : "";
           return `<figure class="kph"><div class="ph">${shotImg(s.id, `Photo ${esc(a.title)}`)}</div>`
             + `<figcaption contenteditable="true" data-ck="${esc(key)}" data-ph="Add photo description…">${esc(cap)}</figcaption></figure>`;
         }).join("") + `</div>`
-      : `<div class="kempty">${PHOTOS===null?"Loading photos…":"No photos for this date."}</div>`;
+      : `<div class="kempty">${AREAS===null?"Loading photos…":"No photos in this folder."}</div>`;
     return `<section class="kunit">`
       + `<div class="kutop"><span>Casa Nira Uluwatu · Daily Progress Report</span><span class="kd">${fmtEN(rd)}</span></div>`
-      + `<div class="kuhead"><div><span class="kuid">${esc(a.title)}</span><span class="kuty">Common Area</span></div></div>`
-      + `<div class="khlwrap"><div class="khl">`
-      + `<div class="kdesc kh"><span class="kdl">Highlights</span><div contenteditable="true" data-ck="h:${esc(a.id)}" data-ph="Key achievements today…">${esc(hl)}</div></div>`
-      + `<div class="kdesc kl"><span class="kdl">Next Week Focus</span><div contenteditable="true" data-ck="f:${esc(a.id)}" data-ph="Planned works for next week…">${esc(nf)}</div></div>`
-      + `</div></div>`
+      + `<div class="kuhead"><div><span class="kuid">${esc(a.title)}</span><span class="kuty">Common Area</span></div>`
+      + (folder?`<div class="klink"><a href="https://drive.google.com/drive/folders/${esc(folder)}" target="_blank" rel="noopener">Open folder ↗</a></div>`:"")
+      + `</div>`
       + `<div class="ksec">Photo Documentation${shots.length?` · ${shots.length}`:""}</div>${photos}`
       + `</section>`;
   }
@@ -1227,21 +1235,34 @@
     }).join("");
     $("kUnit").value = KUNIT;
 
+    if(AREAS===null && !LOADING_AREAS) loadAreas();
+
     const chosen = KUNIT==="ALL" ? units : units.filter(u=>u.id===KUNIT);
     const totF = chosen.reduce((s,u)=>s+shotsFor(u.id).length,0)
-      + KAREAS.reduce((s,a)=>s+kareaShots(a.re).length,0);
+      + KAREAS.reduce((s,a)=>s+kareaShots(a).length,0);
     $("kHint").textContent = `${chosen.length} unit${chosen.length===1?"":"s"} + ${KAREAS.length} areas · ${totF} photo${totF===1?"":"s"}`;
     SUBH.klien = `${KUNIT==="ALL"?"All units":"Unit "+KUNIT} · ${fmtEN(rd)}`;
     applyHead();
     kn.className="note";
     kn.innerHTML = `Compact owner report — pick a unit, then <strong>Print for Owner</strong> (choose “Save as PDF” in the print dialog to send it). `
-      + `Infrastructure &amp; Amenities pages are always included. `
+      + `Amenities &amp; Communal pages are always included. `
       + `Photo descriptions, Highlights &amp; Next Week Focus are click-to-edit; entries are saved on this device.`;
 
     const am={}; if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok) am[r.unit]=r;
     const caps=kcaps(d.date);
-    rep.innerHTML = chosen.map(u=>kunitSec(u, am[u.id], rd, caps)).join("")
-      + KAREAS.map(a=>kareaSec(a, rd, caps)).join("");
+    // One Highlights / Next Week Focus for the whole report, up top — the
+    // strip prints once here, so the first unit page below drops its own.
+    const hl = caps["h:@"] != null ? caps["h:@"] : "";
+    const nf = caps["f:@"] != null ? caps["f:@"] : "";
+    const krep = `<div class="krep">`
+      + `<div class="kutop"><span>Casa Nira Uluwatu · Daily Progress Report</span><span class="kd">${fmtEN(rd)}</span></div>`
+      + `<div class="khlwrap"><div class="khl">`
+      + `<div class="kdesc kh"><span class="kdl">Highlights</span><div contenteditable="true" data-ck="h:@" data-ph="Key achievements today…">${esc(hl)}</div></div>`
+      + `<div class="kdesc kl"><span class="kdl">Next Week Focus</span><div contenteditable="true" data-ck="f:@" data-ph="Planned works for next week…">${esc(nf)}</div></div>`
+      + `</div></div></div>`;
+    rep.innerHTML = krep
+      + chosen.map(u=>kunitSec(u, am[u.id], rd, caps)).join("")
+      + KAREAS.map(a=>kareaSec(a, rd)).join("");
   }
 
   $("kDate").addEventListener("change", e=>{ if(e.target.value) loadDaily(false, e.target.value); });
@@ -1255,9 +1276,12 @@
   // selection changes, so an edit in progress is never wiped mid-keystroke.
   $("kreport").addEventListener("input", e=>{
     const t=e.target.closest("[data-ck]"); if(!t || !DAILY) return;
-    const o=kcaps(DAILY.date);
+    // Common-area captions ("a:…") are dateless — the folders are — while unit
+    // captions and the day's Highlights / Next Week Focus belong to the date.
+    const store = t.dataset.ck.startsWith("a:") ? "areas" : DAILY.date;
+    const o=kcaps(store);
     o[t.dataset.ck]=t.textContent.replace(/\s+/g," ").trim();
-    kcapSave(DAILY.date,o);
+    kcapSave(store,o);
   });
 
   /* Cuaca lapangan dari /api/weather (Open-Meteo di sisi server, di-cache 15

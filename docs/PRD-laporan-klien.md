@@ -8,6 +8,15 @@
 > editable **Highlight & Lowlight** section. Unit pages carry: progress stats,
 > S-curve, Highlight/Lowlight, photos.
 >
+> **Rev 6 (2026-07-31):** photo captions no longer default to the file name
+> ("IMG 8841" told an owner nothing) — they start empty and empty stays off the
+> print. Highlights & Next Week Focus are **one centralized section at the top
+> of the report**, not repeated per page. The Infra section is dropped; the two
+> common-area pages are **Amenities** and **Communal**, whose Drive folders are
+> flat (no per-date subfolder) — a new `/api/daily/areas` endpoint lists those
+> two public folders server-side (Drive embedded-folder view, zero-dep) and
+> their photo captions are stored dateless.
+>
 > **Rev 5 (2026-07-31):** the S-curve shows plan, actual, target and handover
 > only — the pace **projection is removed** from the owner report (it stays on
 > the internal audit tab). Two site-wide sections are **always appended**:
