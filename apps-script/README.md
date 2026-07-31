@@ -39,7 +39,7 @@ Check which code is actually live:
 <exec-url>?pretty=1
 ```
 
-`scriptVersion` should read **`v3-series-months`**, and `series` / `months` should
+`scriptVersion` should read **`v5-photo-ttl`**, and `series` / `months` should
 be present. If they're missing, the URL is still on old code.
 
 Also make sure the project holds only **one** copy of this script — a leftover
@@ -71,7 +71,13 @@ the sheet's block names are mapped in `FOLDER_ALIAS` — `Infra` covers both
 Walking 22 units three levels deep would be ~66 Drive round trips. Instead four
 `Drive.Files.list` queries resolve a whole day, because every unit's date folder
 shares one name: ask for all folders called `30 07 2026` whose parent is one of
-the month folders, in a single call. Cached 6h.
+the month folders, in a single call.
+
+Cached **6h for a past day that already has photos, 10 min otherwise** — today
+keeps filling up as people upload, and an empty answer nearly always means "not
+uploaded yet" rather than "no photos taken". Holding either for six hours is what
+makes a photo added at noon invisible until evening. **Refresh data** on the
+dashboard bypasses every layer immediately.
 
 **Sharing:** the script reads as the deploying account, so it lists photos
 whatever the sharing is — but the *browser* renders the thumbnail. With the Rekap
@@ -190,6 +196,7 @@ icon) if you'd rather not.
 | `{"error":"spreadsheet not found — set SHEET_ID"}` | Wrong `SHEET_ID`, or the deploying account can't open it. |
 | Dashboard still shows the snapshot | `DAILY_FEED` unset, or set but not redeployed. The page's note line says which source it used. |
 | Edited the sheet but the JSON is stale | The 6h cache. Hit **Refresh data** (sends `?nocache=1`), or wait it out. |
+| Uploaded photos but the cards stay empty | Same cache, up to 10 min for today. Hit **Refresh data**. If it's still empty, check the folder is named `<DD MM YYYY>` (e.g. `31 07 2026`) inside `<MM YYYY>` inside the unit folder — `?photos=YYYY-MM-DD&nocache=1&pretty=1` shows what the script found. |
 | `hasData: false` | The day's `Jumlah Aktual` column is genuinely empty. |
 | Re-deployed but `series` / `months` still missing | The `/exec` URL is on an old version — see [Re-deploying after an edit](#re-deploying-after-an-edit). Check `scriptVersion` in the response. |
 | Only one month in the dropdown, no chart | Same cause: an older script sends no `months` / `series`. Typing a date still works. |

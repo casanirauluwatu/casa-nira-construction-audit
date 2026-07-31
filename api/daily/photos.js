@@ -7,6 +7,9 @@ export const maxDuration = 30;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+// Site time is WITA (UTC+8, no DST) — the same clock the Drive folders are named in.
+const todayWita = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+
 export default async function handler(req, res) {
   const q = req.query || {};
   const fresh = q.fresh != null;
@@ -17,9 +20,16 @@ export default async function handler(req, res) {
     return;
   }
   const data = await getPhotos({ date, fresh });
+  // Only a finished day that already has photos may be held for hours. Today is
+  // still being uploaded to, and an empty day usually means "not yet" — pinning
+  // either at the edge would hide a photo added minutes later.
+  const shots = Object.values(data.counts || {}).reduce((a, b) => a + (b || 0), 0);
+  const settled = data.ok && shots > 0 && date < todayWita();
   res.setHeader(
     "cache-control",
-    fresh || !data.ok ? "public, max-age=0, s-maxage=60" : "public, max-age=300, s-maxage=21600, stale-while-revalidate=86400"
+    !fresh && settled
+      ? "public, max-age=300, s-maxage=21600, stale-while-revalidate=86400"
+      : "public, max-age=0, s-maxage=60, stale-while-revalidate=300"
   );
   res.status(200).json(data);
 }

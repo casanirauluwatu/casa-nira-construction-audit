@@ -25,21 +25,34 @@ const TYPES = {
 };
 
 // Serve a cached JSON endpoint. compute() runs on miss (or when ?fresh is set).
-async function serveJson(res, key, fresh, compute) {
+// ttlFor(data) may shorten the hold for an answer that is still changing.
+async function serveJson(res, key, fresh, compute, ttlFor = null) {
   if (!fresh) {
     const hit = CACHE.get(key);
-    if (hit && Date.now() - hit.at < TTL_MS) {
-      res.writeHead(200, { "content-type": "application/json", "cache-control": `public, max-age=${Math.floor(TTL_MS / 1000)}`, "x-cache": "HIT" }).end(hit.body);
+    if (hit && Date.now() - hit.at < hit.ttl) {
+      res.writeHead(200, { "content-type": "application/json", "cache-control": `public, max-age=${Math.floor(hit.ttl / 1000)}`, "x-cache": "HIT" }).end(hit.body);
       return;
     }
   }
-  const body = JSON.stringify(await compute());
-  if (!fresh) CACHE.set(key, { at: Date.now(), body });
+  const data = await compute();
+  const ttl = ttlFor ? ttlFor(data) : TTL_MS;
+  const body = JSON.stringify(data);
+  if (!fresh) CACHE.set(key, { at: Date.now(), body, ttl });
   res.writeHead(200, {
     "content-type": "application/json",
-    "cache-control": fresh ? "no-store" : `public, max-age=${Math.floor(TTL_MS / 1000)}`,
+    "cache-control": fresh ? "no-store" : `public, max-age=${Math.floor(ttl / 1000)}`,
     "x-cache": fresh ? "BYPASS" : "MISS",
   }).end(body);
+}
+
+// Site time is WITA (UTC+8, no DST) — the clock the Drive day folders are named in.
+const todayWita = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+
+// Photos keep arriving through the day, and an empty answer usually means "not
+// uploaded yet" — hold those for a minute, not six hours.
+function photoTtl(date, data) {
+  const shots = Object.values(data?.counts || {}).reduce((a, b) => a + (b || 0), 0);
+  return data?.ok && shots > 0 && date < todayWita() ? TTL_MS : 60000;
 }
 
 const server = http.createServer(async (req, res) => {
@@ -71,7 +84,7 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === "/api/daily/photos") {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get("date") || "") ? url.searchParams.get("date") : null;
     if (!date) { res.writeHead(400, { "content-type": "application/json" }).end('{"error":"date required"}'); return; }
-    await serveJson(res, `photos:${date}`, fresh, () => getPhotos({ date, fresh }));
+    await serveJson(res, `photos:${date}`, fresh, () => getPhotos({ date, fresh }), (d) => photoTtl(date, d));
     return;
   }
 

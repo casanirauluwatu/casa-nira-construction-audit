@@ -108,6 +108,11 @@ cached rather than refetched on every open:
 - **Vercel** — responses carry `s-maxage=21600` (6h edge cache) + stale-while-revalidate, so most opens are served from the CDN without invoking the function.
 - **Node server** — an in-memory cache per endpoint (`CACHE_TTL_MIN`, default 360 = 6h).
 
+Site photos are the exception: only a **past** day that already returned photos
+gets the 6h hold. Today's folder is still being uploaded to, and an empty answer
+usually means "not yet", so both are held 60s — otherwise one lookup made before
+the morning upload would hide the photos for the rest of the day.
+
 Weather is served from `/api/weather` (Open-Meteo, no API key) with a 15-minute
 edge cache, rather than fetched by each visitor — so it is consistent for everyone
 and still works on networks that block third-party calls.

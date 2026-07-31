@@ -68,10 +68,10 @@ var MAX_SCAN_ROWS = 420;  // rows pulled per read; blocks end ~320
 var BLOCK_TAIL = 20;      // if a block starts this close to the window end, re-read wider
 var CACHE_SEC = 21600;    // 6h — matches the dashboard's edge cache
 var EMPTY_CACHE_SEC = 600;// 10min while the requested day still has no numbers
-var CACHE_VER = 'v4';     // bump to invalidate every cached entry
+var CACHE_VER = 'v5';     // bump to invalidate every cached entry
 // Shown in every response as `scriptVersion`, so you can tell at a glance which
 // code the /exec URL is actually serving after a re-deploy.
-var SCRIPT_VERSION = 'v4-photos';
+var SCRIPT_VERSION = 'v5-photo-ttl';
 var MONTHS_ID = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
@@ -84,8 +84,12 @@ function doGet(e) {
       var pk = 'photos:' + CACHE_VER + ':' + p.photos;
       var pc = tryCache();
       if (pc && !skip) { var ph = pc.get(pk); if (ph) return out(ph, p.pretty); }
-      var pd = JSON.stringify(photosFor(p.photos));
-      if (pc) { try { pc.put(pk, pd, PHOTO_CACHE_SEC); } catch (ignore) {} }
+      var pres = photosFor(p.photos);
+      var pd = JSON.stringify(pres);
+      // Never pin today's answer — or an empty one — for 6h: photos are uploaded
+      // through the day, so a lookup made before the upload would hide them
+      // until evening. Only a finished day that already has photos is settled.
+      if (pc) { try { pc.put(pk, pd, photoTtl_(pres)); } catch (ignore) {} }
       return out(pd, p.pretty);
     }
     var key = cacheKey(p.date, p.month);
@@ -472,7 +476,8 @@ function out(body, pretty) {
    ================================================================== */
 
 var REKAP_FOLDER_ID = '1x_VL0b99xelLk5ON9jaRR5tbo8S1lhfl';
-var PHOTO_CACHE_SEC = 21600;   // 6h, same as the labour answers
+var PHOTO_CACHE_SEC = 21600;   // 6h — a past day whose upload is done
+var PHOTO_LIVE_CACHE_SEC = 600;// 10min — today, or any day that came back empty
 var MAX_PER_UNIT = 12;         // cards show a handful; keep the payload small
 
 // The Drive folder names that do not match the spreadsheet's block names.
@@ -525,6 +530,19 @@ function photosFor(dateParam) {
     counts: countOf_(photos),
     generatedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * How long a photo answer may be cached. The long TTL is only safe once the day
+ * is over *and* it found something: today keeps filling up, and an empty answer
+ * usually means "not uploaded yet", not "no photos taken".
+ */
+function photoTtl_(res) {
+  var n = 0, c = (res && res.counts) || {};
+  Object.keys(c).forEach(function (u) { n += c[u] || 0; });
+  if (!n) return PHOTO_LIVE_CACHE_SEC;
+  var want = parseYMD(res.date);
+  return want && key(want) < key(todayYMD()) ? PHOTO_CACHE_SEC : PHOTO_LIVE_CACHE_SEC;
 }
 
 /** One Drive query for every child of a set of parents. */
