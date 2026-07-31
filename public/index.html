@@ -150,6 +150,43 @@
   .uc .pct{font:600 11.5px ui-monospace,Menlo,monospace;color:var(--muted);}
   .nbox{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--olive);border-radius:8px;padding:11px 14px;font-size:12.5px;margin-bottom:9px;}
   .nbox .nl{display:block;font:600 9.5px ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;}
+
+  /* ---------- laporan klien (owner report) ---------- */
+  .kbar{align-items:center;}
+  button.kexp{padding:9px 16px;}
+  .kunit{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(43,38,32,.05);}
+  .kutop{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font:600 9.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:10px;}
+  .kutop .kd{color:var(--muted);letter-spacing:.04em;}
+  .kuhead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+  .kuid{font:700 19px ui-monospace,Menlo,monospace;letter-spacing:.02em;}
+  .kuty{margin-left:9px;font:600 10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);}
+  .kustats{display:flex;gap:13px;flex-wrap:wrap;font-size:12px;color:var(--muted);}
+  .kustats b{color:var(--ink);font-family:ui-monospace,Menlo,monospace;font-weight:600;}
+  .kustats .pos b{color:var(--green);}.kustats .neg b{color:var(--red);}
+  .ksec{font:600 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:12px 0 7px;}
+  .kcurve svg{width:100%;height:auto;display:block;}
+  .khint{font-size:11px;color:var(--muted);margin-top:2px;}
+  .kdesc{background:#faf7ef;border:1px solid var(--line);border-left:3px solid var(--olive);border-radius:8px;padding:8px 11px;font-size:12.5px;line-height:1.5;}
+  .kdesc .kdl{display:block;font:600 9px ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--olive);margin-bottom:3px;}
+  .khl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start;margin-top:10px;}
+  .kdesc.kh{border-left-color:var(--green);}
+  .kdesc.kh .kdl{color:var(--green);}
+  .kdesc.kl{border-left-color:var(--amber);}
+  .kdesc.kl .kdl{color:var(--amber);}
+  .kphotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
+  .kph{margin:0;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff;display:flex;flex-direction:column;}
+  .kph .ph{position:relative;aspect-ratio:4/3;background:#ede7da;overflow:hidden;}
+  .kph .ph img{width:100%;height:100%;object-fit:cover;display:block;}
+  .kph .ph .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);text-align:center;padding:8px;}
+  .kph .ph .empty[hidden]{display:none;}
+  .kph .ph .empty svg{width:24px;height:24px;opacity:.5;}
+  .kph .ph .empty span{font-size:10.5px;}
+  .kph figcaption{padding:6px 9px 7px;font-size:11.5px;line-height:1.45;min-height:30px;}
+  [data-ck]{outline:none;border-radius:6px;cursor:text;}
+  [data-ck]:hover{background:#f7f1e2;}
+  [data-ck]:focus{background:#faf3df;box-shadow:0 0 0 2px #e8dcbd;}
+  [data-ck]:empty::before{content:attr(data-ph);color:var(--muted);font-style:italic;}
+  .kempty{border:1px dashed var(--line);border-radius:10px;padding:20px;text-align:center;color:var(--muted);font-size:12.5px;}
   @media (max-width:640px){
     .wrap{padding:26px 14px 48px;}
     h1{font-size:23px;margin:8px 0 5px;}
@@ -185,6 +222,9 @@
     .chart-sel{flex:1 1 100%;justify-content:space-between;}
     .chart-sel select{flex:1;min-height:44px;font-size:16px;}
     .uc .ft a{padding:8px 0;}
+    button.kexp{flex:1;min-height:44px;}
+    .khl{grid-template-columns:minmax(0,1fr);}
+    .kphotos{grid-template-columns:repeat(2,minmax(0,1fr));}
 
     /* The chart is unreadable squeezed into 390px — let it keep its width and
        scroll sideways, the way the audit chart already does. */
@@ -261,6 +301,33 @@
     .nshot{font-size:6.5pt;padding:2px 5px;}
     .nbox{padding:7px 10px;font-size:8pt;margin-bottom:6px;}
     a{color:inherit;}
+
+    /* ---------- laporan klien: one compact page per unit for the owner ---------- */
+    /* Each unit strip carries the project name + date, so the page header would
+       print twice. */
+    body.print-klien .top{display:none!important;}
+    .kunit{border:none;border-radius:0;padding:0;margin:0;box-shadow:none;}
+    .kunit:not(:first-child){break-before:page;}
+    .kutop{font-size:7pt;padding-bottom:4px;margin-bottom:7px;}
+    .kuhead{margin-bottom:5px;}
+    .kuid{font-size:14pt;}
+    .kuty{font-size:7.5pt;}
+    .kustats{font-size:8pt;gap:10px;}
+    .ksec{margin:7px 0 4px;font-size:6.5pt;}
+    .khint{font-size:7pt;margin-top:1px;}
+    .kdesc{padding:5px 9px;font-size:8pt;}
+    .khl{gap:6px;margin-top:6px;}
+    /* An untouched Highlight/Lowlight box prints as nothing; if both are empty
+       the whole row stays off the page. */
+    .khl .kdesc:not(:has([data-ck]:not(:empty))){display:none;}
+    .khlwrap:not(:has([data-ck]:not(:empty))){display:none;}
+    .kphotos{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+    .kph{break-inside:avoid;border-radius:6px;}
+    .kph figcaption{font-size:7pt;padding:3px 6px;min-height:0;}
+    /* Edit affordances are screen furniture; an untouched placeholder prints as nothing. */
+    [data-ck]:hover,[data-ck]:focus{background:none;box-shadow:none;}
+    [data-ck]:empty{display:none;}
+    .kempty{padding:8px;font-size:8pt;}
   }
 </style>
 </head>
@@ -281,6 +348,7 @@
   <nav class="tabs" role="tablist" aria-label="Laporan">
     <button class="tab" id="tab-audit" type="button" role="tab" aria-selected="true" aria-controls="panel-audit">Construction Audit</button>
     <button class="tab" id="tab-harian" type="button" role="tab" aria-selected="false" aria-controls="panel-harian">Laporan Harian</button>
+    <button class="tab" id="tab-klien" type="button" role="tab" aria-selected="false" aria-controls="panel-klien">Client Report</button>
   </nav>
 
   <section class="tabpanel" id="panel-audit" role="tabpanel" aria-labelledby="tab-audit">
@@ -364,6 +432,17 @@
     <div class="sec" id="secCatatan"><h2>Catatan &amp; Kendala</h2><div class="rule"></div></div>
     <div id="dnotes"></div>
   </section>
+
+  <section class="tabpanel" id="panel-klien" role="tabpanel" aria-labelledby="tab-klien" hidden>
+    <div class="dbar kbar">
+      <label class="dbar-f">Date <input type="date" id="kDate"></label>
+      <label class="dbar-f">Unit <select id="kUnit"></select></label>
+      <button type="button" class="refresh kexp" id="kPrint">Print for Owner</button>
+      <span class="dbar-h" id="kHint"></span>
+    </div>
+    <div class="note" id="knote">Loading client report…</div>
+    <div id="kreport"></div>
+  </section>
 </div>
 <script>
   const $ = (id) => document.getElementById(id);
@@ -422,6 +501,7 @@
     if(TAB==="audit") applyHead();
     buildChart(rows);
     if(DAILY) paintPhotos(DAILY);   // photo cards borrow the live progress % from here
+    else renderKlien();             // klien S-curves come from here too
   }
 
   function buildChart(rows){
@@ -522,9 +602,10 @@
     finally{ btn.disabled=false; btn.textContent="Refresh data"; }
   }
   /* ==================== tabs ==================== */
-  const H1 = { audit:"Construction Feed Audit", harian:"Laporan Harian Proyek" };
-  const SUBH = { audit:"Loading live feed data…", harian:"Memuat laporan harian…" };
-  let TAB = location.hash.slice(1)==="harian" ? "harian" : "audit";
+  const H1 = { audit:"Construction Feed Audit", harian:"Laporan Harian Proyek", klien:"Daily Client Report" };
+  const SUBH = { audit:"Loading live feed data…", harian:"Memuat laporan harian…", klien:"Choose a date & unit, then Print for Owner." };
+  const HASH0 = location.hash.slice(1);
+  let TAB = HASH0==="harian" || HASH0==="klien" ? HASH0 : "audit";
   let AUDIT = null, DAILY = null, LOADING_DAILY = false;
 
   function applyHead(){
@@ -534,18 +615,29 @@
   }
   function setTab(t){
     TAB = t;
-    for(const k of ["audit","harian"]){
+    for(const k of ["audit","harian","klien"]){
       $("tab-"+k).setAttribute("aria-selected", String(k===t));
       $("panel-"+k).hidden = k!==t;
     }
     applyHead();
     history.replaceState(null,"","#"+t);
-    if(t==="harian" && !DAILY && !LOADING_DAILY) loadDaily();
+    if((t==="harian"||t==="klien") && !DAILY && !LOADING_DAILY) loadDaily();
+    if(t==="klien") renderKlien();
   }
   $("tab-audit").addEventListener("click", ()=>setTab("audit"));
   $("tab-harian").addEventListener("click", ()=>setTab("harian"));
+  $("tab-klien").addEventListener("click", ()=>setTab("klien"));
   $("print").addEventListener("click", ()=>window.print());
-  $("refresh").addEventListener("click", ()=>{ TAB==="harian" ? loadDaily(true) : load(true); });
+  // Printing from the Client Report hides the page header (each report page
+  // carries its own strip); the class scopes those print rules to that tab.
+  window.addEventListener("beforeprint", ()=>{ document.body.classList.toggle("print-klien", TAB==="klien"); });
+  window.addEventListener("afterprint", ()=>{ document.body.classList.remove("print-klien"); });
+  // The klien report draws from both sources, so its refresh re-pulls both.
+  $("refresh").addEventListener("click", ()=>{
+    if(TAB==="audit") load(true);
+    else if(TAB==="harian") loadDaily(true);
+    else { loadDaily(true); load(true); }
+  });
   $("unitSel").addEventListener("change", e=>drawChart(e.target.value));
 
   /* ==================== laporan harian ==================== */
@@ -809,6 +901,11 @@
     $("phHint").textContent = PHOTOS===null ? "memuat…"
       : PHOTOS.ok ? `${tot} foto · ${withShots} unit · folder Rekap`
       : `foto tidak tersedia (${PHOTOS.error||"?"})`;
+
+    // The klien report shows the same day and photos — keep it in step. This
+    // runs on daily load, on photo arrival and on audit render, so every data
+    // source the report reads passes through here.
+    renderKlien();
   }
 
   /* ---------- pemilih tanggal ---------- */
@@ -984,6 +1081,184 @@
     $("mpFoot").innerHTML = `Rata-rata <strong>${avg.toFixed(0)}</strong> pekerja · puncak <strong>${peak}</strong> (${dShort(peakAt)}) · ${real.length-worked.length} hari tanpa pekerja`
       + (d.live?` · klik hari untuk membuka laporannya`:"");
   }
+
+  /* ==================== laporan klien ====================
+     Owner-facing daily report: pick one unit (or all) from a dropdown, get a
+     compact one-page report — photos with editable descriptions, the S-curve,
+     highlight & lowlight — and print it for the owner (window.print).
+     Reads the same DAILY / PHOTOS / AUDIT state as the other tabs — no data of
+     its own except the captions, which live in localStorage on this device. */
+  let KUNIT = null;   // "ALL" or one unit id
+
+  // The owners read English; the internal tabs stay Indonesian.
+  const DAY_EN = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const MON_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const fmtEN = (d) => `${DAY_EN[d.getDay()]}, ${d.getDate()} ${MON_EN[d.getMonth()]} ${d.getFullYear()}`;
+
+  const kcapKey = (date) => "kcap:" + date;
+  function kcaps(date){ try{ return JSON.parse(localStorage.getItem(kcapKey(date))||"{}"); }catch{ return {}; } }
+  function kcapSave(date, o){ try{ localStorage.setItem(kcapKey(date), JSON.stringify(o)); }catch{} }
+  // "IMG_20260730_A1-kolam_renang.HEIC" → "IMG 20260730 A1 kolam renang"
+  const nameCap = (n) => String(n||"").replace(/\.[A-Za-z0-9]{2,5}$/,"").replace(/[_\-]+/g," ").replace(/\s+/g," ").trim();
+
+  // Standalone S-curve for one unit, same visual language as the audit chart.
+  function kcurve(r){
+    const W=960,H=250,PL=42,PR=16,PT=22,PB=36,iw=W-PL-PR,ih=H-PT-PB;
+    const pts=(r.series||[]).map(w=>({t:pW(w.d),p:w.p,a:w.a})).filter(x=>x.t);
+    if(!pts.length) return `<div class="kempty">No S-curve schedule available for ${esc(r.unit)}.</div>`;
+    // Plan, actual, target and the committed hand-over only — the pace-based
+    // projection is an internal working figure and stays off the owner report.
+    const target=pW(r.target), now=CHART_NOW, committed=pW(commitOf(r.unit));
+    const t0=pts[0].t; let t1=pts[pts.length-1].t;
+    [target,now,committed].forEach(d=>{ if(d&&d>t1) t1=d; });
+    t1=new Date(t1.getTime()+10*864e5); const span=(t1-t0)||1;
+    const xF=d=>PL+((d-t0)/span)*iw, yF=v=>PT+(1-Math.max(0,Math.min(100,v))/100)*ih;
+    let s="";
+    for(const gy of [0,25,50,75,100]){const y=yF(gy);s+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="#e6dfd1"/><text x="${PL-8}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="10" fill="#8f887c" ${MONO}>${gy}</text>`;}
+    monthTicks(t0,t1).forEach(tk=>{const x=xF(tk.date);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#efe9dd"/><text x="${x.toFixed(1)}" y="${H-22}" text-anchor="middle" font-size="9" fill="#8f887c" ${MONO}>${mlabel(tk)}</text>`;});
+    const upto=pts.filter(x=>x.a!=null);
+    s+=poly(pts.map(x=>[xF(x.t),yF(x.p)]),"#a9822f","5 4",2);
+    s+=poly(upto.map(x=>[xF(x.t),yF(x.a)]),"#6f7043",null,2.6);
+    // The committed hand-over label wins the top row when the two dates are
+    // close — the target date is still in the hint line under the chart.
+    const tClash = target && committed && Math.abs(xF(target)-xF(committed)) < 140;
+    if(target){const x=xF(target);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#a9822f" stroke-width="1.2" stroke-dasharray="4 3"/>`+diamond(x,yF(100),5,"#a9822f")+(tClash?"":`<text x="${x.toFixed(1)}" y="${PT-8}" text-anchor="middle" font-size="9" fill="#a9822f" font-weight="600" ${MONO}>TARGET</text>`);}
+    if(now){const x=xF(now);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#b4472e" stroke-width="1" stroke-dasharray="2 2" opacity="0.7"/><text x="${x.toFixed(1)}" y="${PT-8}" text-anchor="middle" font-size="9" fill="#b4472e" ${MONO}>today</text>`;}
+    if(committed){const x=xF(committed);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#d9791a" stroke-width="2"/><text x="${x.toFixed(1)}" y="${PT-8}" text-anchor="middle" font-size="9.5" fill="#d9791a" font-weight="700" ${MONO}>HANDOVER ${committed.getUTCDate()} ${MON3[committed.getUTCMonth()]}</text>`;}
+    if(upto.length){const last=upto[upto.length-1];const lx=xF(last.t),ly=yF(last.a);s+=`<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.6" fill="#6f7043"/><text x="${(lx-7).toFixed(1)}" y="${(ly-7).toFixed(1)}" text-anchor="end" font-size="11.5" font-weight="600" fill="#6f7043" ${MONO}>${last.a.toFixed(1)}%</text>`;}
+    return `<div class="kcurve"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="S-curve ${esc(r.unit)}">${s}</svg>`
+      + `<div class="khint">Dashed gold = plan · solid olive = actual. Actual <strong>${r.actual.toFixed(1)}%</strong> vs plan ${r.planned.toFixed(1)}%.</div></div>`;
+  }
+
+  // One compact unit page: project strip, unit + progress stats, S-curve,
+  // highlight/lowlight, then the photos. Progress figures only — labour and
+  // manpower stay on the internal tabs; this page goes to the owner.
+  function kunitSec(u, r, rd, caps){
+    const due=commitOf(u.id), shots=shotsFor(u.id);
+    const hl = caps["h:"+u.id] != null ? caps["h:"+u.id] : "";
+    const nf = caps["f:"+u.id] != null ? caps["f:"+u.id] : "";
+    // Committed hand-over date wins over the feed's extrapolated target — it is
+    // the date that was promised.
+    const stats = r
+      ? `<span>Progress <b>${r.actual.toFixed(1)}%</b></span><span>Plan <b>${r.planned.toFixed(1)}%</b></span>`
+        + `<span class="${r.deviation<0?"neg":"pos"}">Deviation <b>${sgn(r.deviation)}</b></span>`
+        + (r.d0!=null?`<span>This week <b class="${dCls(r.d0)}">${sgn(r.d0)}</b></span>`:"")
+        + `<span>${due?"Handover":"Target"} <b>${esc(due||r.target)}</b></span>`
+      : (due?`<span>Handover <b>${esc(due)}</b></span>`:"");
+    const curve = r ? kcurve(r)
+      : `<div class="kempty">${AUDIT?`No S-curve data available for ${esc(u.id)}.`:"Loading progress data…"}</div>`;
+    const photos = shots.length
+      ? `<div class="kphotos">` + shots.map((s,i)=>{
+          const key="p:"+s.id;
+          const cap = caps[key] != null ? caps[key] : (nameCap(s.name) || `Photo ${i+1} — ${u.id}`);
+          return `<figure class="kph"><div class="ph">${shotImg(s.id, `Photo ${esc(u.id)}`)}</div>`
+            + `<figcaption contenteditable="true" data-ck="${esc(key)}" data-ph="Add photo description…">${esc(cap)}</figcaption></figure>`;
+        }).join("") + `</div>`
+      : `<div class="kempty">${PHOTOS===null?"Loading photos…":"No photos for this date."}</div>`;
+    return `<section class="kunit">`
+      + `<div class="kutop"><span>Casa Nira Uluwatu · Daily Progress Report</span><span class="kd">${fmtEN(rd)}</span></div>`
+      + `<div class="kuhead"><div><span class="kuid">${esc(u.id)}</span><span class="kuty">${esc(u.type||"")}</span></div>`
+      + `<div class="kustats">${stats}</div></div>`
+      + curve
+      + `<div class="khlwrap"><div class="khl">`
+      + `<div class="kdesc kh"><span class="kdl">Highlights</span><div contenteditable="true" data-ck="h:${esc(u.id)}" data-ph="Key achievements today…">${esc(hl)}</div></div>`
+      + `<div class="kdesc kl"><span class="kdl">Next Week Focus</span><div contenteditable="true" data-ck="f:${esc(u.id)}" data-ph="Planned works for next week…">${esc(nf)}</div></div>`
+      + `</div></div>`
+      + `<div class="ksec">Photo Documentation${shots.length?` · ${shots.length}`:""}</div>${photos}`
+      + `</section>`;
+  }
+
+  // Site-wide sections on every owner report, whatever unit is chosen. The
+  // matching Drive folders exist by default; photos land in any folder whose
+  // name matches `re`. Folder names as they are on Drive: "Infra" (also carries
+  // Infrastruktur / Fabrikasi), "amenities", and "communcal" [sic] — the
+  // regexes are loose so a later folder rename to the full/corrected word
+  // still matches.
+  const KAREAS = [
+    { id:"INFRA",     title:"Infrastructure", re:/infra/i  },
+    { id:"AMENITIES", title:"Amenities",      re:/amenit/i },
+    { id:"COMMUNAL",  title:"Communal",       re:/commun/i },
+  ];
+  function kareaShots(re){
+    if(!PHOTOS || !PHOTOS.ok) return [];
+    const p = PHOTOS.photos || {};
+    return Object.keys(p).filter(k=>re.test(k)).flatMap(k=>p[k]||[]);
+  }
+  function kareaSec(a, rd, caps){
+    const shots = kareaShots(a.re);
+    const hl = caps["h:"+a.id] != null ? caps["h:"+a.id] : "";
+    const nf = caps["f:"+a.id] != null ? caps["f:"+a.id] : "";
+    const photos = shots.length
+      ? `<div class="kphotos">` + shots.map((s,i)=>{
+          const key="p:"+s.id;
+          const cap = caps[key] != null ? caps[key] : (nameCap(s.name) || `Photo ${i+1} — ${a.title}`);
+          return `<figure class="kph"><div class="ph">${shotImg(s.id, `Photo ${esc(a.title)}`)}</div>`
+            + `<figcaption contenteditable="true" data-ck="${esc(key)}" data-ph="Add photo description…">${esc(cap)}</figcaption></figure>`;
+        }).join("") + `</div>`
+      : `<div class="kempty">${PHOTOS===null?"Loading photos…":"No photos for this date."}</div>`;
+    return `<section class="kunit">`
+      + `<div class="kutop"><span>Casa Nira Uluwatu · Daily Progress Report</span><span class="kd">${fmtEN(rd)}</span></div>`
+      + `<div class="kuhead"><div><span class="kuid">${esc(a.title)}</span><span class="kuty">Common Area</span></div></div>`
+      + `<div class="khlwrap"><div class="khl">`
+      + `<div class="kdesc kh"><span class="kdl">Highlights</span><div contenteditable="true" data-ck="h:${esc(a.id)}" data-ph="Key achievements today…">${esc(hl)}</div></div>`
+      + `<div class="kdesc kl"><span class="kdl">Next Week Focus</span><div contenteditable="true" data-ck="f:${esc(a.id)}" data-ph="Planned works for next week…">${esc(nf)}</div></div>`
+      + `</div></div>`
+      + `<div class="ksec">Photo Documentation${shots.length?` · ${shots.length}`:""}</div>${photos}`
+      + `</section>`;
+  }
+
+  function renderKlien(){
+    if(TAB!=="klien") return;
+    const kn=$("knote"), rep=$("kreport");
+    if(!DAILY){
+      kn.className="note"; kn.textContent="Loading daily data…"; rep.innerHTML="";
+      return;
+    }
+    const d=DAILY, rd=new Date(d.date+"T00:00:00");
+    const units=d.units||[], ids=units.map(u=>u.id);
+    if(KUNIT==null){ try{ KUNIT=localStorage.getItem("klienUnit")||"ALL"; }catch{ KUNIT="ALL"; } }
+    if(KUNIT!=="ALL" && !ids.includes(KUNIT)) KUNIT="ALL";
+    $("kDate").value = d.date||"";
+    $("kDate").disabled = !d.live;   // snapshot mode answers exactly one day
+
+    $("kUnit").innerHTML = `<option value="ALL">All units · one page each</option>` + units.map(u=>{
+      const n=shotsFor(u.id).length;
+      return `<option value="${esc(u.id)}">${esc(u.id)} · ${esc((u.type||"").replace(/^The /,""))}${n?` · ${n} photo${n===1?"":"s"}`:""}</option>`;
+    }).join("");
+    $("kUnit").value = KUNIT;
+
+    const chosen = KUNIT==="ALL" ? units : units.filter(u=>u.id===KUNIT);
+    const totF = chosen.reduce((s,u)=>s+shotsFor(u.id).length,0)
+      + KAREAS.reduce((s,a)=>s+kareaShots(a.re).length,0);
+    $("kHint").textContent = `${chosen.length} unit${chosen.length===1?"":"s"} + ${KAREAS.length} areas · ${totF} photo${totF===1?"":"s"}`;
+    SUBH.klien = `${KUNIT==="ALL"?"All units":"Unit "+KUNIT} · ${fmtEN(rd)}`;
+    applyHead();
+    kn.className="note";
+    kn.innerHTML = `Compact owner report — pick a unit, then <strong>Print for Owner</strong> (choose “Save as PDF” in the print dialog to send it). `
+      + `Infrastructure &amp; Amenities pages are always included. `
+      + `Photo descriptions, Highlights &amp; Next Week Focus are click-to-edit; entries are saved on this device.`;
+
+    const am={}; if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok) am[r.unit]=r;
+    const caps=kcaps(d.date);
+    rep.innerHTML = chosen.map(u=>kunitSec(u, am[u.id], rd, caps)).join("")
+      + KAREAS.map(a=>kareaSec(a, rd, caps)).join("");
+  }
+
+  $("kDate").addEventListener("change", e=>{ if(e.target.value) loadDaily(false, e.target.value); });
+  $("kUnit").addEventListener("change", e=>{
+    KUNIT=e.target.value;
+    try{ localStorage.setItem("klienUnit", KUNIT); }catch{}
+    renderKlien();
+  });
+  $("kPrint").addEventListener("click", ()=>window.print());
+  // Captions save as they are typed; the report only re-renders on data or
+  // selection changes, so an edit in progress is never wiped mid-keystroke.
+  $("kreport").addEventListener("input", e=>{
+    const t=e.target.closest("[data-ck]"); if(!t || !DAILY) return;
+    const o=kcaps(DAILY.date);
+    o[t.dataset.ck]=t.textContent.replace(/\s+/g," ").trim();
+    kcapSave(DAILY.date,o);
+  });
 
   /* Cuaca lapangan dari /api/weather (Open-Meteo di sisi server, di-cache 15
      menit). Ditarik server-side agar konsisten untuk semua penonton dan tetap
