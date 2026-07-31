@@ -73,6 +73,43 @@ async function fetchFeed(url, ms) {
   }
 }
 
+// Common-area photo folders on Drive. Unlike the villa Rekap folders these are
+// flat — pictures dropped straight in, no per-date subfolder — so the daily
+// photo feed never sees them. They are public ("anyone with the link"), which
+// lets the embedded folder view be read without credentials or an API key.
+const AREA_FOLDERS = {
+  amenities: "1MxvIsuPzEoVMHqoATrMB-SrMKpdLbtsS",
+  communal: "10qb-SF-dz5cZZAcfu4yFargvgdDirrm9",
+};
+
+/** Current photos in the fixed common-area folders (Amenities, Communal). */
+export async function getAreaPhotos() {
+  const out = { ok: true, areas: {}, folders: { ...AREA_FOLDERS } };
+  await Promise.all(Object.entries(AREA_FOLDERS).map(async ([key, folderId]) => {
+    const url = `https://drive.google.com/embeddedfolderview?id=${folderId}`;
+    // Drive rate-limits this view with stray 503s — retry with a short pause.
+    let res, why;
+    for (let i = 0; i < 3; i++) {
+      if (i) await new Promise((ok) => setTimeout(ok, 700 * i));
+      ({ res, why } = await fetchFeed(url, TIMEOUT_MS));
+      if (!why && res.ok) break;
+    }
+    if (why || !res.ok) {
+      out.areas[key] = [];
+      out.errors = { ...(out.errors || {}), [key]: why || `HTTP ${res.status}` };
+      return;
+    }
+    const html = await res.text();
+    // Grid entries look like: id="entry-<fileId>" … class="flip-entry-title">name.jpg<
+    const shots = [];
+    const re = /id="entry-([-\w]+)"[\s\S]*?flip-entry-title">([^<]*)</g;
+    let m;
+    while ((m = re.exec(html)) && shots.length < 200) shots.push({ id: m[1], name: m[2] });
+    out.areas[key] = shots;
+  }));
+  return out;
+}
+
 /** Site photos for one day. Same feed, `?photos=YYYY-MM-DD`. */
 export async function getPhotos({ date, fresh = false } = {}) {
   const feed = process.env.DAILY_FEED;
