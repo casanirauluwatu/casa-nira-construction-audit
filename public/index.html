@@ -156,7 +156,6 @@
   button.kexp{padding:9px 16px;}
   .kunit,.krep{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(43,38,32,.05);}
   .krep .khl{margin-top:0;}
-  .krep+.kunit .kutop{display:none;}
   .kabout{margin:2px 0 4px;}
   .kutop{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;font:600 12px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:10px;}
   .kutop .kd{font-size:10px;}
@@ -314,9 +313,6 @@
        one-unit report lands on one or two pages. */
     .krep{margin:0 0 7px;}
     .kunit{margin:0 0 8px;padding-top:6px;border-top:1px solid var(--line);}
-    /* The strip prints once at the very top (on .krep); repeating it on every
-       section mid-page is noise. */
-    .kunit .kutop{display:none;}
     .kutop{font-size:9pt;padding-bottom:4px;margin-bottom:7px;}
     .kutop .kd{font-size:7.5pt;}
     .kuhead{margin-bottom:5px;}
@@ -1145,7 +1141,7 @@
   // One compact unit page: project strip, unit + progress stats, S-curve,
   // highlight/lowlight, then the photos. Progress figures only — labour and
   // manpower stay on the internal tabs; this page goes to the owner.
-  function kunitSec(u, r, rd, caps){
+  function kunitSec(u, r, caps){
     const due=commitOf(u.id), shots=shotsFor(u.id);
     // Committed hand-over date wins over the feed's extrapolated target — it is
     // the date that was promised.
@@ -1169,7 +1165,6 @@
         }).join("") + `</div>`
       : `<div class="kempty">${PHOTOS===null?"Loading photos…":"No photos for this date."}</div>`;
     return `<section class="kunit">`
-      + `<div class="kutop"><span>Casa Nira Uluwatu · Weekly Progress Report</span><span class="kd">${fmtEN(rd)}</span></div>`
       + `<div class="kuhead"><div><span class="kuid">${esc(u.id)}</span><span class="kuty">${esc(u.type||"")}</span></div>`
       + `<div class="kustats">${stats}</div></div>`
       + curve
@@ -1203,7 +1198,7 @@
     renderKlien();
   }
   const kareaShots = (a) => AREAS && AREAS.ok ? (AREAS.areas[a.key]||[]) : [];
-  function kareaSec(a, rd){
+  function kareaSec(a){
     const shots = kareaShots(a);
     const photos = shots.length
       ? `<div class="kphotos">` + shots.map((s)=>
@@ -1211,8 +1206,7 @@
         ).join("") + `</div>`
       : `<div class="kempty">${AREAS===null?"Loading photos…":"No photos in this folder."}</div>`;
     return `<section class="kunit">`
-      + `<div class="kutop"><span>Casa Nira Uluwatu · Weekly Progress Report</span><span class="kd">${fmtEN(rd)}</span></div>`
-      + `<div class="kuhead"><div><span class="kuid">${esc(a.title)}</span><span class="kuty">Common Area</span></div></div>`
+      + `<div class="kuhead"><div><span class="kuid">${esc(a.title)}</span></div></div>`
       + `<div class="kdesc kabout">${esc(a.desc)}</div>`
       + `<div class="ksec">Photo Documentation${shots.length?` · ${shots.length}`:""}</div>${photos}`
       + `</section>`;
@@ -1248,7 +1242,7 @@
     applyHead();
     kn.className="note";
     kn.innerHTML = `Compact owner report — pick a unit, then <strong>Print for Owner</strong> (choose “Save as PDF” in the print dialog to send it). `
-      + `Amenities &amp; Communal pages are always included. `
+      + `Amenities, Furniture &amp; Communal sections are always included. `
       + `Photo descriptions, Highlights &amp; Next Week Focus are click-to-edit; entries are saved on this device.`;
 
     const am={}; if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok) am[r.unit]=r;
@@ -1264,8 +1258,8 @@
       + `<div class="kdesc kl"><span class="kdl">Next Week Focus</span><div contenteditable="true" data-ck="f:@" data-ph="Planned works for next week…">${esc(nf)}</div></div>`
       + `</div></div></div>`;
     rep.innerHTML = krep
-      + chosen.map(u=>kunitSec(u, am[u.id], rd, caps)).join("")
-      + KAREAS.map(a=>kareaSec(a, rd)).join("");
+      + chosen.map(u=>kunitSec(u, am[u.id], caps)).join("")
+      + KAREAS.map(a=>kareaSec(a)).join("");
   }
 
   $("kDate").addEventListener("change", e=>{ if(e.target.value) loadDaily(false, e.target.value); });
