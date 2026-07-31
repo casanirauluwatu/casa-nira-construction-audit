@@ -157,6 +157,7 @@
   .kunit,.krep{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(43,38,32,.05);}
   .krep .khl{margin-top:0;}
   .krep+.kunit .kutop{display:none;}
+  .kabout{margin:2px 0 4px;}
   .kutop{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font:600 9.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:10px;}
   .kutop .kd{color:var(--muted);letter-spacing:.04em;}
   .kuhead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
@@ -320,7 +321,9 @@
     .kuid{font-size:14pt;}
     .kuty{font-size:7.5pt;}
     .kustats{font-size:8pt;gap:10px;}
-    .ksec{margin:7px 0 4px;font-size:6.5pt;}
+    .ksec{margin:7px 0 4px;font-size:6.5pt;break-after:avoid;}
+    .kuhead{break-after:avoid;}
+    .kdesc{break-inside:avoid;break-after:avoid;}
     .khint{font-size:7pt;margin-top:1px;}
     .kdesc{padding:5px 9px;font-size:8pt;}
     .khl{gap:6px;margin-top:6px;}
@@ -1172,14 +1175,16 @@
       + `</section>`;
   }
 
-  // Common-area pages on every owner report. These photos live in two fixed
+  // Common-area sections on every owner report. These photos live in two fixed
   // Drive folders — flat, no per-date subfolder — so they come from
   // /api/daily/areas (server-side folder listing), not the daily photo feed.
-  // Their captions are keyed "a:<id>" and stored dateless: the pictures are
-  // date-independent, so a description written once should stay.
+  // Each section carries one permanent description instead of per photo
+  // captions; the wording is fixed here so every owner reads the same thing.
   const KAREAS = [
-    { id:"AMENITIES", title:"Amenities", key:"amenities" },
-    { id:"COMMUNAL",  title:"Communal",  key:"communal"  },
+    { id:"AMENITIES", title:"Amenities", key:"amenities",
+      desc:"All amenities have already been procured and delivered to site, so there is no lead time. The photos show the custom branding applied to the collection, including paintings, plates, bedding, kitchenware and cleaning supplies." },
+    { id:"COMMUNAL",  title:"Communal",  key:"communal",
+      desc:"The entrance signage and a sample palm tree for the communal area have been installed, and electricity is connected. The next step is the pergola at the reception, followed by the works on the main road and the signage for each villa." },
   ];
   let AREAS = null, LOADING_AREAS = false;
   async function loadAreas(fresh){
@@ -1196,21 +1201,15 @@
   const kareaShots = (a) => AREAS && AREAS.ok ? (AREAS.areas[a.key]||[]) : [];
   function kareaSec(a, rd){
     const shots = kareaShots(a);
-    const acaps = kcaps("areas");
     const photos = shots.length
-      ? `<div class="kphotos">` + shots.map((s)=>{
-          const key="a:"+s.id;
-          // A subfolder name ("Pohon palem", "Signage") is a human-written
-          // label, so it makes a sensible default caption; camera file names
-          // never do.
-          const cap = acaps[key] != null ? acaps[key] : (s.group||"");
-          return `<figure class="kph"><div class="ph">${shotImg(s.id, `Photo ${esc(a.title)}`)}</div>`
-            + `<figcaption contenteditable="true" data-ck="${esc(key)}" data-ph="Add photo description…">${esc(cap)}</figcaption></figure>`;
-        }).join("") + `</div>`
+      ? `<div class="kphotos">` + shots.map((s)=>
+          `<figure class="kph"><div class="ph">${shotImg(s.id, `Photo ${esc(a.title)}`)}</div></figure>`
+        ).join("") + `</div>`
       : `<div class="kempty">${AREAS===null?"Loading photos…":"No photos in this folder."}</div>`;
     return `<section class="kunit">`
       + `<div class="kutop"><span>Casa Nira Uluwatu · Daily Progress Report</span><span class="kd">${fmtEN(rd)}</span></div>`
       + `<div class="kuhead"><div><span class="kuid">${esc(a.title)}</span><span class="kuty">Common Area</span></div></div>`
+      + `<div class="kdesc kabout">${esc(a.desc)}</div>`
       + `<div class="ksec">Photo Documentation${shots.length?` · ${shots.length}`:""}</div>${photos}`
       + `</section>`;
   }
@@ -1276,12 +1275,9 @@
   // selection changes, so an edit in progress is never wiped mid-keystroke.
   $("kreport").addEventListener("input", e=>{
     const t=e.target.closest("[data-ck]"); if(!t || !DAILY) return;
-    // Common-area captions ("a:…") are dateless — the folders are — while unit
-    // captions and the day's Highlights / Next Week Focus belong to the date.
-    const store = t.dataset.ck.startsWith("a:") ? "areas" : DAILY.date;
-    const o=kcaps(store);
+    const o=kcaps(DAILY.date);
     o[t.dataset.ck]=t.textContent.replace(/\s+/g," ").trim();
-    kcapSave(store,o);
+    kcapSave(DAILY.date,o);
   });
 
   /* Cuaca lapangan dari /api/weather (Open-Meteo di sisi server, di-cache 15
