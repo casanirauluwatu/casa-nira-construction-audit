@@ -37,6 +37,7 @@
   #chart{width:100%;min-width:600px;height:auto;display:block;}
   .chart-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;align-items:center;}
   .chart-legend .lg{font:600 11px ui-monospace,Menlo,monospace;color:var(--muted);display:inline-flex;align-items:center;gap:6px;}
+  .chart-legend .lgw{font-style:normal;}
   .hint{margin-top:6px;font-size:11.5px;color:var(--muted);}
   .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:12px;background:var(--card);box-shadow:0 1px 2px rgba(43,38,32,.05);}
   table{border-collapse:collapse;width:100%;font-size:13.5px;}
@@ -73,7 +74,15 @@
   .src{margin:8px 0 0;font-size:11.5px;color:var(--muted);}
   .twoup{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;align-items:start;}
   .twoup.even{grid-template-columns:repeat(2,minmax(0,1fr));}
-  .wx-row{display:grid;grid-template-columns:1.3fr 1fr .92fr;gap:14px;align-items:stretch;}
+  .wx-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch;}
+  .wxmore{margin-top:12px;}
+  .wxmore>summary{cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:7px;
+    font:600 11.5px -apple-system,sans-serif;color:var(--olive);padding:7px 0;}
+  .wxmore>summary::-webkit-details-marker{display:none;}
+  .wxmore>summary::before{content:"▸";font-size:10px;}
+  .wxmore[open]>summary::before{content:"▾";}
+  .wxmore>summary:hover{text-decoration:underline;}
+  .wxmore .wx-row{margin-top:10px;}
   .dbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:11px 14px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 2px rgba(43,38,32,.05);}
   .dbar-f{font:600 11px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:inline-flex;align-items:center;gap:8px;}
   .dbar-f input,.dbar-f select{font:600 13px ui-monospace,Menlo,monospace;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 9px;cursor:pointer;}
@@ -154,7 +163,9 @@
     .chart-head{gap:8px;margin-bottom:8px;}
     .chart-title{font-size:10px;}
     .chart-sel{font-size:11.5px;}.chart-sel select{font-size:12px;padding:5px 8px;}
-    .chart-legend{gap:8px 12px;}
+    /* Ranges alone carry the colour code; the words repeat what the table says. */
+    .chart-legend{gap:7px 10px;}
+    .chart-legend .lgw,.chart-legend .lg.sep{display:none;}
     .tabs{margin:16px 0 18px;}.tab{padding:12px 14px;font-size:13px;}
     .sec{margin:22px 0 10px;}
     .twoup,.twoup.even,.wx-row{grid-template-columns:minmax(0,1fr);}
@@ -222,8 +233,17 @@
     thead th{padding:6px 7px;font-size:6.5pt;position:static;}
     tbody td{padding:4px 7px;}
     td.wtxt{min-width:0;}
+    /* On screen the weather sits last, out of the way. On paper it belongs with
+       the day's numbers, and the photo contact sheet is the last page. Reorder
+       for print only — everything else keeps order 0 and stays in DOM order. */
+    #panel-harian{display:flex;flex-direction:column;}
+    #secCuaca,#wxCard,#wxMore{order:5;}
+    #secFoto,#pgrid{order:9;}
+    #secCatatan,#dnotes{order:12;}
     /* Photos start a fresh page and print six-up — a contact sheet, not a gallery. */
     #secFoto{break-before:page;}
+    .wxmore>summary{display:none;}
+    .wxmore .wx-row{grid-template-columns:1fr 1fr;}
     .pgrid{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;}
     .uc .bd{padding:5px 6px;gap:1px;}
     .uc .ty{font-size:6pt;}
@@ -258,6 +278,7 @@
 
   <section class="tabpanel" id="panel-audit" role="tabpanel" aria-labelledby="tab-audit">
   <div class="note" id="note">Pulled live from the construction “Time Schedule” feeds. Served from a ~6-hour cache — click <strong>Refresh data</strong> for the latest.</div>
+  <div id="auditBody" hidden>
   <div class="cards" id="cards"></div>
 
   <div class="chart-card">
@@ -286,6 +307,7 @@
     <dt>Target delivery</dt><dd>Planned completion (S-curve hits 100%), at week-end.</dd>
     <dt>Projected (recent pace)</dt><dd>Completion extrapolated from the average weekly gain over the last 6 weeks.</dd>
   </dl>
+  </div>
   </section>
 
   <section class="tabpanel" id="panel-harian" role="tabpanel" aria-labelledby="tab-harian" hidden>
@@ -311,14 +333,6 @@
       <div class="hint" id="mpFoot"></div>
     </div>
 
-    <div class="sec"><h2>Cuaca Lapangan</h2><div class="rule"></div><span class="hint">Uluwatu, Bali · Open-Meteo</span></div>
-    <div class="wx-row">
-      <div class="wx" id="wxCard"></div>
-      <div class="pnl"><div class="pnl-t">Rekap — <span id="wxMonth">bulan ini</span></div><div id="wxRecap"></div></div>
-      <div class="pnl"><div class="pnl-t">Kalender</div><div id="wxCal"></div></div>
-    </div>
-    <p class="src" id="wxSrc"></p>
-
     <div class="sec"><h2>Jumlah Pekerja per Unit</h2><div class="rule"></div><span class="hint" id="wkHint"></span></div>
     <div class="chart-legend" id="wkKey" style="margin:0 0 10px"></div>
     <div class="tbl-wrap"><table><thead id="wkHead"></thead><tbody id="wkBody"></tbody></table></div>
@@ -327,7 +341,20 @@
     <div class="sec" id="secFoto"><h2>Dokumentasi Foto per Unit</h2><div class="rule"></div><span class="hint" id="phHint">terhubung ke Google Drive</span></div>
     <div class="pgrid" id="pgrid"></div>
 
-    <div class="sec"><h2>Catatan &amp; Kendala</h2><div class="rule"></div></div>
+    <!-- Weather is context, not the headline: it sits after the numbers, the
+         table and the photos, and only today's card is open by default. -->
+    <div class="sec" id="secCuaca"><h2>Cuaca Lapangan</h2><div class="rule"></div><span class="hint">Uluwatu, Bali · Open-Meteo</span></div>
+    <div class="wx" id="wxCard"></div>
+    <details class="wxmore" id="wxMore">
+      <summary>Rekap bulan &amp; kalender cuaca</summary>
+      <div class="wx-row">
+        <div class="pnl"><div class="pnl-t">Rekap — <span id="wxMonth">bulan ini</span></div><div id="wxRecap"></div></div>
+        <div class="pnl"><div class="pnl-t">Kalender</div><div id="wxCal"></div></div>
+      </div>
+      <p class="src" id="wxSrc"></p>
+    </details>
+
+    <div class="sec" id="secCatatan"><h2>Catatan &amp; Kendala</h2><div class="rule"></div></div>
     <div id="dnotes"></div>
   </section>
 </div>
@@ -477,8 +504,14 @@
       const res=await fetch(url, fresh?{cache:"no-store"}:{});
       if(!res.ok){let m;try{m=(await res.json()).error;}catch{}throw new Error(m||`Feed error (HTTP ${res.status}).`);}
       render(await res.json());
+      $("auditBody").hidden = false;
       $("note").className="note"; $("note").innerHTML='Pulled live from the construction “Time Schedule” feeds. Click <strong>Refresh data</strong> to re-pull.';
-    }catch(e){ $("note").className="note err"; $("note").textContent=e.message||"Could not load the audit."; }
+    }catch(e){
+      // Without data the chart card and table render as a page of empty boxes.
+      // Show the reason and nothing else.
+      $("auditBody").hidden = true;
+      $("note").className="note err"; $("note").textContent=e.message||"Could not load the audit.";
+    }
     finally{ btn.disabled=false; btn.textContent="Refresh data"; }
   }
   /* ==================== tabs ==================== */
@@ -505,6 +538,11 @@
   $("tab-audit").addEventListener("click", ()=>setTab("audit"));
   $("tab-harian").addEventListener("click", ()=>setTab("harian"));
   $("print").addEventListener("click", ()=>window.print());
+  // A collapsed <details> prints as its summary line, so open the weather recap
+  // for the printed copy and put it back afterwards.
+  let wxWasOpen = false;
+  window.addEventListener("beforeprint", ()=>{ const m=$("wxMore"); if(m){ wxWasOpen=m.open; m.open=true; } });
+  window.addEventListener("afterprint", ()=>{ const m=$("wxMore"); if(m) m.open=wxWasOpen; });
   $("refresh").addEventListener("click", ()=>{ TAB==="harian" ? loadDaily(true) : load(true); });
   $("unitSel").addEventListener("change", e=>drawChart(e.target.value));
 
@@ -532,15 +570,17 @@
   let PH_FRESH = false;// set by loadDaily so Refresh data reaches the photos too
 
   // One attendance colour code, used on the chart, the table bars and the % cells.
+  // n = the word, r = the range. On a phone only the range is shown — five
+  // name+range pairs wrapped to three lines and buried the chart.
   const BANDS = [
-    { min:100, c:"#3f7d4f", l:"Penuh · ≥100%" },
-    { min:75,  c:"#6f7043", l:"Baik · 75–99%" },
-    { min:50,  c:"#b5842c", l:"Sedang · 50–74%" },
-    { min:1,   c:"#b4472e", l:"Rendah · 1–49%" },
-    { min:0,   c:"#8f887c", l:"Kosong · 0%" },
+    { min:100, c:"#3f7d4f", n:"Penuh",  r:"≥100%" },
+    { min:75,  c:"#6f7043", n:"Baik",   r:"75–99%" },
+    { min:50,  c:"#b5842c", n:"Sedang", r:"50–74%" },
+    { min:1,   c:"#b4472e", n:"Rendah", r:"1–49%" },
+    { min:0,   c:"#8f887c", n:"Kosong", r:"0%" },
   ];
   const band = (pct) => (pct == null ? BANDS[4] : BANDS.find(b => pct >= b.min) || BANDS[4]);
-  const bandLegend = () => BANDS.map(b=>`<span class="lg" style="color:${b.c}">■ ${b.l}</span>`).join("");
+  const bandLegend = () => BANDS.map(b=>`<span class="lg" style="color:${b.c}">■ <i class="lgw">${b.n} ·</i> ${b.r}</span>`).join("");
 
   async function loadDaily(fresh, date, month){
     LOADING_DAILY = true;
@@ -857,7 +897,9 @@
     const todayISO = dstr(new Date());
     const future = dates.map(x => x > todayISO);
     const lastReal = (()=>{ for(let i=dates.length-1;i>=0;i--) if(!future[i]) return i; return -1; })();
-    $("mpTitle").textContent = `Jumlah pekerja per hari · ${MP_SEL==="ALL"?"seluruh lapangan":MP_SEL} · ${sr.month||""}`;
+    // The unit is on the selector beside this and in the section hint — repeating
+    // it here is what pushed the title onto two lines on a phone.
+    $("mpTitle").textContent = `Jumlah pekerja per hari · ${sr.month||""}`;
 
     const W=960,H=250,PL=38,PR=14,PT=16,PB=34,iw=W-PL-PR,ih=H-PT-PB;
     const n=dates.length;
@@ -887,6 +929,10 @@
     }
     s2+=poly(line(plan),"#a9822f","5 4",2);
     s2+=poly(pts,"#6f7043",null,2.4);
+    // A label centred on the first or last point runs off the plot, which is what
+    // clipped the final head-count against the report-date line.
+    const anchorAt=x=> x<PL+18 ? "start" : x>W-PR-18 ? "end" : "middle";
+    const lblX=x=>{const a=anchorAt(x); return a==="end"?x-4:a==="start"?x+3:x;};
     // Points carry the attendance colour code; labels sit above each one.
     const pctAt=i=>plan[i]?act[i]/plan[i]*100:null;
     const at0=dates.indexOf(d.date);
@@ -894,12 +940,18 @@
       if(future[i]) continue;
       s2+=`<circle cx="${xF(i).toFixed(1)}" cy="${yF(act[i]).toFixed(1)}" r="2.8" fill="${band(pctAt(i)).c}"/>`;
       if(i!==at0 && act[i]>0)
-        s2+=`<text x="${xF(i).toFixed(1)}" y="${(yF(act[i])-8).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="600" fill="${band(pctAt(i)).c}" ${MONO}>${act[i]}</text>`;
+        s2+=`<text x="${lblX(xF(i)).toFixed(1)}" y="${(yF(act[i])-8).toFixed(1)}" text-anchor="${anchorAt(xF(i))}" font-size="9.5" font-weight="600" fill="${band(pctAt(i)).c}" ${MONO}>${act[i]}</text>`;
     }
-    // Plan is flat for long stretches — label it only where it starts or changes.
+    // Plan barely moves: labelling every one-worker wobble produced a row of
+    // near-identical numbers. Label the start and only changes worth noticing,
+    // and never two labels close enough to touch.
+    let lastPlanX=-1e9;
     for(let i=0;i<n;i++){
-      if(i===0||plan[i]!==plan[i-1])
-        s2+=`<text x="${(xF(i)+(i===0?2:0)).toFixed(1)}" y="${(yF(plan[i])-7).toFixed(1)}" text-anchor="${i===0?"start":"middle"}" font-size="9.5" font-weight="600" fill="#a9822f" ${MONO}>${plan[i]}</text>`;
+      if(i!==0 && Math.abs(plan[i]-plan[i-1])<8) continue;
+      const x=xF(i);
+      if(x-lastPlanX<46) continue;
+      lastPlanX=x;
+      s2+=`<text x="${lblX(x).toFixed(1)}" y="${(yF(plan[i])-7).toFixed(1)}" text-anchor="${anchorAt(x)}" font-size="9.5" font-weight="600" fill="#a9822f" ${MONO}>${plan[i]}</text>`;
     }
     // marker on the day being reported
     const at=dates.indexOf(d.date);
@@ -907,7 +959,7 @@
       const x=xF(at);
       s2+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#b4472e" stroke-width="1.4" stroke-dasharray="3 2"/>`
         + `<circle cx="${x.toFixed(1)}" cy="${yF(act[at]).toFixed(1)}" r="4.2" fill="#b4472e"/>`
-        + `<text x="${x.toFixed(1)}" y="${(yF(act[at])-9).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="#b4472e" ${MONO}>${act[at]}</text>`;
+        + `<text x="${lblX(x).toFixed(1)}" y="${(yF(act[at])-9).toFixed(1)}" text-anchor="${anchorAt(x)}" font-size="11" font-weight="700" fill="#b4472e" ${MONO}>${act[at]}</text>`;
     }
     // click a day to load it
     let hits="";
@@ -922,11 +974,13 @@
       + `<span class="lg"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#6f7043" stroke-width="2.4"/></svg> Aktual</span>`
       + `<span class="lg" style="color:#b4472e">| tanggal laporan</span>`
       + `<span class="lg" style="color:var(--muted)">▮ Minggu</span>`
-      + `<span class="lg" style="color:var(--line);user-select:none">│</span>` + bandLegend();
-    $("mpHint").textContent = `${sr.month||""} · ${MP_SEL==="ALL"?"semua blok":MP_SEL}`;
-    $("mpFoot").innerHTML = `Rata-rata <strong>${avg.toFixed(1)}</strong> pekerja pada ${worked.length} hari kerja · puncak <strong>${peak}</strong> (${peakAt||"—"}) · ${real.length-worked.length} hari tanpa pekerja.`
-      + (lastReal<n-1?` ${n-1-lastReal} hari setelah hari ini dikecualikan.`:"")
-      + (d.live?` Klik salah satu hari untuk membuka laporannya.`:"");
+      + `<span class="lg sep" style="color:var(--line);user-select:none">│</span>` + bandLegend();
+    $("mpHint").textContent = MP_SEL==="ALL" ? "semua unit" : MP_SEL;
+    // Three lines of prose under a chart nobody reads. Keep the three numbers and
+    // the one instruction; "belum terjadi" is already drawn on the chart itself.
+    const dShort = (s)=> s ? new Date(s+"T00:00:00").toLocaleDateString("id-ID",{day:"numeric",month:"short"}) : "—";
+    $("mpFoot").innerHTML = `Rata-rata <strong>${avg.toFixed(0)}</strong> pekerja · puncak <strong>${peak}</strong> (${dShort(peakAt)}) · ${real.length-worked.length} hari tanpa pekerja`
+      + (d.live?` · klik hari untuk membuka laporannya`:"");
   }
 
   /* Cuaca lapangan dari /api/weather (Open-Meteo di sisi server, di-cache 15
@@ -965,7 +1019,7 @@
       <div><div class="wx-loc">${esc(w.location)} · Hari Ini</div>
         <div class="wx-now"><span class="wx-ic">${WI[w.now.icon]||WI.partly}</span>
         <div><span class="t">${w.now.temp}°</span><div class="c">${esc(w.now.cond)} · Lembap ${w.now.humidity}% · Angin ${w.now.wind} km/j`
-        + (rain!=null?` · Hujan ${rain.toFixed(1)}mm${w.now.rainChance!=null?` (${w.now.rainChance}%)`:""}`:"")
+        + (rain?` · Hujan ${rain.toFixed(1)}mm`:"")
         + `</div></div></div></div>
       <div style="text-align:right"><span class="flag ${w.work}">Kelayakan kerja: ${wl}</span><div class="wx-note">${esc(w.workNote)}</div></div>
     </div>` + (w.slots&&w.slots.length ? `<div class="wx-slots">${w.slots.map(s=>
@@ -988,9 +1042,8 @@
       const heavy = wet.filter(v=>v>=2).length;
       $("wxRecap").innerHTML = `<div class="stack">${keys.map(k=>`<span style="width:${(cnt[k]/tot*100).toFixed(1)}%;background:${(L[k]||{}).colour||"#ccc"}"></span>`).join("")}</div>`
         + `<div class="leg">${keys.map(k=>`<div class="r"><span class="sw" style="background:${(L[k]||{}).colour}"></span><span class="lab">${esc((L[k]||{}).label||k)}</span><span class="pc">${(cnt[k]/tot*100).toFixed(1)}%</span><span class="ct">${cnt[k]} hari</span></div>`).join("")}</div>`
-        + `<div class="wx-dom">Dominan <b style="color:var(--ink)">${esc((L[dom]||{}).label||dom)}</b> · ${tot} hari tercatat · curah <b style="color:var(--ink)">${totalMm.toFixed(1)}mm</b>`
-        + (heavy?` · <b style="color:var(--ink)">${heavy} hari ≥2mm</b> berpotensi menunda pengecoran`:` · tidak ada hari ≥2mm`)
-        + (tot<w.month.days?` · ${w.month.days-tot} hari belum masuk prakiraan`:"")+`</div>`;
+        + `<div class="wx-dom">Dominan <b style="color:var(--ink)">${esc((L[dom]||{}).label||dom)}</b> · curah <b style="color:var(--ink)">${totalMm.toFixed(1)}mm</b> / ${tot} hari`
+        + (heavy?` · <b style="color:var(--ink)">${heavy} hari ≥2mm</b> menunda pengecoran`:` · tidak ada hari ≥2mm`)+`</div>`;
     }
 
     // Kalender
