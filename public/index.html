@@ -1170,10 +1170,14 @@
 
   // Site-wide sections on every owner report, whatever unit is chosen. The
   // matching Drive folders exist by default; photos land in any folder whose
-  // name matches `re` (e.g. "Infra" also carries Infrastruktur / Fabrikasi).
+  // name matches `re`. Folder names as they are on Drive: "Infra" (also carries
+  // Infrastruktur / Fabrikasi), "amenities", and "communcal" [sic] — the
+  // regexes are loose so a later folder rename to the full/corrected word
+  // still matches.
   const KAREAS = [
     { id:"INFRA",     title:"Infrastructure", re:/infra/i  },
     { id:"AMENITIES", title:"Amenities",      re:/amenit/i },
+    { id:"COMMUNAL",  title:"Communal",       re:/commun/i },
   ];
   function kareaShots(re){
     if(!PHOTOS || !PHOTOS.ok) return [];
