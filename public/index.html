@@ -157,8 +157,6 @@
   .kunit,.krep{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(43,38,32,.05);}
   .krep .khl{margin-top:0;}
   .krep+.kunit .kutop{display:none;}
-  .klink a{font:600 11px -apple-system,sans-serif;color:var(--olive);text-decoration:none;}
-  .klink a:hover{text-decoration:underline;}
   .kutop{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font:600 9.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:10px;}
   .kutop .kd{color:var(--muted);letter-spacing:.04em;}
   .kuhead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
@@ -311,12 +309,15 @@
        print twice. */
     body.print-klien .top{display:none!important;}
     .kunit,.krep{border:none;border-radius:0;padding:0;box-shadow:none;}
-    .kunit{margin:0;}
+    /* The print flows exactly like the dashboard — sections follow each other
+       with a thin rule between them, no forced page per section. Photos and
+       text boxes still refuse to split; everything else wraps naturally, so a
+       one-unit report lands on one or two pages. */
     .krep{margin:0 0 7px;}
-    /* .krep is a div, the pages are <section>s — the first section shares
-       page 1 with the Highlights block, every later one starts fresh. */
-    .kunit:not(:first-of-type){break-before:page;}
-    .klink{display:none;}
+    .kunit{margin:0 0 8px;padding-top:6px;border-top:1px solid var(--line);}
+    /* The strip prints once at the very top (on .krep); repeating it on every
+       section mid-page is noise. */
+    .kunit .kutop{display:none;}
     .kutop{font-size:7pt;padding-bottom:4px;margin-bottom:7px;}
     .kuhead{margin-bottom:5px;}
     .kuid{font-size:14pt;}
@@ -1126,12 +1127,15 @@
     const upto=pts.filter(x=>x.a!=null);
     s+=poly(pts.map(x=>[xF(x.t),yF(x.p)]),"#a9822f","5 4",2);
     s+=poly(upto.map(x=>[xF(x.t),yF(x.a)]),"#6f7043",null,2.6);
+    // Top-row labels near either edge anchor inward instead of centring, so a
+    // handover sitting at the right margin never prints as "HANDOVER 30 Se…".
+    const topLbl = (x)=> x>W-110 ? `x="${(x-5).toFixed(1)}" text-anchor="end"` : x<PL+55 ? `x="${(x+5).toFixed(1)}" text-anchor="start"` : `x="${x.toFixed(1)}" text-anchor="middle"`;
     // The committed hand-over label wins the top row when the two dates are
-    // close — the target date is still in the hint line under the chart.
+    // close — the target date is still in the stats line above the chart.
     const tClash = target && committed && Math.abs(xF(target)-xF(committed)) < 140;
-    if(target){const x=xF(target);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#a9822f" stroke-width="1.2" stroke-dasharray="4 3"/>`+diamond(x,yF(100),5,"#a9822f")+(tClash?"":`<text x="${x.toFixed(1)}" y="${PT-8}" text-anchor="middle" font-size="9" fill="#a9822f" font-weight="600" ${MONO}>TARGET</text>`);}
-    if(now){const x=xF(now);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#b4472e" stroke-width="1" stroke-dasharray="2 2" opacity="0.7"/><text x="${x.toFixed(1)}" y="${PT-8}" text-anchor="middle" font-size="9" fill="#b4472e" ${MONO}>today</text>`;}
-    if(committed){const x=xF(committed);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#d9791a" stroke-width="2"/><text x="${x.toFixed(1)}" y="${PT-8}" text-anchor="middle" font-size="9.5" fill="#d9791a" font-weight="700" ${MONO}>HANDOVER ${committed.getUTCDate()} ${MON3[committed.getUTCMonth()]}</text>`;}
+    if(target){const x=xF(target);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#a9822f" stroke-width="1.2" stroke-dasharray="4 3"/>`+diamond(x,yF(100),5,"#a9822f")+(tClash?"":`<text ${topLbl(x)} y="${PT-8}" font-size="9" fill="#a9822f" font-weight="600" ${MONO}>TARGET</text>`);}
+    if(now){const x=xF(now);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#b4472e" stroke-width="1" stroke-dasharray="2 2" opacity="0.7"/><text ${topLbl(x)} y="${PT-8}" font-size="9" fill="#b4472e" ${MONO}>today</text>`;}
+    if(committed){const x=xF(committed);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#d9791a" stroke-width="2"/><text ${topLbl(x)} y="${PT-8}" font-size="9.5" fill="#d9791a" font-weight="700" ${MONO}>HANDOVER ${committed.getUTCDate()} ${MON3[committed.getUTCMonth()]}</text>`;}
     if(upto.length){const last=upto[upto.length-1];const lx=xF(last.t),ly=yF(last.a);s+=`<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.6" fill="#6f7043"/><text x="${(lx-7).toFixed(1)}" y="${(ly-7).toFixed(1)}" text-anchor="end" font-size="11.5" font-weight="600" fill="#6f7043" ${MONO}>${last.a.toFixed(1)}%</text>`;}
     return `<div class="kcurve"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="S-curve ${esc(r.unit)}">${s}</svg>`
       + `<div class="khint">Dashed gold = plan · solid olive = actual. Actual <strong>${r.actual.toFixed(1)}%</strong> vs plan ${r.planned.toFixed(1)}%.</div></div>`;
@@ -1197,20 +1201,20 @@
   function kareaSec(a, rd){
     const shots = kareaShots(a);
     const acaps = kcaps("areas");
-    const folder = AREAS && AREAS.folders ? AREAS.folders[a.key] : null;
     const photos = shots.length
       ? `<div class="kphotos">` + shots.map((s)=>{
           const key="a:"+s.id;
-          const cap = acaps[key] != null ? acaps[key] : "";
+          // A subfolder name ("Pohon palem", "Signage") is a human-written
+          // label, so it makes a sensible default caption; camera file names
+          // never do.
+          const cap = acaps[key] != null ? acaps[key] : (s.group||"");
           return `<figure class="kph"><div class="ph">${shotImg(s.id, `Photo ${esc(a.title)}`)}</div>`
             + `<figcaption contenteditable="true" data-ck="${esc(key)}" data-ph="Add photo description…">${esc(cap)}</figcaption></figure>`;
         }).join("") + `</div>`
       : `<div class="kempty">${AREAS===null?"Loading photos…":"No photos in this folder."}</div>`;
     return `<section class="kunit">`
       + `<div class="kutop"><span>Casa Nira Uluwatu · Daily Progress Report</span><span class="kd">${fmtEN(rd)}</span></div>`
-      + `<div class="kuhead"><div><span class="kuid">${esc(a.title)}</span><span class="kuty">Common Area</span></div>`
-      + (folder?`<div class="klink"><a href="https://drive.google.com/drive/folders/${esc(folder)}" target="_blank" rel="noopener">Open folder ↗</a></div>`:"")
-      + `</div>`
+      + `<div class="kuhead"><div><span class="kuid">${esc(a.title)}</span><span class="kuty">Common Area</span></div></div>`
       + `<div class="ksec">Photo Documentation${shots.length?` · ${shots.length}`:""}</div>${photos}`
       + `</section>`;
   }
