@@ -121,7 +121,7 @@
   .cal .c{aspect-ratio:1;border-radius:4px;display:flex;align-items:center;justify-content:center;font:600 10px ui-monospace,Menlo,monospace;}
   .cal .c.today{box-shadow:0 0 0 2px var(--ink);}
   #panel-harian .tbl-wrap table{min-width:820px;}
-  tr.blkhdr td{background:#f4efe3;color:var(--gold);font:600 10px ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;padding:7px 12px;}
+  tr.blkhdr td{background:#f4efe3;color:var(--gold);font:600 10px ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;padding:7px 12px;text-align:left;}
   tr.totrow td{border-top:1.5px solid var(--line-strong,#d8cfbb);font-weight:600;}
   td.wtxt{white-space:normal;min-width:200px;line-height:1.45;}
   .khbar{display:inline-block;vertical-align:middle;width:64px;height:6px;background:#ece5d6;border-radius:4px;overflow:hidden;}
@@ -299,9 +299,6 @@
     .uc .ft a{display:none;}
     .uc .pct{font-size:7pt;}
     .pbadge,.wbadge{font-size:6.5pt;padding:2px 5px;}
-    /* Six-up, "Utilities" and "di luar villa" collided across the tile. The unit
-       name is the one that has to survive. */
-    .wbadge.alt{display:none;}
     .nshot{font-size:6.5pt;padding:2px 5px;}
     .nbox{padding:7px 10px;font-size:8pt;margin-bottom:6px;}
     a{color:inherit;}
@@ -895,7 +892,6 @@
           const shots = PHOTOS.photos[k], first = shots[0];
           const day = (PHOTOS.dayFolders||{})[k] || (PHOTOS.folders||{})[k];
           return `<div class="uc"><div class="ph"><span class="pbadge">${esc(k)}</span>`
-            + `<span class="wbadge off alt">di luar villa</span>`
             + shotImg(first.id, `Foto ${k}`)
             + (shots.length>1?`<span class="nshot">+${shots.length-1}</span>`:"")
             + `</div><div class="bd"><div class="ty">Area umum</div><div class="ft">`
