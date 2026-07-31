@@ -8,6 +8,12 @@
 > editable **Highlight & Lowlight** section. Unit pages carry: progress stats,
 > S-curve, Highlight/Lowlight, photos.
 >
+> **Rev 4 (2026-07-31):** the Client Report tab is **entirely in English**
+> (tab name, toolbar, report content, chart annotations — "today",
+> "HANDOVER" — dates, placeholders; internal tabs stay Indonesian). The two
+> editable blocks are **Highlights** and **Next Week Focus** (replacing
+> Highlight/Lowlight); the print button reads **"Print for Owner"**.
+>
 > **Rev 3 (2026-07-31):** unit selection is a **dropdown** ("Semua unit" + one
 > entry per unit, mirroring the audit tab's chart selector), not multi-select
 > chips. No cover page. The report is **one compact page per unit**: a project

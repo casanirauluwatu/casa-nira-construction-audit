@@ -341,7 +341,7 @@
   <nav class="tabs" role="tablist" aria-label="Laporan">
     <button class="tab" id="tab-audit" type="button" role="tab" aria-selected="true" aria-controls="panel-audit">Construction Audit</button>
     <button class="tab" id="tab-harian" type="button" role="tab" aria-selected="false" aria-controls="panel-harian">Laporan Harian</button>
-    <button class="tab" id="tab-klien" type="button" role="tab" aria-selected="false" aria-controls="panel-klien">Laporan Klien</button>
+    <button class="tab" id="tab-klien" type="button" role="tab" aria-selected="false" aria-controls="panel-klien">Client Report</button>
   </nav>
 
   <section class="tabpanel" id="panel-audit" role="tabpanel" aria-labelledby="tab-audit">
@@ -428,12 +428,12 @@
 
   <section class="tabpanel" id="panel-klien" role="tabpanel" aria-labelledby="tab-klien" hidden>
     <div class="dbar kbar">
-      <label class="dbar-f">Tanggal <input type="date" id="kDate"></label>
+      <label class="dbar-f">Date <input type="date" id="kDate"></label>
       <label class="dbar-f">Unit <select id="kUnit"></select></label>
-      <button type="button" class="refresh kexp" id="kPrint">Cetak untuk Owner</button>
+      <button type="button" class="refresh kexp" id="kPrint">Print for Owner</button>
       <span class="dbar-h" id="kHint"></span>
     </div>
-    <div class="note" id="knote">Memuat laporan klien…</div>
+    <div class="note" id="knote">Loading client report…</div>
     <div id="kreport"></div>
   </section>
 </div>
@@ -595,8 +595,8 @@
     finally{ btn.disabled=false; btn.textContent="Refresh data"; }
   }
   /* ==================== tabs ==================== */
-  const H1 = { audit:"Construction Feed Audit", harian:"Laporan Harian Proyek", klien:"Laporan Harian — Klien" };
-  const SUBH = { audit:"Loading live feed data…", harian:"Memuat laporan harian…", klien:"Pilih tanggal & unit, lalu Export PDF." };
+  const H1 = { audit:"Construction Feed Audit", harian:"Laporan Harian Proyek", klien:"Daily Client Report" };
+  const SUBH = { audit:"Loading live feed data…", harian:"Memuat laporan harian…", klien:"Choose a date & unit, then Print for Owner." };
   const HASH0 = location.hash.slice(1);
   let TAB = HASH0==="harian" || HASH0==="klien" ? HASH0 : "audit";
   let AUDIT = null, DAILY = null, LOADING_DAILY = false;
@@ -1090,6 +1090,11 @@
      its own except the captions, which live in localStorage on this device. */
   let KUNIT = null;   // "ALL" or one unit id
 
+  // The owners read English; the internal tabs stay Indonesian.
+  const DAY_EN = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const MON_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const fmtEN = (d) => `${DAY_EN[d.getDay()]}, ${d.getDate()} ${MON_EN[d.getMonth()]} ${d.getFullYear()}`;
+
   const kcapKey = (date) => "kcap:" + date;
   function kcaps(date){ try{ return JSON.parse(localStorage.getItem(kcapKey(date))||"{}"); }catch{ return {}; } }
   function kcapSave(date, o){ try{ localStorage.setItem(kcapKey(date), JSON.stringify(o)); }catch{} }
@@ -1100,7 +1105,7 @@
   function kcurve(r){
     const W=960,H=250,PL=42,PR=16,PT=22,PB=36,iw=W-PL-PR,ih=H-PT-PB;
     const pts=(r.series||[]).map(w=>({t:pW(w.d),p:w.p,a:w.a})).filter(x=>x.t);
-    if(!pts.length) return `<div class="kempty">Jadwal S-curve tidak tersedia untuk ${esc(r.unit)}.</div>`;
+    if(!pts.length) return `<div class="kempty">No S-curve schedule available for ${esc(r.unit)}.</div>`;
     const target=pW(r.target), proj=projDate(r), now=CHART_NOW, committed=pW(commitOf(r.unit));
     const t0=pts[0].t; let t1=pts[pts.length-1].t;
     [target,proj,now,committed].forEach(d=>{ if(d&&d>t1) t1=d; });
@@ -1117,16 +1122,16 @@
     // close — the target date is still in the hint line under the chart.
     const tClash = target && committed && Math.abs(xF(target)-xF(committed)) < 140;
     if(target){const x=xF(target);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#a9822f" stroke-width="1.2" stroke-dasharray="4 3"/>`+diamond(x,yF(100),5,"#a9822f")+(tClash?"":`<text x="${x.toFixed(1)}" y="${PT-8}" text-anchor="middle" font-size="9" fill="#a9822f" font-weight="600" ${MONO}>TARGET</text>`);}
-    if(now){const x=xF(now);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#b4472e" stroke-width="1" stroke-dasharray="2 2" opacity="0.7"/><text x="${x.toFixed(1)}" y="${PT-8}" text-anchor="middle" font-size="9" fill="#b4472e" ${MONO}>hari ini</text>`;}
-    if(committed){const x=xF(committed);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#d9791a" stroke-width="2"/><text x="${x.toFixed(1)}" y="${PT-8}" text-anchor="middle" font-size="9.5" fill="#d9791a" font-weight="700" ${MONO}>SERAH TERIMA ${committed.getUTCDate()} ${MON3[committed.getUTCMonth()]}</text>`;}
+    if(now){const x=xF(now);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#b4472e" stroke-width="1" stroke-dasharray="2 2" opacity="0.7"/><text x="${x.toFixed(1)}" y="${PT-8}" text-anchor="middle" font-size="9" fill="#b4472e" ${MONO}>today</text>`;}
+    if(committed){const x=xF(committed);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#d9791a" stroke-width="2"/><text x="${x.toFixed(1)}" y="${PT-8}" text-anchor="middle" font-size="9.5" fill="#d9791a" font-weight="700" ${MONO}>HANDOVER ${committed.getUTCDate()} ${MON3[committed.getUTCMonth()]}</text>`;}
     if(upto.length){const last=upto[upto.length-1];const lx=xF(last.t),ly=yF(last.a);s+=`<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.6" fill="#6f7043"/><text x="${(lx-7).toFixed(1)}" y="${(ly-7).toFixed(1)}" text-anchor="end" font-size="11.5" font-weight="600" fill="#6f7043" ${MONO}>${last.a.toFixed(1)}%</text>`;}
     const slip=(target&&proj)?Math.round((proj-target)/(7*864e5)):null;
     const slipTxt = slip==null ? "" : slip<=0
-      ? ` — <strong style="color:#3f7d4f">${Math.abs(slip)} minggu lebih cepat dari target</strong>`
-      : ` — <strong style="color:#b4472e">${slip} minggu di belakang target</strong>`;
-    return `<div class="kcurve"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Kurva-S ${esc(r.unit)}">${s}</svg>`
-      + `<div class="khint">Garis putus emas = rencana · garis olive = aktual. Aktual <strong>${r.actual.toFixed(1)}%</strong> vs rencana ${r.planned.toFixed(1)}%. `
-      + `Target ${esc(r.target)}${r.projDate&&r.projDate!=="done"?`, proyeksi ${esc(r.projDate)}`:""}${slipTxt}.</div></div>`;
+      ? ` — <strong style="color:#3f7d4f">${Math.abs(slip)} week${Math.abs(slip)===1?"":"s"} ahead of target</strong>`
+      : ` — <strong style="color:#b4472e">${slip} week${slip===1?"":"s"} behind target</strong>`;
+    return `<div class="kcurve"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="S-curve ${esc(r.unit)}">${s}</svg>`
+      + `<div class="khint">Dashed gold = plan · solid olive = actual. Actual <strong>${r.actual.toFixed(1)}%</strong> vs plan ${r.planned.toFixed(1)}%. `
+      + `Target ${esc(r.target)}${r.projDate&&r.projDate!=="done"?`, projected ${esc(r.projDate)}`:""}${slipTxt}.</div></div>`;
   }
 
   // One compact unit page: project strip, unit + progress stats, S-curve,
@@ -1135,35 +1140,35 @@
   function kunitSec(u, r, rd, caps){
     const due=commitOf(u.id), shots=shotsFor(u.id);
     const hl = caps["h:"+u.id] != null ? caps["h:"+u.id] : "";
-    const ll = caps["l:"+u.id] != null ? caps["l:"+u.id] : "";
+    const nf = caps["f:"+u.id] != null ? caps["f:"+u.id] : "";
     // Committed hand-over date wins over the feed's extrapolated target — it is
     // the date that was promised.
     const stats = r
-      ? `<span>Progres <b>${r.actual.toFixed(1)}%</b></span><span>Rencana <b>${r.planned.toFixed(1)}%</b></span>`
-        + `<span class="${r.deviation<0?"neg":"pos"}">Deviasi <b>${sgn(r.deviation)}</b></span>`
-        + (r.d0!=null?`<span>Minggu ini <b class="${dCls(r.d0)}">${sgn(r.d0)}</b></span>`:"")
-        + `<span>${due?"Serah terima":"Target"} <b>${esc(due||r.target)}</b></span>`
-      : (due?`<span>Serah terima <b>${esc(due)}</b></span>`:"");
+      ? `<span>Progress <b>${r.actual.toFixed(1)}%</b></span><span>Plan <b>${r.planned.toFixed(1)}%</b></span>`
+        + `<span class="${r.deviation<0?"neg":"pos"}">Deviation <b>${sgn(r.deviation)}</b></span>`
+        + (r.d0!=null?`<span>This week <b class="${dCls(r.d0)}">${sgn(r.d0)}</b></span>`:"")
+        + `<span>${due?"Handover":"Target"} <b>${esc(due||r.target)}</b></span>`
+      : (due?`<span>Handover <b>${esc(due)}</b></span>`:"");
     const curve = r ? kcurve(r)
-      : `<div class="kempty">${AUDIT?`Data S-curve tidak tersedia untuk ${esc(u.id)}.`:"Memuat data progres…"}</div>`;
+      : `<div class="kempty">${AUDIT?`No S-curve data available for ${esc(u.id)}.`:"Loading progress data…"}</div>`;
     const photos = shots.length
       ? `<div class="kphotos">` + shots.map((s,i)=>{
           const key="p:"+s.id;
-          const cap = caps[key] != null ? caps[key] : (nameCap(s.name) || `Foto ${i+1} — ${u.id}`);
-          return `<figure class="kph"><div class="ph">${shotImg(s.id, `Foto ${esc(u.id)}`)}</div>`
-            + `<figcaption contenteditable="true" data-ck="${esc(key)}" data-ph="Tulis keterangan foto…">${esc(cap)}</figcaption></figure>`;
+          const cap = caps[key] != null ? caps[key] : (nameCap(s.name) || `Photo ${i+1} — ${u.id}`);
+          return `<figure class="kph"><div class="ph">${shotImg(s.id, `Photo ${esc(u.id)}`)}</div>`
+            + `<figcaption contenteditable="true" data-ck="${esc(key)}" data-ph="Add photo description…">${esc(cap)}</figcaption></figure>`;
         }).join("") + `</div>`
-      : `<div class="kempty">${PHOTOS===null?"Memuat foto…":"Belum ada foto untuk tanggal ini."}</div>`;
+      : `<div class="kempty">${PHOTOS===null?"Loading photos…":"No photos for this date."}</div>`;
     return `<section class="kunit">`
-      + `<div class="kutop"><span>Casa Nira Uluwatu · Laporan Harian</span><span class="kd">${fmtID(rd)}</span></div>`
+      + `<div class="kutop"><span>Casa Nira Uluwatu · Daily Progress Report</span><span class="kd">${fmtEN(rd)}</span></div>`
       + `<div class="kuhead"><div><span class="kuid">${esc(u.id)}</span><span class="kuty">${esc(u.type||"")}</span></div>`
       + `<div class="kustats">${stats}</div></div>`
       + curve
       + `<div class="khlwrap"><div class="khl">`
-      + `<div class="kdesc kh"><span class="kdl">Highlight</span><div contenteditable="true" data-ck="h:${esc(u.id)}" data-ph="Capaian penting hari ini…">${esc(hl)}</div></div>`
-      + `<div class="kdesc kl"><span class="kdl">Lowlight</span><div contenteditable="true" data-ck="l:${esc(u.id)}" data-ph="Kendala / perlu perhatian…">${esc(ll)}</div></div>`
+      + `<div class="kdesc kh"><span class="kdl">Highlights</span><div contenteditable="true" data-ck="h:${esc(u.id)}" data-ph="Key achievements today…">${esc(hl)}</div></div>`
+      + `<div class="kdesc kl"><span class="kdl">Next Week Focus</span><div contenteditable="true" data-ck="f:${esc(u.id)}" data-ph="Planned works for next week…">${esc(nf)}</div></div>`
       + `</div></div>`
-      + `<div class="ksec">Dokumentasi Foto${shots.length?` · ${shots.length}`:""}</div>${photos}`
+      + `<div class="ksec">Photo Documentation${shots.length?` · ${shots.length}`:""}</div>${photos}`
       + `</section>`;
   }
 
@@ -1171,7 +1176,7 @@
     if(TAB!=="klien") return;
     const kn=$("knote"), rep=$("kreport");
     if(!DAILY){
-      kn.className="note"; kn.textContent="Memuat data harian…"; rep.innerHTML="";
+      kn.className="note"; kn.textContent="Loading daily data…"; rep.innerHTML="";
       return;
     }
     const d=DAILY, rd=new Date(d.date+"T00:00:00");
@@ -1181,20 +1186,20 @@
     $("kDate").value = d.date||"";
     $("kDate").disabled = !d.live;   // snapshot mode answers exactly one day
 
-    $("kUnit").innerHTML = `<option value="ALL">Semua unit · halaman per unit</option>` + units.map(u=>{
+    $("kUnit").innerHTML = `<option value="ALL">All units · one page each</option>` + units.map(u=>{
       const n=shotsFor(u.id).length;
-      return `<option value="${esc(u.id)}">${esc(u.id)} · ${esc((u.type||"").replace(/^The /,""))}${n?` · ${n} foto`:""}</option>`;
+      return `<option value="${esc(u.id)}">${esc(u.id)} · ${esc((u.type||"").replace(/^The /,""))}${n?` · ${n} photo${n===1?"":"s"}`:""}</option>`;
     }).join("");
     $("kUnit").value = KUNIT;
 
     const chosen = KUNIT==="ALL" ? units : units.filter(u=>u.id===KUNIT);
     const totF = chosen.reduce((s,u)=>s+shotsFor(u.id).length,0);
-    $("kHint").textContent = `${chosen.length} unit · ${totF} foto`;
-    SUBH.klien = `${KUNIT==="ALL"?"Semua unit":"Unit "+KUNIT} · ${fmtID(rd)}`;
+    $("kHint").textContent = `${chosen.length} unit${chosen.length===1?"":"s"} · ${totF} photo${totF===1?"":"s"}`;
+    SUBH.klien = `${KUNIT==="ALL"?"All units":"Unit "+KUNIT} · ${fmtEN(rd)}`;
     applyHead();
     kn.className="note";
-    kn.innerHTML = `Laporan ringkas untuk owner — pilih unit, lalu <strong>Cetak untuk Owner</strong> (dialog cetak; pilih “Save as PDF” untuk dikirim). `
-      + `Keterangan foto, highlight &amp; lowlight dapat diklik untuk diedit; tersimpan di perangkat ini.`;
+    kn.innerHTML = `Compact owner report — pick a unit, then <strong>Print for Owner</strong> (choose “Save as PDF” in the print dialog to send it). `
+      + `Photo descriptions, Highlights &amp; Next Week Focus are click-to-edit; entries are saved on this device.`;
 
     const am={}; if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok) am[r.unit]=r;
     const caps=kcaps(d.date);
