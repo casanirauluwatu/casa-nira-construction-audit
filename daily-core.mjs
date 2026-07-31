@@ -79,6 +79,7 @@ async function fetchFeed(url, ms) {
 // lets the embedded folder view be read without credentials or an API key.
 const AREA_FOLDERS = {
   amenities: "1MxvIsuPzEoVMHqoATrMB-SrMKpdLbtsS",
+  furniture: "1NeJoy-314xldnEb2DvuRo7qaUYg4xKul",
   communal: "10qb-SF-dz5cZZAcfu4yFargvgdDirrm9",
 };
 

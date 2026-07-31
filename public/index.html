@@ -158,7 +158,8 @@
   .krep .khl{margin-top:0;}
   .krep+.kunit .kutop{display:none;}
   .kabout{margin:2px 0 4px;}
-  .kutop{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font:600 9.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:10px;}
+  .kutop{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;font:600 12px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:10px;}
+  .kutop .kd{font-size:10px;}
   .kutop .kd{color:var(--muted);letter-spacing:.04em;}
   .kuhead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
   .kuid{font:700 19px ui-monospace,Menlo,monospace;letter-spacing:.02em;}
@@ -319,7 +320,8 @@
     /* The strip prints once at the very top (on .krep); repeating it on every
        section mid-page is noise. */
     .kunit .kutop{display:none;}
-    .kutop{font-size:7pt;padding-bottom:4px;margin-bottom:7px;}
+    .kutop{font-size:9pt;padding-bottom:4px;margin-bottom:7px;}
+    .kutop .kd{font-size:7.5pt;}
     .kuhead{margin-bottom:5px;}
     .kuid{font-size:14pt;}
     .kuty{font-size:7.5pt;}
@@ -615,7 +617,7 @@
     finally{ btn.disabled=false; btn.textContent="Refresh data"; }
   }
   /* ==================== tabs ==================== */
-  const H1 = { audit:"Construction Feed Audit", harian:"Laporan Harian Proyek", klien:"Daily Client Report" };
+  const H1 = { audit:"Construction Feed Audit", harian:"Laporan Harian Proyek", klien:"Weekly Progress Report" };
   const SUBH = { audit:"Loading live feed data…", harian:"Memuat laporan harian…", klien:"Choose a date & unit, then Print for Owner." };
   const HASH0 = location.hash.slice(1);
   let TAB = HASH0==="harian" || HASH0==="klien" ? HASH0 : "audit";
@@ -1171,7 +1173,7 @@
         }).join("") + `</div>`
       : `<div class="kempty">${PHOTOS===null?"Loading photos…":"No photos for this date."}</div>`;
     return `<section class="kunit">`
-      + `<div class="kutop"><span>Casa Nira Uluwatu · Daily Progress Report</span><span class="kd">${fmtEN(rd)}</span></div>`
+      + `<div class="kutop"><span>Casa Nira Uluwatu · Weekly Progress Report</span><span class="kd">${fmtEN(rd)}</span></div>`
       + `<div class="kuhead"><div><span class="kuid">${esc(u.id)}</span><span class="kuty">${esc(u.type||"")}</span></div>`
       + `<div class="kustats">${stats}</div></div>`
       + curve
@@ -1187,6 +1189,8 @@
   const KAREAS = [
     { id:"AMENITIES", title:"Amenities", key:"amenities",
       desc:"All amenities have already been procured and delivered to site, so there is no lead time. The photos show the custom branding applied to the collection, including paintings, plates, bedding, kitchenware and cleaning supplies." },
+    { id:"FURNITURE", title:"Furniture", key:"furniture",
+      desc:"Production of the loose furniture is in progress and it will be ready for delivery soon. The photos show the progress so far." },
     { id:"COMMUNAL",  title:"Communal",  key:"communal",
       desc:"The entrance signage and a sample palm tree for the communal area have been installed, and electricity is connected. The next step is the pergola at the reception, followed by the works on the main road and the signage for each villa." },
   ];
@@ -1211,7 +1215,7 @@
         ).join("") + `</div>`
       : `<div class="kempty">${AREAS===null?"Loading photos…":"No photos in this folder."}</div>`;
     return `<section class="kunit">`
-      + `<div class="kutop"><span>Casa Nira Uluwatu · Daily Progress Report</span><span class="kd">${fmtEN(rd)}</span></div>`
+      + `<div class="kutop"><span>Casa Nira Uluwatu · Weekly Progress Report</span><span class="kd">${fmtEN(rd)}</span></div>`
       + `<div class="kuhead"><div><span class="kuid">${esc(a.title)}</span><span class="kuty">Common Area</span></div></div>`
       + `<div class="kdesc kabout">${esc(a.desc)}</div>`
       + `<div class="ksec">Photo Documentation${shots.length?` · ${shots.length}`:""}</div>${photos}`
@@ -1258,7 +1262,7 @@
     const hl = caps["h:@"] != null ? caps["h:@"] : "";
     const nf = caps["f:@"] != null ? caps["f:@"] : "";
     const krep = `<div class="krep">`
-      + `<div class="kutop"><span>Casa Nira Uluwatu · Daily Progress Report</span><span class="kd">${fmtEN(rd)}</span></div>`
+      + `<div class="kutop"><span>Casa Nira Uluwatu · Weekly Progress Report</span><span class="kd">${fmtEN(rd)}</span></div>`
       + `<div class="khlwrap"><div class="khl">`
       + `<div class="kdesc kh"><span class="kdl">Highlights</span><div contenteditable="true" data-ck="h:@" data-ph="Key achievements today…">${esc(hl)}</div></div>`
       + `<div class="kdesc kl"><span class="kdl">Next Week Focus</span><div contenteditable="true" data-ck="f:@" data-ph="Planned works for next week…">${esc(nf)}</div></div>`
