@@ -529,6 +529,7 @@
   const DOW = ["Sen","Sel","Rab","Kam","Jum","Sab","Min"];
   let WX = null, D_DATE = null, D_MONTH = null, MP_SEL = "ALL";
   let PHOTOS = null;   // { ok, photos:{unit:[{id,name}]}, folders, alias }
+  let PH_FRESH = false;// set by loadDaily so Refresh data reaches the photos too
 
   // One attendance colour code, used on the chart, the table bars and the % cells.
   const BANDS = [
@@ -543,6 +544,7 @@
 
   async function loadDaily(fresh, date, month){
     LOADING_DAILY = true;
+    PH_FRESH = !!fresh;   // renderDaily kicks off the photo fetch; carry the flag over
     if(month!==undefined){ D_MONTH = month; D_DATE = null; }
     else if(date!==undefined){ D_DATE = date; D_MONTH = null; }
     const btn=$("refresh"); btn.disabled=true; btn.innerHTML='<span class="spin"></span> Memuat…';
@@ -653,7 +655,7 @@
     $("wkSrc").textContent = `Sumber: ${d.labourSource||"Daily Mapping Labour on Site"} — kolom “Jumlah Aktual” tanggal ${fmtID(rd)}.`;
 
     paintPhotos(d);
-    loadPhotos(d.date);
+    loadPhotos(d.date, { fresh: PH_FRESH, live: !!d.isToday });
     syncDateBar(d);
     buildManpower(d);
 
@@ -673,11 +675,20 @@
   }
 
   // Site photos arrive separately so a slow Drive lookup never delays the numbers.
-  async function loadPhotos(date){
+  // Refresh data has to reach them too: without fresh, a CDN copy taken before
+  // the day's upload keeps answering "0 foto" and nothing the browser does —
+  // including a hard reload — can get past it. For today the URL also carries a
+  // 5-minute bucket, so photos uploaded during the day show up on the next open
+  // instead of waiting for a cache entry to expire.
+  async function loadPhotos(date, opt){
     if(!date) return;
+    const o = opt || {};
     PHOTOS = null;
     try{
-      const res = await fetch("/api/daily/photos?date="+encodeURIComponent(date));
+      const qs = ["date="+encodeURIComponent(date)];
+      if(o.fresh) qs.push("fresh=1");
+      else if(o.live) qs.push("t="+Math.floor(Date.now()/300000));
+      const res = await fetch("/api/daily/photos?"+qs.join("&"), o.fresh?{cache:"no-store"}:{});
       const j = await res.json();
       PHOTOS = j && j.ok ? j : { ok:false, error:(j&&j.error)||`HTTP ${res.status}` };
     }catch(e){ PHOTOS = { ok:false, error:e.message }; }
