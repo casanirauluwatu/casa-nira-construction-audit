@@ -8,6 +8,14 @@
 > editable **Highlight & Lowlight** section. Unit pages carry: progress stats,
 > S-curve, Highlight/Lowlight, photos.
 >
+> **Rev 5 (2026-07-31):** the S-curve shows plan, actual, target and handover
+> only — the pace **projection is removed** from the owner report (it stays on
+> the internal audit tab). Two site-wide sections are **always appended**:
+> **Infrastructure** and **Amenities**, fed by the same-day Drive photo folders
+> whose names match `infra` / `amenit` (these folders exist by default on
+> Drive). Each has the same Highlights / Next Week Focus / photo layout, minus
+> progress stats, and prints as its own page.
+>
 > **Rev 4 (2026-07-31):** the Client Report tab is **entirely in English**
 > (tab name, toolbar, report content, chart annotations — "today",
 > "HANDOVER" — dates, placeholders; internal tabs stay Indonesian). The two
