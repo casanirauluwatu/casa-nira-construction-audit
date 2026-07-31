@@ -2,6 +2,12 @@
 
 **Status:** Approved for build · **Owner:** Casa Nira ops · **Doc date:** 2026-07-31
 
+> **Rev 2 (2026-07-31):** client feedback — no labour/manpower data anywhere in
+> the client report (no worker counts on the cover, summary table, or unit
+> headers). The per-unit "Pekerjaan hari ini" summary is replaced by an
+> editable **Highlight & Lowlight** section. Unit pages carry: progress stats,
+> S-curve, Highlight/Lowlight, photos.
+
 ## 1. Background
 
 The dashboard already has two tabs:
@@ -21,7 +27,8 @@ A third tab, **Laporan Klien**, that generates a clean, client-ready daily
 report whose primary output is an **exported PDF**, with:
 
 1. **Photos front and centre** — large photos per unit, each with an editable
-   description (caption), plus an editable "work done today" summary per unit.
+   description (caption), plus an editable Highlight & Lowlight section per
+   unit.
 2. **Progress per unit as an S-curve** — planned vs actual, target, projection,
    committed due date.
 3. **Unit selection** — the person generating the report chooses exactly which
@@ -74,21 +81,24 @@ Site admin / project manager, daily:
 **Cover block** (PDF page 1):
 
 - Eyebrow "Casa Nira Uluwatu", title "Laporan Harian Proyek", full Indonesian
-  date, count of selected units and total workers on site for those units.
-- Summary table of the selected units: Unit · Tipe · Pekerja (aktual/rencana) ·
-  Progres % · Rencana % · Deviasi · Target selesai (committed due date wins
-  over the feed's extrapolated target when one exists).
+  date, count of selected units and photo count. **No labour figures.**
+- Summary table of the selected units: Unit · Tipe · Progres % · Rencana % ·
+  Deviasi · Target selesai (committed due date wins over the feed's
+  extrapolated target when one exists).
 
 **Per selected unit** (each starts a fresh PDF page):
 
-- Header: unit id, villa type, and inline stats — Progres, Rencana, Deviasi
-  (green/red), Pekerja hari ini.
+- Header: unit id, villa type, committed hand-over date, and inline stats —
+  Progres, Rencana, Deviasi (green/red). **No worker counts.**
 - **Kurva-S**: planned (dashed gold) vs actual (solid olive), target diamond,
   projected completion, today marker, committed due line — same visual language
   as the audit tab, rendered standalone per unit. One-line summary underneath
   ("Aktual X% vs rencana Y% … Z minggu di depan/di belakang target").
-- **Pekerjaan hari ini**: editable text block, prefilled with the trade
-  breakdown from the labour sheet (`comp`), e.g. "ARS Sipil 2 · MEP Elektrikal 2".
+- **Highlight & Lowlight**: two editable text blocks side by side — Highlight
+  (green accent, "capaian penting hari ini") and Lowlight (amber accent,
+  "kendala / perlu perhatian"). Both start empty; an empty block is omitted
+  from the PDF, and when both are empty the whole section (heading included)
+  is omitted.
 - **Dokumentasi foto**: every photo for that unit and date, large (grid,
   2-up in PDF), each with an editable caption. Caption defaults to the Drive
   file name (cleaned: extension stripped, separators → spaces); empty captions
@@ -96,7 +106,7 @@ Site admin / project manager, daily:
 
 ### 5.3 Editable descriptions
 
-- Captions and work summaries are `contenteditable` regions, saved on input to
+- Captions and Highlight/Lowlight entries are `contenteditable` regions, saved on input to
   `localStorage` keyed by date (`kcap:<date>`), photo id / unit id inside.
 - Revisiting the same date restores the saved text; other dates are unaffected.
 

@@ -181,6 +181,11 @@
   .khint{font-size:11.5px;color:var(--muted);margin-top:4px;}
   .kdesc{background:#faf7ef;border:1px solid var(--line);border-left:3px solid var(--olive);border-radius:8px;padding:10px 13px;font-size:13px;line-height:1.55;}
   .kdesc .kdl{display:block;font:600 9.5px ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--olive);margin-bottom:4px;}
+  .khl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start;}
+  .kdesc.kh{border-left-color:var(--green);}
+  .kdesc.kh .kdl{color:var(--green);}
+  .kdesc.kl{border-left-color:var(--amber);}
+  .kdesc.kl .kdl{color:var(--amber);}
   .kphotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;}
   .kph{margin:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;display:flex;flex-direction:column;}
   .kph .ph{position:relative;aspect-ratio:4/3;background:#ede7da;overflow:hidden;}
@@ -234,6 +239,7 @@
     .kchip{min-height:38px;}
     .kmeta{text-align:left;}
     button.kexp{flex:1;min-height:44px;}
+    .khl{grid-template-columns:minmax(0,1fr);}
 
     /* The chart is unreadable squeezed into 390px — let it keep its width and
        scroll sideways, the way the audit chart already does. */
@@ -322,6 +328,11 @@
     .ksec{margin:10px 0 6px;font-size:7pt;}
     .khint{font-size:7.5pt;}
     .kdesc{padding:7px 10px;font-size:8.5pt;}
+    .khl{gap:8px;}
+    /* An untouched Highlight/Lowlight box prints as nothing; if both are empty
+       the whole section, heading included, stays off the PDF. */
+    .khl .kdesc:not(:has([data-ck]:not(:empty))){display:none;}
+    .khlwrap:not(:has([data-ck]:not(:empty))){display:none;}
     .kphotos{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
     .kph{break-inside:avoid;border-radius:8px;}
     .kph figcaption{font-size:8pt;padding:5px 8px;min-height:0;}
@@ -1178,31 +1189,31 @@
 
     const am={}; if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok) am[r.unit]=r;
     const caps=kcaps(d.date);
-    const totW=chosen.reduce((s,u)=>s+(u.workers||0),0), totP=chosen.reduce((s,u)=>s+(u.plan||0),0);
     const totF=chosen.reduce((s,u)=>s+shotsFor(u.id).length,0);
 
-    // Cover: title + one summary row per unit. Committed due date wins over the
-    // feed's extrapolated target — it is the date that was promised.
+    // Cover: title + one summary row per unit. Progress figures only — labour
+    // and manpower stay on the internal tabs; this report goes to the client.
+    // Committed due date wins over the feed's extrapolated target — it is the
+    // date that was promised.
     const sumRows = chosen.map(u=>{
       const r=am[u.id], due=commitOf(u.id);
       return `<tr><td class="u">${esc(u.id)}</td><td class="dim">${esc((u.type||"").replace(/^The /,""))}</td>`
-        + `<td class="mono">${u.workers||0}<span class="dim"> / ${u.plan||0}</span></td>`
         + (r ? `<td class="mono">${r.actual.toFixed(1)}%</td><td class="mono dim">${r.planned.toFixed(1)}%</td><td class="mono ${r.deviation<0?"neg":"pos"}">${sgn(r.deviation)}</td>`
              : `<td class="mono dim">—</td><td class="mono dim">—</td><td class="mono dim">—</td>`)
         + `<td class="mono">${esc(due || (r?r.target:"—"))}</td></tr>`;
     }).join("");
     const cover = `<div class="kcover"><div class="kchead">`
       + `<div><div class="eyebrow">Casa Nira Uluwatu</div><h2>Laporan Harian Proyek</h2><div class="kdate">${fmtID(rd)}</div></div>`
-      + `<div class="kmeta"><b>${chosen.length}</b> unit dalam laporan · <b>${totW}</b>/${totP} pekerja di lapangan<br><b>${totF}</b> foto dokumentasi</div>`
-      + `</div><div class="tbl-wrap"><table><thead><tr><th class="l">Unit</th><th class="l">Tipe</th><th>Pekerja</th><th>Progres</th><th>Rencana</th><th>Deviasi</th><th>Target selesai</th></tr></thead>`
+      + `<div class="kmeta"><b>${chosen.length}</b> unit dalam laporan · <b>${totF}</b> foto dokumentasi</div>`
+      + `</div><div class="tbl-wrap"><table><thead><tr><th class="l">Unit</th><th class="l">Tipe</th><th>Progres</th><th>Rencana</th><th>Deviasi</th><th>Target selesai</th></tr></thead>`
       + `<tbody>${sumRows}</tbody></table></div></div>`;
 
     const secs = chosen.map(u=>{
       const r=am[u.id], due=commitOf(u.id), shots=shotsFor(u.id);
-      const desc = caps["u:"+u.id] != null ? caps["u:"+u.id] : (u.comp||"");
-      const stats = (r ? `<span>Progres <b>${r.actual.toFixed(1)}%</b></span><span>Rencana <b>${r.planned.toFixed(1)}%</b></span>`
-          + `<span class="${r.deviation<0?"neg":"pos"}">Deviasi <b>${sgn(r.deviation)}</b></span>` : "")
-        + `<span>Pekerja hari ini <b>${u.workers||0}/${u.plan||0}</b></span>`;
+      const hl = caps["h:"+u.id] != null ? caps["h:"+u.id] : "";
+      const ll = caps["l:"+u.id] != null ? caps["l:"+u.id] : "";
+      const stats = r ? `<span>Progres <b>${r.actual.toFixed(1)}%</b></span><span>Rencana <b>${r.planned.toFixed(1)}%</b></span>`
+          + `<span class="${r.deviation<0?"neg":"pos"}">Deviasi <b>${sgn(r.deviation)}</b></span>` : "";
       const curve = r ? kcurve(r)
         : `<div class="kempty">${AUDIT?`Data S-curve tidak tersedia untuk ${esc(u.id)}.`:"Memuat data progres…"}</div>`;
       const photos = shots.length
@@ -1217,8 +1228,10 @@
         + `<div class="kuhead"><div><span class="kuid">${esc(u.id)}</span><span class="kuty">${esc(u.type||"")}</span>${due?`<span class="kudue">serah terima ${esc(due)}</span>`:""}</div>`
         + `<div class="kustats">${stats}</div></div>`
         + `<div class="ksec">Kurva-S Progres</div>${curve}`
-        + `<div class="ksec">Pekerjaan Hari Ini</div>`
-        + `<div class="kdesc"><span class="kdl">Ringkasan</span><div contenteditable="true" data-ck="u:${esc(u.id)}" data-ph="Tulis ringkasan pekerjaan hari ini…">${esc(desc)}</div></div>`
+        + `<div class="khlwrap"><div class="ksec">Highlight &amp; Lowlight</div><div class="khl">`
+        + `<div class="kdesc kh"><span class="kdl">Highlight</span><div contenteditable="true" data-ck="h:${esc(u.id)}" data-ph="Capaian penting hari ini…">${esc(hl)}</div></div>`
+        + `<div class="kdesc kl"><span class="kdl">Lowlight</span><div contenteditable="true" data-ck="l:${esc(u.id)}" data-ph="Kendala / perlu perhatian…">${esc(ll)}</div></div>`
+        + `</div></div>`
         + `<div class="ksec">Dokumentasi Foto${shots.length?` · ${shots.length}`:""}</div>${photos}`
         + `</section>`;
     }).join("");
