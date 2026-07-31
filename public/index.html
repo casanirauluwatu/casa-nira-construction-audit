@@ -240,12 +240,13 @@
     .card-n{font-size:21px;}
   }
   @media print{
-    /* A daily report that runs to five pages does not get read. Target three:
-       numbers and chart, the labour table, then photos. */
-    @page{ size:A4; margin:11mm; }
+    /* Two A4 pages: page 1 is the day — numbers, curve, the whole labour table.
+       Page 2 is the photo contact sheet with the weather and notes under it.
+       Every rule below exists to hold that; check the page count after editing. */
+    @page{ size:A4; margin:10mm; }
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     html,body{background:#fff;}
-    body{font-size:9.5pt;overflow:visible;}
+    body{font-size:9pt;overflow:visible;}
     .wrap{max-width:none;padding:0;}
     /* Controls, hints and source notes are screen furniture. The date is already
        in the sub-heading, so the picker adds nothing on paper. */
@@ -253,37 +254,40 @@
     .tabpanel[hidden]{display:none!important;}
     .card,.pnl,.uc,.tbl-wrap,.wx,.chart-card{box-shadow:none;}
     .pnl,.uc,.wx,.nbox,tr,.chart-card{break-inside:avoid;}
-    .sec{break-after:avoid;margin:12px 0 7px;}
-    h1{font-size:19pt;margin:4px 0 3px;}
-    .sub-h{font-size:9pt;}
-    .eyebrow{font-size:7.5pt;}
+    .sec{break-after:avoid;margin:9px 0 5px;}
+    h1{font-size:17pt;margin:2px 0 2px;}
+    .sub-h{font-size:8.5pt;}
+    .eyebrow{font-size:7pt;}
     .tbl-wrap,.chart-scroll{overflow:visible;}
     #panel-harian .tbl-wrap table,#panel-audit table{min-width:0;}
     #mpchart,#chart{min-width:0;width:100%;}
-    .cards{gap:7px;margin-bottom:12px;}
-    .card{padding:8px 10px;}.card-n{font-size:15pt;}.card-l{font-size:6.5pt;margin-top:3px;}
-    .chart-card{padding:8px 10px;margin-bottom:10px;}
-    .chart-legend{gap:6px 10px;margin-top:5px;}.chart-legend .lg{font-size:7pt;}
+    .cards{gap:6px;margin-bottom:9px;}
+    .card{padding:6px 9px;}.card-n{font-size:13.5pt;}.card-l{font-size:6pt;margin-top:2px;letter-spacing:.04em;}
+    .chart-card{padding:7px 9px;margin-bottom:8px;}
+    /* Ranges alone keep the key on one line; with the words it wrapped, leaving
+       "Kosong · 0%" on a row of its own. */
+    .chart-legend{gap:5px 9px;margin-top:4px;}.chart-legend .lg{font-size:6.5pt;}
+    .chart-legend .lgw,.chart-legend .lg.sep{display:none;}
     .wx-row{gap:8px;}
-    .wx{padding:10px;}.wx-now .t{font-size:17pt;}.wx-slots{margin-top:8px;padding-top:8px;}
-    .wx-slot .i{width:15px;height:15px;}.wx-slot .v{font-size:10pt;}
-    .leg .r{font-size:7.5pt;}.wx-dom{font-size:7.5pt;}
-    .cal .c{font-size:6.5pt;border-radius:3px;}
-    table{font-size:8pt;}
-    thead th{padding:6px 7px;font-size:6.5pt;position:static;}
-    tbody td{padding:4px 7px;}
+    .wx{padding:9px 10px;}.wx-now .t{font-size:15pt;}.wx-slots{margin-top:7px;padding-top:7px;}
+    .wx-slot .i{width:14px;height:14px;}.wx-slot .v{font-size:9.5pt;}
+    .leg .r{font-size:7pt;}.wx-dom{font-size:7pt;}
+    .cal .c{font-size:6pt;border-radius:3px;}
+    /* The table is the bulk of page 1 — 22 rows at screen density overflowed it. */
+    table{font-size:7.5pt;}
+    thead th{padding:4px 6px;font-size:6pt;position:static;}
+    tbody td{padding:2.5px 6px;}
     td.wtxt{min-width:0;}
-    /* On screen the weather sits last, out of the way. On paper it belongs with
-       the day's numbers, and the photo contact sheet is the last page. Reorder
-       for print only — everything else keeps order 0 and stays in DOM order. */
-    #panel-harian{display:flex;flex-direction:column;}
-    #secCuaca,#wxCard,#wxMore{order:5;}
-    #secFoto,#pgrid{order:9;}
-    #secCatatan,#dnotes{order:12;}
+    tr.blkhdr td{padding:3px 6px;font-size:6pt;}
+    .khbar{width:38px;height:5px;}
+    .badge{padding:1px 6px;font-size:6.5pt;}
+    /* The same colour key is printed two inches above, under the curve. */
+    #wkKey{display:none;}
     /* Photos start a fresh page and print six-up — a contact sheet, not a gallery. */
     #secFoto{break-before:page;}
-    .wxmore>summary{display:none;}
-    .wxmore .wx-row{grid-template-columns:1fr 1fr;}
+    /* Today's card and its workability verdict are what a site report needs; the
+       month recap and calendar are screen analysis and cost a third page. */
+    .wxmore{display:none;}
     .pgrid{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;}
     .uc .bd{padding:5px 6px;gap:1px;}
     .uc .ty{font-size:6pt;}
@@ -291,6 +295,9 @@
     .uc .ft a{display:none;}
     .uc .pct{font-size:7pt;}
     .pbadge,.wbadge{font-size:6.5pt;padding:2px 5px;}
+    /* Six-up, "Utilities" and "di luar villa" collided across the tile. The unit
+       name is the one that has to survive. */
+    .wbadge.alt{display:none;}
     .nshot{font-size:6.5pt;padding:2px 5px;}
     .nbox{padding:7px 10px;font-size:8pt;margin-bottom:6px;}
     a{color:inherit;}
@@ -621,17 +628,10 @@
   $("tab-harian").addEventListener("click", ()=>setTab("harian"));
   $("tab-klien").addEventListener("click", ()=>setTab("klien"));
   $("print").addEventListener("click", ()=>window.print());
-  // A collapsed <details> prints as its summary line, so open the weather recap
-  // for the printed copy and put it back afterwards.
-  let wxWasOpen = false;
-  window.addEventListener("beforeprint", ()=>{
-    const m=$("wxMore"); if(m){ wxWasOpen=m.open; m.open=true; }
-    document.body.classList.toggle("print-klien", TAB==="klien");
-  });
-  window.addEventListener("afterprint", ()=>{
-    const m=$("wxMore"); if(m) m.open=wxWasOpen;
-    document.body.classList.remove("print-klien");
-  });
+  // Printing from the Client Report hides the page header (each report page
+  // carries its own strip); the class scopes those print rules to that tab.
+  window.addEventListener("beforeprint", ()=>{ document.body.classList.toggle("print-klien", TAB==="klien"); });
+  window.addEventListener("afterprint", ()=>{ document.body.classList.remove("print-klien"); });
   // The klien report draws from both sources, so its refresh re-pulls both.
   $("refresh").addEventListener("click", ()=>{
     if(TAB==="audit") load(true);
@@ -886,7 +886,7 @@
           const shots = PHOTOS.photos[k], first = shots[0];
           const day = (PHOTOS.dayFolders||{})[k] || (PHOTOS.folders||{})[k];
           return `<div class="uc"><div class="ph"><span class="pbadge">${esc(k)}</span>`
-            + `<span class="wbadge off">di luar villa</span>`
+            + `<span class="wbadge off alt">di luar villa</span>`
             + shotImg(first.id, `Foto ${k}`)
             + (shots.length>1?`<span class="nshot">+${shots.length-1}</span>`:"")
             + `</div><div class="bd"><div class="ty">Area umum</div><div class="ft">`
