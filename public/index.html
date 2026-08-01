@@ -1158,15 +1158,7 @@
   // highlight/lowlight, then the photos. Progress figures only — labour and
   // manpower stay on the internal tabs; this page goes to the owner.
   function kunitSec(u, r, caps){
-    const due=commitOf(u.id), shots=kShots(u.id);
-    // Committed hand-over date wins over the feed's extrapolated target — it is
-    // the date that was promised.
-    const stats = r
-      ? `<span>Progress <b>${r.actual.toFixed(1)}%</b></span><span>Plan <b>${r.planned.toFixed(1)}%</b></span>`
-        + `<span class="${r.deviation<0?"neg":"pos"}">Deviation <b>${sgn(r.deviation)}</b></span>`
-        + (r.d0!=null?`<span>This week <b class="${dCls(r.d0)}">${sgn(r.d0)}</b></span>`:"")
-        + `<span>${due?"Handover":"Target"} <b>${esc(due||r.target)}</b></span>`
-      : (due?`<span>Handover <b>${esc(due)}</b></span>`:"");
+    const shots=kShots(u.id);
     // The S-curve chip pulls the chart from every unit page; the stats line
     // above it keeps carrying the progress figures either way.
     const curve = !(KSEC && KSEC.has("SCURVE")) ? ""
@@ -1186,8 +1178,7 @@
         }).join("") + `</div>`
       : `<div class="kempty">${!KP||KP.loading?"Loading photos…":KRANGE>1?"No photos in this period.":"No photos for this date."}</div>`;
     return `<section class="kunit">`
-      + `<div class="kuhead"><div><span class="kuid">${esc(u.id)}</span><span class="kuty">${esc(u.type||"")}</span></div>`
-      + `<div class="kustats">${stats}</div></div>`
+      + `<div class="kuhead"><div><span class="kuid">${esc(u.id)}</span><span class="kuty">${esc(u.type||"")}</span></div></div>`
       + curve
       + `<div class="ksec">Photo Documentation${shots.length?` · ${shots.length}`:""}</div>${photos}`
       + `</section>`;
