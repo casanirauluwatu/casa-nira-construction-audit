@@ -36,6 +36,51 @@ function weekEndOf(lbl) {
 }
 const daysBetween = (a, b) => Math.round((a.getTime() - b.getTime()) / 86400000);
 
+const round2 = (n) => Math.round(n * 100) / 100;
+
+// Per-unit manual corrections to the parsed actual (built) % series, kept in
+// step with the owner dashboard (casa-nira-dashboard lib/construction.ts) so
+// both tools tell owners the same story. The transform receives the weekly
+// actuals (null = un-reported week) and returns a replacement series; the
+// nowIndex, deltas, pace and projections are all recomputed from it.
+const ACTUAL_SERIES_OVERRIDES = {
+  // C7: owners' agreed manual correction. Anchor the two reference weeks, then
+  // let every later week build on the 66.3% baseline using the *sheet's own*
+  // week-over-week deltas:
+  //   week 44 -> 62.5%  (fixed)
+  //   week 45 -> 66.3%  (fixed baseline)
+  //   week 46+ -> 66.3% + (reportedₙ - reported₄₅)
+  // So week 46 = 66.3% + the real 45->46 gain, week 47 = week-46 value + the
+  // real 46->47 gain, and so on. Real progress accrues on top of the baseline
+  // without ever moving weeks 44/45.
+  C7: (a) => {
+    const out = a.slice();
+    const WK44 = 43; // week 44 (index 43)
+    const WK45 = 44; // week 45 (index 44)
+    const real45 = a[WK45]; // sheet's raw week-45 value, captured before override
+    if (WK44 < out.length) out[WK44] = 62.5;
+    if (WK45 < out.length) out[WK45] = 66.3;
+    if (real45 != null) {
+      for (let i = WK45 + 1; i < out.length; i++) {
+        if (a[i] != null) out[i] = round2(66.3 + (a[i] - real45));
+      }
+    }
+    return out;
+  },
+};
+
+// Swap in the corrected actuals and re-derive nowIndex; everything computeRow
+// builds afterwards flows from the corrected series automatically.
+function applyActualOverride(unit, p) {
+  const fn = ACTUAL_SERIES_OVERRIDES[unit];
+  if (!fn) return;
+  const next = fn(p.weeks.map((w) => w.actual));
+  p.weeks.forEach((w, i) => { w.actual = next[i] ?? null; });
+  let ni = -1;
+  p.weeks.forEach((w, i) => { if (w.actual != null) ni = i; });
+  p.nowIndex = ni < 0 ? 0 : ni;
+}
+
 function parseSchedule(rows) {
   const planned = rows.find((r) => clean(r[0]) === "B2");
   const actual = rows.find((r) => clean(r[0]) === "C2");
@@ -72,6 +117,7 @@ function computeRow(unit, data, now, trailWeeks) {
   if (!Array.isArray(rows)) return { unit, ok: false, note: "no schedule rows" };
   const p = parseSchedule(rows);
   if (!p) return { unit, ok: false, note: "schedule unparseable" };
+  applyActualOverride(unit, p);
   const weeks = p.weeks;
   const ni = p.nowIndex;
   const w = weeks[ni];
