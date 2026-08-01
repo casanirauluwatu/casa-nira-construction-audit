@@ -1167,7 +1167,10 @@
         + (r.d0!=null?`<span>This week <b class="${dCls(r.d0)}">${sgn(r.d0)}</b></span>`:"")
         + `<span>${due?"Handover":"Target"} <b>${esc(due||r.target)}</b></span>`
       : (due?`<span>Handover <b>${esc(due)}</b></span>`:"");
-    const curve = r ? kcurve(r)
+    // The S-curve chip pulls the chart from every unit page; the stats line
+    // above it keeps carrying the progress figures either way.
+    const curve = !(KSEC && KSEC.has("SCURVE")) ? ""
+      : r ? kcurve(r)
       : `<div class="kempty">${AUDIT?`No S-curve data available for ${esc(u.id)}.`:"Loading progress data…"}</div>`;
     // Captions start empty on purpose: camera file names ("IMG 8841",
     // "WhatsApp Image …") say nothing to an owner, and an empty caption
@@ -1203,17 +1206,19 @@
     { id:"COMMUNAL",  title:"Communal",  key:"communal",
       desc:"The entrance signage and a sample palm tree for the communal area have been installed, and electricity is connected. The next step is the pergola at the reception, followed by the works on the main road and the signage for each villa." },
   ];
-  // Which of the three sections go into this report. Furniture differs between
-  // units, so the person printing can leave a section off for an owner it does
-  // not apply to. All on by default; the choice sticks to the device.
+  // Which parts go into this report. Furniture differs between units, so the
+  // person printing can leave a section off for an owner it does not apply to;
+  // the S-curve can come off the unit pages the same way. All on by default;
+  // the choice sticks to the device.
+  const ksecValid = (id) => id==="SCURVE" || KAREAS.some(a=>a.id===id);
   let KSEC = null;
   function ksecInit(){
     if(KSEC) return KSEC;
     try{
       const s = JSON.parse(localStorage.getItem("klienAreas")||"null");
-      if(Array.isArray(s)) return (KSEC = new Set(s.filter(id=>KAREAS.some(a=>a.id===id))));
+      if(Array.isArray(s)) return (KSEC = new Set(s.filter(ksecValid)));
     }catch{}
-    return (KSEC = new Set(KAREAS.map(a=>a.id)));
+    return (KSEC = new Set(["SCURVE", ...KAREAS.map(a=>a.id)]));
   }
   const ksecSave = () => { try{ localStorage.setItem("klienAreas", JSON.stringify([...KSEC])); }catch{} };
 
@@ -1308,7 +1313,7 @@
     loadKPhotos(d.date, KRANGE);   // no-op when this date+range is already loaded
 
     const sec = ksecInit();
-    $("kAreas").innerHTML = KAREAS.map(a=>
+    $("kAreas").innerHTML = [{id:"SCURVE", title:"S-curve"}, ...KAREAS].map(a=>
       `<label class="kchip${sec.has(a.id)?" on":""}"><input type="checkbox" value="${esc(a.id)}"${sec.has(a.id)?" checked":""}>${esc(a.title)}</label>`
     ).join("");
     const areasOn = KAREAS.filter(a=>sec.has(a.id));
