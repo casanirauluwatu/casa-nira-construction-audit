@@ -154,6 +154,11 @@
   /* ---------- laporan klien (owner report) ---------- */
   .kbar{align-items:center;}
   button.kexp{padding:9px 16px;}
+  .kareas{display:flex;flex-wrap:wrap;gap:6px;}
+  .kchip{display:inline-flex;align-items:center;font:600 12px ui-monospace,Menlo,monospace;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer;user-select:none;}
+  .kchip:hover{border-color:var(--olive);color:var(--ink);}
+  .kchip input{display:none;}
+  .kchip.on{color:#fff;background:var(--olive);border-color:var(--olive);}
   .kunit,.krep{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(43,38,32,.05);}
   .krep .khl{margin-top:0;}
   .kabout{margin:2px 0 4px;}
@@ -227,6 +232,8 @@
     .chart-sel select{flex:1;min-height:44px;font-size:16px;}
     .uc .ft a{padding:8px 0;}
     button.kexp{flex:1;min-height:44px;}
+    .kareas{flex-basis:100%;}
+    .kchip{min-height:38px;}
     .khl{grid-template-columns:minmax(0,1fr);}
     .kphotos{grid-template-columns:repeat(2,minmax(0,1fr));}
 
@@ -452,6 +459,8 @@
         <option value="14">Last 14 days</option>
       </select></label>
       <label class="dbar-f">Unit <select id="kUnit"></select></label>
+      <span class="dbar-f">Sections</span>
+      <div class="kareas" id="kAreas"></div>
       <button type="button" class="refresh kexp" id="kPrint">Print for Owner</button>
       <span class="dbar-h" id="kHint"></span>
     </div>
@@ -1194,6 +1203,20 @@
     { id:"COMMUNAL",  title:"Communal",  key:"communal",
       desc:"The entrance signage and a sample palm tree for the communal area have been installed, and electricity is connected. The next step is the pergola at the reception, followed by the works on the main road and the signage for each villa." },
   ];
+  // Which of the three sections go into this report. Furniture differs between
+  // units, so the person printing can leave a section off for an owner it does
+  // not apply to. All on by default; the choice sticks to the device.
+  let KSEC = null;
+  function ksecInit(){
+    if(KSEC) return KSEC;
+    try{
+      const s = JSON.parse(localStorage.getItem("klienAreas")||"null");
+      if(Array.isArray(s)) return (KSEC = new Set(s.filter(id=>KAREAS.some(a=>a.id===id))));
+    }catch{}
+    return (KSEC = new Set(KAREAS.map(a=>a.id)));
+  }
+  const ksecSave = () => { try{ localStorage.setItem("klienAreas", JSON.stringify([...KSEC])); }catch{} };
+
   let AREAS = null, LOADING_AREAS = false;
   async function loadAreas(fresh){
     if(LOADING_AREAS) return;
@@ -1284,15 +1307,21 @@
     $("kRange").value = String(KRANGE);
     loadKPhotos(d.date, KRANGE);   // no-op when this date+range is already loaded
 
+    const sec = ksecInit();
+    $("kAreas").innerHTML = KAREAS.map(a=>
+      `<label class="kchip${sec.has(a.id)?" on":""}"><input type="checkbox" value="${esc(a.id)}"${sec.has(a.id)?" checked":""}>${esc(a.title)}</label>`
+    ).join("");
+    const areasOn = KAREAS.filter(a=>sec.has(a.id));
+
     const chosen = KUNIT==="ALL" ? units : units.filter(u=>u.id===KUNIT);
     const totF = chosen.reduce((s,u)=>s+kShots(u.id).length,0)
-      + KAREAS.reduce((s,a)=>s+kareaShots(a).length,0);
-    $("kHint").textContent = `${chosen.length} unit${chosen.length===1?"":"s"} + ${KAREAS.length} areas · ${totF} photo${totF===1?"":"s"}`;
+      + areasOn.reduce((s,a)=>s+kareaShots(a).length,0);
+    $("kHint").textContent = `${chosen.length} unit${chosen.length===1?"":"s"}${areasOn.length?` + ${areasOn.length} area${areasOn.length===1?"":"s"}`:""} · ${totF} photo${totF===1?"":"s"}`;
     SUBH.klien = `${KUNIT==="ALL"?"All units":"Unit "+KUNIT} · ${fmtEN(rd)}`;
     applyHead();
     kn.className="note";
     kn.innerHTML = `Compact owner report — pick a unit, then <strong>Print for Owner</strong> (choose “Save as PDF” in the print dialog to send it). `
-      + `Amenities, Furniture &amp; Communal sections are always included. `
+      + `Toggle the Amenities, Furniture &amp; Communal sections off for an owner they do not apply to — furniture differs between units. `
       + `Photo descriptions, Highlights &amp; Next Week Focus are click-to-edit; entries are saved on this device.`;
 
     const am={}; if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok) am[r.unit]=r;
@@ -1310,7 +1339,7 @@
       + `</div></div></div>`;
     rep.innerHTML = krep
       + chosen.map(u=>kunitSec(u, am[u.id], caps)).join("")
-      + KAREAS.map(a=>kareaSec(a)).join("");
+      + areasOn.map(a=>kareaSec(a)).join("");
   }
 
   $("kDate").addEventListener("change", e=>{ if(e.target.value) loadDaily(false, e.target.value); });
@@ -1318,6 +1347,11 @@
     KRANGE=+e.target.value||7;
     try{ localStorage.setItem("klienRange", String(KRANGE)); }catch{}
     renderKlien();   // kicks off the range fetch for the new period
+  });
+  $("kAreas").addEventListener("change", e=>{
+    const cb=e.target; if(!cb || cb.tagName!=="INPUT" || !KSEC) return;
+    cb.checked ? KSEC.add(cb.value) : KSEC.delete(cb.value);
+    ksecSave(); renderKlien();
   });
   $("kUnit").addEventListener("change", e=>{
     KUNIT=e.target.value;
