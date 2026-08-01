@@ -185,6 +185,7 @@
   .kph .ph .empty svg{width:24px;height:24px;opacity:.5;}
   .kph .ph .empty span{font-size:10.5px;}
   .kph figcaption{padding:6px 9px 7px;font-size:11.5px;line-height:1.45;min-height:30px;}
+  .kph .kday{position:absolute;right:6px;top:6px;background:rgba(43,38,32,.72);color:#f3efe4;font:600 10px ui-monospace,Menlo,monospace;padding:2px 7px;border-radius:5px;}
   [data-ck]{outline:none;border-radius:6px;cursor:text;}
   [data-ck]:hover{background:#f7f1e2;}
   [data-ck]:focus{background:#faf3df;box-shadow:0 0 0 2px #e8dcbd;}
@@ -332,6 +333,7 @@
     .kphotos{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
     .kph{break-inside:avoid;border-radius:6px;}
     .kph figcaption{font-size:7pt;padding:3px 6px;min-height:0;}
+    .kph .kday{font-size:6pt;padding:1px 5px;}
     /* Edit affordances are screen furniture; an untouched placeholder prints as nothing. */
     [data-ck]:hover,[data-ck]:focus{background:none;box-shadow:none;}
     [data-ck]:empty{display:none;}
@@ -444,6 +446,11 @@
   <section class="tabpanel" id="panel-klien" role="tabpanel" aria-labelledby="tab-klien" hidden>
     <div class="dbar kbar">
       <label class="dbar-f">Date <input type="date" id="kDate"></label>
+      <label class="dbar-f">Photos <select id="kRange">
+        <option value="1">Report date only</option>
+        <option value="7">Last 7 days</option>
+        <option value="14">Last 14 days</option>
+      </select></label>
       <label class="dbar-f">Unit <select id="kUnit"></select></label>
       <button type="button" class="refresh kexp" id="kPrint">Print for Owner</button>
       <span class="dbar-h" id="kHint"></span>
@@ -644,7 +651,10 @@
   $("refresh").addEventListener("click", ()=>{
     if(TAB==="audit") load(true);
     else if(TAB==="harian") loadDaily(true);
-    else { loadDaily(true); load(true); loadAreas(true); }
+    else {
+      loadDaily(true); load(true); loadAreas(true);
+      if(DAILY && KRANGE) loadKPhotos(DAILY.date, KRANGE, true);
+    }
   });
   $("unitSel").addEventListener("change", e=>drawChart(e.target.value));
 
@@ -1139,7 +1149,7 @@
   // highlight/lowlight, then the photos. Progress figures only — labour and
   // manpower stay on the internal tabs; this page goes to the owner.
   function kunitSec(u, r, caps){
-    const due=commitOf(u.id), shots=shotsFor(u.id);
+    const due=commitOf(u.id), shots=kShots(u.id);
     // Committed hand-over date wins over the feed's extrapolated target — it is
     // the date that was promised.
     const stats = r
@@ -1157,10 +1167,12 @@
       ? `<div class="kphotos">` + shots.map((s)=>{
           const key="p:"+s.id;
           const cap = caps[key] != null ? caps[key] : "";
-          return `<figure class="kph"><div class="ph">${shotImg(s.id, `Photo ${esc(u.id)}`)}</div>`
-            + `<figcaption contenteditable="true" data-ck="${esc(key)}" data-ph="Add photo description…">${esc(cap)}</figcaption></figure>`;
+          // The day chip only earns its place when the grid spans several days.
+          return `<figure class="kph"><div class="ph">${shotImg(s.id, `Photo ${esc(u.id)}`)}`
+            + (KRANGE>1 && s.day ? `<span class="kday">${dayChip(s.day)}</span>` : "")
+            + `</div><figcaption contenteditable="true" data-ck="${esc(key)}" data-ph="Add photo description…">${esc(cap)}</figcaption></figure>`;
         }).join("") + `</div>`
-      : `<div class="kempty">${PHOTOS===null?"Loading photos…":"No photos for this date."}</div>`;
+      : `<div class="kempty">${!KP||KP.loading?"Loading photos…":KRANGE>1?"No photos in this period.":"No photos for this date."}</div>`;
     return `<section class="kunit">`
       + `<div class="kuhead"><div><span class="kuid">${esc(u.id)}</span><span class="kuty">${esc(u.type||"")}</span></div>`
       + `<div class="kustats">${stats}</div></div>`
@@ -1195,6 +1207,43 @@
     renderKlien();
   }
   const kareaShots = (a) => AREAS && AREAS.ok ? (AREAS.areas[a.key]||[]) : [];
+
+  // Unit photos over a period, not just the report date. The daily photo
+  // endpoint answers one day at a time (and caches each day at the edge), so
+  // the range is fetched as one small request per day and merged, deduped by
+  // file id, each shot tagged with the day it was taken.
+  let KRANGE = null;          // 1 | 7 | 14 days ending on the report date
+  let KP = null, KP_KEY = ""; // { loading, map:{unit:[shots]}, alias }
+  async function loadKPhotos(end, days, fresh){
+    const key = end+":"+days;
+    if(KP_KEY===key && KP && !fresh) return;
+    KP_KEY = key;
+    KP = { loading:true, map:{}, alias:{}, seen:new Set() };
+    const dates = []; for(let i=0;i<days;i++) dates.push(shiftDay(end,-i));
+    await Promise.all(dates.map(async (day)=>{
+      try{
+        const res = await fetch("/api/daily/photos?date="+day+(fresh?"&fresh=1":""), fresh?{cache:"no-store"}:{});
+        const j = await res.json();
+        if(!(j && j.ok) || KP_KEY!==key) return;
+        for(const [k,arr] of Object.entries(j.photos||{})){
+          for(const s of (arr||[])){
+            if(KP.seen.has(s.id)) continue;
+            KP.seen.add(s.id);
+            (KP.map[k]=KP.map[k]||[]).push({ ...s, day });
+          }
+        }
+        if(j.alias) Object.assign(KP.alias, j.alias);
+      }catch{}
+    }));
+    if(KP_KEY===key){ KP.loading=false; renderKlien(); }
+  }
+  // Oldest first, so a unit's photos read as the week's story.
+  function kShots(id){
+    if(!KP) return [];
+    const arr = KP.map[id] || KP.map[KP.alias[id]] || [];
+    return [...arr].sort((a,b)=>a.day<b.day?-1:a.day>b.day?1:0);
+  }
+  const dayChip = (iso)=>{ const d=new Date(iso+"T00:00:00"); return `${d.getDate()} ${MON3[d.getMonth()]}`; };
   function kareaSec(a){
     const shots = kareaShots(a);
     const photos = shots.length
@@ -1224,15 +1273,19 @@
     $("kDate").disabled = !d.live;   // snapshot mode answers exactly one day
 
     $("kUnit").innerHTML = `<option value="ALL">All units · one page each</option>` + units.map(u=>{
-      const n=shotsFor(u.id).length;
+      const n=kShots(u.id).length;
       return `<option value="${esc(u.id)}">${esc(u.id)} · ${esc((u.type||"").replace(/^The /,""))}${n?` · ${n} photo${n===1?"":"s"}`:""}</option>`;
     }).join("");
     $("kUnit").value = KUNIT;
 
     if(AREAS===null && !LOADING_AREAS) loadAreas();
+    if(KRANGE==null){ try{ KRANGE=+localStorage.getItem("klienRange")||7; }catch{ KRANGE=7; } }
+    if(![1,7,14].includes(KRANGE)) KRANGE=7;
+    $("kRange").value = String(KRANGE);
+    loadKPhotos(d.date, KRANGE);   // no-op when this date+range is already loaded
 
     const chosen = KUNIT==="ALL" ? units : units.filter(u=>u.id===KUNIT);
-    const totF = chosen.reduce((s,u)=>s+shotsFor(u.id).length,0)
+    const totF = chosen.reduce((s,u)=>s+kShots(u.id).length,0)
       + KAREAS.reduce((s,a)=>s+kareaShots(a).length,0);
     $("kHint").textContent = `${chosen.length} unit${chosen.length===1?"":"s"} + ${KAREAS.length} areas · ${totF} photo${totF===1?"":"s"}`;
     SUBH.klien = `${KUNIT==="ALL"?"All units":"Unit "+KUNIT} · ${fmtEN(rd)}`;
@@ -1248,8 +1301,9 @@
     // strip prints once here, so the first unit page below drops its own.
     const hl = caps["h:@"] != null ? caps["h:@"] : "";
     const nf = caps["f:@"] != null ? caps["f:@"] : "";
+    const period = KRANGE===7 ? `Week ending ${fmtEN(rd)}` : KRANGE===14 ? `Two weeks ending ${fmtEN(rd)}` : fmtEN(rd);
     const krep = `<div class="krep">`
-      + `<div class="kutop"><span>Casa Nira Uluwatu · Weekly Progress Report</span><span class="kd">${fmtEN(rd)}</span></div>`
+      + `<div class="kutop"><span>Casa Nira Uluwatu · Weekly Progress Report</span><span class="kd">${period}</span></div>`
       + `<div class="khlwrap"><div class="khl">`
       + `<div class="kdesc kh"><span class="kdl">Highlights</span><div contenteditable="true" data-ck="h:@" data-ph="Key achievements today…">${esc(hl)}</div></div>`
       + `<div class="kdesc kl"><span class="kdl">Next Week Focus</span><div contenteditable="true" data-ck="f:@" data-ph="Planned works for next week…">${esc(nf)}</div></div>`
@@ -1260,6 +1314,11 @@
   }
 
   $("kDate").addEventListener("change", e=>{ if(e.target.value) loadDaily(false, e.target.value); });
+  $("kRange").addEventListener("change", e=>{
+    KRANGE=+e.target.value||7;
+    try{ localStorage.setItem("klienRange", String(KRANGE)); }catch{}
+    renderKlien();   // kicks off the range fetch for the new period
+  });
   $("kUnit").addEventListener("change", e=>{
     KUNIT=e.target.value;
     try{ localStorage.setItem("klienUnit", KUNIT); }catch{}
