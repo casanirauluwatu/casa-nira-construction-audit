@@ -130,24 +130,33 @@
   .badge.aktif{background:#eef0e2;color:var(--olive);}
   .badge.kosong{background:#f7e8e1;color:var(--red);}
   .badge.libur{background:#eee;color:#777;}
-  .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(188px,1fr));gap:12px;}
-  .uc{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--card);box-shadow:0 1px 2px rgba(43,38,32,.05);}
-  .uc .ph{position:relative;aspect-ratio:4/3;background:#ede7da;overflow:hidden;}
-  .uc .ph img{width:100%;height:100%;object-fit:cover;display:block;}
-  .uc .ph .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);text-align:center;padding:8px;}
-  .uc .ph .empty[hidden]{display:none;}
-  .uc .ph .empty svg{width:24px;height:24px;opacity:.5;}
-  .uc .ph .empty span{font-size:10.5px;}
-  .pbadge{position:absolute;left:8px;top:8px;background:rgba(43,38,32,.82);color:#f3efe4;font:600 11px ui-monospace,Menlo,monospace;padding:3px 8px;border-radius:6px;}
-  .wbadge{position:absolute;right:8px;top:8px;color:#fff;font:600 10px ui-monospace,Menlo,monospace;padding:3px 8px;border-radius:6px;}
-  .wbadge.on{background:rgba(63,125,79,.92);}.wbadge.off{background:rgba(143,136,124,.92);}
-  .nshot{position:absolute;right:8px;bottom:8px;background:rgba(43,38,32,.82);color:#f3efe4;font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;border-radius:6px;}
-  .uc .bd{display:flex;flex-direction:column;gap:3px;padding:10px 12px 12px;flex:1;}
-  .uc .ty{font:600 9.5px ui-monospace,Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);}
-  .uc .ft{margin-top:auto;padding-top:9px;border-top:1px solid #f0eadd;display:flex;justify-content:space-between;align-items:center;gap:8px;}
-  .uc .ft a{font:600 10.5px -apple-system,sans-serif;color:var(--olive);text-decoration:none;}
-  .uc .ft a:hover{text-decoration:underline;}
-  .uc .pct{font:600 11.5px ui-monospace,Menlo,monospace;color:var(--muted);}
+
+  /* One row per unit. The card grid could only ever show a unit's first photo
+     behind a "+N" badge, and the print dropped the rest entirely — a row lets
+     every shot for the unit sit on the page, with the supervisor's note under it. */
+  .ulist{display:flex;flex-direction:column;gap:10px;}
+  .urow{border:1px solid var(--line);border-radius:11px;background:var(--card);box-shadow:0 1px 2px rgba(43,38,32,.05);overflow:hidden;}
+  .uhd{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:9px 12px;background:#faf7ef;border-bottom:1px solid #f0eadd;}
+  .uhd .uid{font:700 12px ui-monospace,Menlo,monospace;background:rgba(43,38,32,.86);color:#f3efe4;padding:3px 9px;border-radius:6px;}
+  .uhd .uty{font:600 9.5px ui-monospace,Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);}
+  .uhd .uwk{font:600 10px ui-monospace,Menlo,monospace;color:#fff;padding:3px 8px;border-radius:6px;}
+  .uhd .uwk.on{background:rgba(63,125,79,.92);}.uhd .uwk.off{background:rgba(143,136,124,.92);}
+  .uhd .usp{margin-left:auto;display:flex;align-items:center;gap:12px;}
+  .uhd .upct{font:600 12px ui-monospace,Menlo,monospace;color:var(--olive);}
+  .uhd .ulink{font:600 10.5px -apple-system,sans-serif;color:var(--olive);text-decoration:none;white-space:nowrap;}
+  .uhd .ulink:hover{text-decoration:underline;}
+  .uhd .ucount{font:600 10px ui-monospace,Menlo,monospace;color:var(--muted);}
+  .ustrip{display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:6px;padding:8px 10px;}
+  .ushot{position:relative;margin:0;aspect-ratio:4/3;background:#ede7da;border-radius:7px;overflow:hidden;}
+  .ushot img{width:100%;height:100%;object-fit:cover;display:block;}
+  .ushot .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--muted);text-align:center;padding:6px;}
+  .ushot .empty[hidden]{display:none;}
+  .ushot .empty svg{width:20px;height:20px;opacity:.5;}
+  .ushot .empty span{font-size:9.5px;}
+  .unone{padding:11px 12px;color:var(--muted);font-size:11.5px;font-style:italic;}
+  .unote{display:flex;align-items:flex-start;gap:9px;padding:8px 12px 10px;border-top:1px solid #f0eadd;}
+  .unote .unl{flex:none;padding-top:3px;font:600 9px ui-monospace,Menlo,monospace;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);}
+  .unote [data-dk]{flex:1;min-height:18px;padding:2px 6px;font-size:12px;line-height:1.5;}
   .nbox{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--olive);border-radius:8px;padding:11px 14px;font-size:12.5px;margin-bottom:9px;}
   .nbox .nl{display:block;font:600 9.5px ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;}
 
@@ -191,10 +200,10 @@
   .kph .ph .empty span{font-size:10.5px;}
   .kph figcaption{padding:6px 9px 7px;font-size:11.5px;line-height:1.45;min-height:30px;}
   .kph .kday{position:absolute;right:6px;top:6px;background:rgba(43,38,32,.72);color:#f3efe4;font:600 10px ui-monospace,Menlo,monospace;padding:2px 7px;border-radius:5px;}
-  [data-ck]{outline:none;border-radius:6px;cursor:text;}
-  [data-ck]:hover{background:#f7f1e2;}
-  [data-ck]:focus{background:#faf3df;box-shadow:0 0 0 2px #e8dcbd;}
-  [data-ck]:empty::before{content:attr(data-ph);color:var(--muted);font-style:italic;}
+  [data-ck],[data-dk]{outline:none;border-radius:6px;cursor:text;}
+  [data-ck]:hover,[data-dk]:hover{background:#f7f1e2;}
+  [data-ck]:focus,[data-dk]:focus{background:#faf3df;box-shadow:0 0 0 2px #e8dcbd;}
+  [data-ck]:empty::before,[data-dk]:empty::before{content:attr(data-ph);color:var(--muted);font-style:italic;}
   .kempty{border:1px dashed var(--line);border-radius:10px;padding:20px;text-align:center;color:var(--muted);font-size:12.5px;}
   @media (max-width:640px){
     .wrap{padding:26px 14px 48px;}
@@ -217,8 +226,10 @@
     .twoup,.twoup.even,.wx-row{grid-template-columns:minmax(0,1fr);}
     .pnl{padding:13px 14px;}
     .wx{padding:15px;}.wx-now .t{font-size:29px;}.wx-note{max-width:none;}
-    .pgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
-    .uc .ft{flex-direction:column;align-items:flex-start;gap:4px;}
+    /* Two photos across on a phone; the header wraps rather than squeezing. */
+    .ustrip{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;padding:7px 8px;}
+    .uhd{padding:8px 10px;gap:7px;}
+    .uhd .usp{margin-left:0;width:100%;justify-content:space-between;}
 
     /* Touch targets: 40px min, and 16px inputs so iOS does not zoom on focus. */
     button.refresh,button.print{min-height:44px;padding:10px 16px;font-size:13px;}
@@ -230,7 +241,6 @@
     .dbar-h{margin-left:0;flex-basis:100%;}
     .chart-sel{flex:1 1 100%;justify-content:space-between;}
     .chart-sel select{flex:1;min-height:44px;font-size:16px;}
-    .uc .ft a{padding:8px 0;}
     button.kexp{flex:1;min-height:44px;}
     .kareas{flex-basis:100%;}
     .kchip{min-height:38px;}
@@ -263,8 +273,8 @@
        in the sub-heading, so the picker adds nothing on paper. */
     .tabs,.acts,.note,.dbar,.chart-sel,.hint,.src,.chart-scroll::after{display:none!important;}
     .tabpanel[hidden]{display:none!important;}
-    .card,.pnl,.uc,.tbl-wrap,.wx,.chart-card{box-shadow:none;}
-    .pnl,.uc,.wx,.nbox,tr,.chart-card{break-inside:avoid;}
+    .card,.pnl,.urow,.tbl-wrap,.wx,.chart-card{box-shadow:none;}
+    .pnl,.urow,.wx,.nbox,tr,.chart-card{break-inside:avoid;}
     .sec{break-after:avoid;margin:9px 0 5px;}
     h1{font-size:17pt;margin:2px 0 2px;}
     .sub-h{font-size:8.5pt;}
@@ -299,14 +309,25 @@
     /* Today's card and its workability verdict are what a site report needs; the
        month recap and calendar are screen analysis and cost a third page. */
     .wxmore{display:none;}
-    .pgrid{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;}
-    .uc .bd{padding:5px 6px;gap:1px;}
-    .uc .ty{font-size:6pt;}
-    .uc .ft{padding-top:4px;}
-    .uc .ft a{display:none;}
-    .uc .pct{font-size:7pt;}
-    .pbadge,.wbadge{font-size:6.5pt;padding:2px 5px;}
-    .nshot{font-size:6.5pt;padding:2px 5px;}
+    /* A unit's row prints whole or moves to the next page — a header stranded
+       from its photos is worse than a page break before it. Every photo prints;
+       nothing hides behind a "+N". */
+    .ulist{gap:6px;}
+    .urow{break-inside:avoid;}
+    .uhd{padding:4px 8px;gap:7px;}
+    .uhd .uid{font-size:7.5pt;padding:2px 6px;}
+    .uhd .uty{font-size:6pt;}
+    .uhd .uwk{font-size:6.5pt;padding:2px 5px;}
+    .uhd .upct{font-size:8pt;}
+    .uhd .ucount{font-size:6.5pt;}
+    .uhd .ulink{display:none;}
+    .ustrip{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:5px 6px;}
+    .unone{padding:5px 8px;font-size:7pt;}
+    .unote{padding:4px 8px 6px;gap:7px;}
+    .unote .unl{font-size:6pt;}
+    .unote [data-dk]{font-size:8pt;line-height:1.35;min-height:0;padding:0;}
+    /* An empty note is not worth the strip of white it costs on paper. */
+    .unote:not(:has([data-dk]:not(:empty))){display:none;}
     .nbox{padding:7px 10px;font-size:8pt;margin-bottom:6px;}
     a{color:inherit;}
 
@@ -342,8 +363,9 @@
     .kph figcaption{font-size:7pt;padding:3px 6px;min-height:0;}
     .kph .kday{font-size:6pt;padding:1px 5px;}
     /* Edit affordances are screen furniture; an untouched placeholder prints as nothing. */
-    [data-ck]:hover,[data-ck]:focus{background:none;box-shadow:none;}
+    [data-ck]:hover,[data-ck]:focus,[data-dk]:hover,[data-dk]:focus{background:none;box-shadow:none;}
     [data-ck]:empty{display:none;}
+    [data-dk]:empty{display:none;}
     .kempty{padding:8px;font-size:8pt;}
   }
 </style>
@@ -431,7 +453,7 @@
     <p class="src" id="wkSrc"></p>
 
     <div class="sec" id="secFoto"><h2>Dokumentasi Foto per Unit</h2><div class="rule"></div><span class="hint" id="phHint">terhubung ke Google Drive</span></div>
-    <div class="pgrid" id="pgrid"></div>
+    <div class="ulist" id="pgrid"></div>
 
     <!-- Weather is context, not the headline: it sits after the numbers, the
          table and the photos, and only today's card is open by default. -->
@@ -488,6 +510,34 @@
   const projDate = (r) => (r.projDate && r.projDate!=="done" && r.projDate!==">5y") ? pW(r.projDate) : null;
   function monthTicks(d0,d1){const out=[];let d=new Date(Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),1));if(d<d0)d=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,1));let g=0;while(d<=d1&&g++<500){out.push({date:new Date(d),m:d.getUTCMonth(),y:d.getUTCFullYear()});d=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,1));}return out;}
   const mlabel = (tk) => MON3[tk.m] + (tk.m===0 ? " '"+String(tk.y).slice(-2) : "");
+  // A tick per month is right for the gridlines but wrong for the labels: over a
+  // multi-year span they land ~13px apart and smear into each other. Label one
+  // month in `step`, stepped off January so the year marks survive, and drop any
+  // that would slide under a fixed label ("today", "% NOW") sharing the row.
+  const lblW = (t) => t.length*5.4 + 8;   // 9px ui-monospace, plus breathing room
+  function labelledTicks(ticks, xF, opts){
+    const o = opts||{}, minGap = o.minGap||52, keepOut = o.keepOut||[];
+    const out = new Set();
+    if(!ticks.length) return out;
+    const px = ticks.length>1 ? Math.abs(xF(ticks[1].date)-xF(ticks[0].date)) : 1e9;
+    const step = [1,2,3,4,6,12,24].find(s=>px*s>=minGap) || 24;
+    for(const tk of ticks){
+      if(((tk.y*12+tk.m) % step) !== 0) continue;
+      const x = xF(tk.date), half = lblW(mlabel(tk))/2;
+      if(keepOut.some(z => x+half > z[0] && x-half < z[1])) continue;
+      out.add(+tk.date);
+    }
+    return out;
+  }
+  // Gridline at every month; the labelled ones get a touch more contrast.
+  function monthAxis(t0,t1,xF,y1,y2,ly,opts){
+    const ticks = monthTicks(t0,t1), lab = labelledTicks(ticks,xF,opts);
+    return ticks.map(tk=>{
+      const x = xF(tk.date).toFixed(1), on = lab.has(+tk.date);
+      return `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="${on?"#e4ddcd":"#f4efe4"}"/>`
+        + (on?`<text x="${x}" y="${ly}" text-anchor="middle" font-size="9" fill="#8f887c" ${MONO}>${mlabel(tk)}</text>`:"");
+    }).join("");
+  }
   function diamond(x,y,r,fill,stroke){return `<path d="M ${x.toFixed(1)} ${(y-r).toFixed(1)} L ${(x+r).toFixed(1)} ${y.toFixed(1)} L ${x.toFixed(1)} ${(y+r).toFixed(1)} L ${(x-r).toFixed(1)} ${y.toFixed(1)} Z" fill="${fill}"${stroke?` stroke="${stroke}" stroke-width="1.5"`:""}/>`;}
   const poly = (pts,stroke,dash,w) => pts.length ? `<polyline points="${pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ")}" fill="none" stroke="${stroke}" stroke-width="${w||2}"${dash?` stroke-dasharray="${dash}"`:""} stroke-linejoin="round" stroke-linecap="round"/>` : "";
 
@@ -552,7 +602,7 @@
     const xF=d=>PL+((d-t0)/span)*iw, yF=v=>PT+(1-Math.max(0,Math.min(100,v))/100)*ih;
     let s="";
     for(const gy of [0,25,50,75,100]){const y=yF(gy);s+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="#e6dfd1"/><text x="${PL-8}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="10" fill="#8f887c" ${MONO}>${gy}</text>`;}
-    monthTicks(t0,t1).forEach(tk=>{const x=xF(tk.date);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#efe9dd"/><text x="${x.toFixed(1)}" y="${H-26}" text-anchor="middle" font-size="9" fill="#8f887c" ${MONO}>${mlabel(tk)}</text>`;});
+    s+=monthAxis(t0,t1,xF,PT,H-PB,H-26);
     const upto=pts.filter(x=>x.a!=null);
     if(upto.length>1){const fwd=upto.map(x=>`${xF(x.t).toFixed(1)},${yF(x.p).toFixed(1)}`);const back=upto.slice().reverse().map(x=>`${xF(x.t).toFixed(1)},${yF(x.a).toFixed(1)}`);s+=`<polygon points="${fwd.concat(back).join(" ")}" fill="#b4472e" opacity="0.09"/>`;}
     s+=poly(pts.map(x=>[xF(x.t),yF(x.p)]),"#a9822f","5 4",2);
@@ -581,8 +631,15 @@
     t0=new Date(Date.UTC(t0.getUTCFullYear(),t0.getUTCMonth(),1)); t1=new Date(Date.UTC(t1.getUTCFullYear(),t1.getUTCMonth()+1,1));
     const iw=W-PL-PR, span=(t1-t0)||1, xF=d=>PL+((d-t0)/span)*iw;
     let s="", rects="";
-    monthTicks(t0,t1).forEach(tk=>{const x=xF(tk.date);s+=`<line x1="${x.toFixed(1)}" y1="${PT-8}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#efe9dd"/><text x="${x.toFixed(1)}" y="${PT-18}" text-anchor="middle" font-size="9" fill="#8f887c" ${MONO}>${mlabel(tk)}</text>`;});
-    {const x=xF(now);s+=`<line x1="${x.toFixed(1)}" y1="${PT-8}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#b4472e" stroke-width="1.2" stroke-dasharray="3 2"/><text x="${x.toFixed(1)}" y="${PT-18}" text-anchor="middle" font-size="9" fill="#b4472e" font-weight="600" ${MONO}>today</text>`;}
+    // "today" and the "% NOW" column header sit in the same row as the month
+    // labels, so both claim their span before the months are laid out.
+    const nx=xF(now), tw=lblW("today")/2;
+    // today sits at the left edge whenever the earliest date is the pull itself,
+    // so anchor it inward there rather than letting it hang off the plot.
+    const tAnchor = nx<PL+tw ? `x="${PL.toFixed(1)}" text-anchor="start"` : `x="${nx.toFixed(1)}" text-anchor="middle"`;
+    const tZone = nx<PL+tw ? [PL-4,PL+2*tw+4] : [nx-tw-4,nx+tw+4];
+    s+=monthAxis(t0,t1,xF,PT-8,H-PB,PT-18,{keepOut:[tZone,[W-8-lblW("% NOW"),W]]});
+    s+=`<line x1="${nx.toFixed(1)}" y1="${PT-8}" x2="${nx.toFixed(1)}" y2="${H-PB}" stroke="#b4472e" stroke-width="1.2" stroke-dasharray="3 2"/><text ${tAnchor} y="${PT-18}" font-size="9" fill="#b4472e" font-weight="600" ${MONO}>today</text>`;
     s+=`<text x="${W-8}" y="${PT-18}" text-anchor="end" font-size="8.5" fill="#8f887c" ${MONO}>% NOW</text>`;
     ok.forEach((r,i)=>{
       const y=PT+i*rowH+rowH/2;
@@ -875,51 +932,72 @@
       + `<div class="empty" hidden>${WI.cam}<span>Tidak dapat memuat — buka folder</span></div>`;
   }
 
-  // Photo cards. Progress % is read from the audit data — never duplicated here.
+  // Supervisor notes, one per unit per day, kept on this device the same way the
+  // klien report keeps its captions — the daily feed is read-only, so there is
+  // nowhere upstream to put them.
+  const dnoteKey = (date) => "dnote:" + date;
+  function dnotes(date){ try{ return JSON.parse(localStorage.getItem(dnoteKey(date))||"{}"); }catch{ return {}; } }
+  function dnoteSave(date, o){ try{ localStorage.setItem(dnoteKey(date), JSON.stringify(o)); }catch{} }
+
+  // One row per unit: header, every photo that unit has, then the SPV note.
+  function unitRow(o){
+    // Drive transcodes HEIC to JPEG through the thumbnail endpoint, so phone
+    // photos display; the file itself would not. If the folder isn't shared
+    // publicly the request returns a sign-in page, so fall back to the link.
+    const strip = o.shots.length
+      ? `<div class="ustrip">${o.shots.map((sh,i)=>`<figure class="ushot">${shotImg(sh.id, `Foto ${o.id} ${i+1}`)}</figure>`).join("")}</div>`
+      : `<div class="unone">${PHOTOS===null ? "Memuat foto…" : PHOTOS && PHOTOS.ok ? "Belum ada foto hari ini." : "Foto tidak tersedia."}</div>`;
+    return `<section class="urow"><div class="uhd">`
+      + `<span class="uid">${esc(o.id)}</span>`
+      + (o.type?`<span class="uty">${esc(o.type)}</span>`:"")
+      + (o.workers==null?"":`<span class="uwk ${o.workers?"on":"off"}">${o.workers}/${o.plan||0} pkj</span>`)
+      + `<span class="usp">`
+      + `<span class="ucount">${o.shots.length} foto</span>`
+      + (o.pct!=null?`<span class="upct">${o.pct.toFixed(1)}%</span>`:"")
+      + (o.folder?`<a class="ulink" href="${o.folder}" target="_blank" rel="noopener">Buka folder ↗</a>`:"")
+      + `</span></div>${strip}`
+      + `<div class="unote"><span class="unl">Catatan SPV</span>`
+      + `<div contenteditable="true" data-dk="${esc(o.id)}" data-ph="Catatan pengawas untuk unit ini…">${esc(o.note||"")}</div>`
+      + `</div></section>`;
+  }
+
+  // Progress % is read from the audit data — never duplicated here.
   function paintPhotos(d){
     const prog={};
     if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok && r.actual!=null) prog[r.unit]=r.actual;
-    $("pgrid").innerHTML = (d.units||[]).map(u=>{
+    const notes = dnotes(d.date);
+    let html = (d.units||[]).map(u=>{
       const dayF = PHOTOS && PHOTOS.ok && PHOTOS.dayFolders ? (PHOTOS.dayFolders[u.id] || PHOTOS.dayFolders[(PHOTOS.alias||{})[u.id]]) : null;
       const folder = dayF ? `https://drive.google.com/drive/folders/${dayF}`
         : u.folder ? `https://drive.google.com/drive/folders/${u.folder}`
         : d.photosFolder ? `https://drive.google.com/drive/folders/${d.photosFolder}` : null;
-      // Drive transcodes HEIC to JPEG through the thumbnail endpoint, so phone
-      // photos display; the file itself would not. If the folder isn't shared
-      // publicly the request returns a sign-in page, so fall back to the link.
-      const shots = shotsFor(u.id), first = shots[0];
-      const inner = first
-        ? shotImg(first.id, `Foto ${u.id}`)
-          + (shots.length>1?`<span class="nshot">+${shots.length-1}</span>`:"")
-        : PHOTOS===null
-          ? `<div class="empty">${WI.cam}<span>Memuat foto…</span></div>`
-          : `<div class="empty">${WI.cam}<span>${PHOTOS.ok?"Belum ada foto":"Foto tidak tersedia"}</span></div>`;
-      const p = prog[u.id];
-      return `<div class="uc"><div class="ph"><span class="pbadge">${esc(u.id)}</span>`
-        + `<span class="wbadge ${u.workers?"on":"off"}">${u.workers||0}/${u.plan||0} pkj</span>${inner}</div>`
-        + `<div class="bd"><div class="ty">${esc(u.type||"")}</div>`
-        + `<div class="ft">${folder?`<a href="${folder}" target="_blank" rel="noopener">Buka folder ↗</a>`:`<span class="pct">—</span>`}`
-        + `<span class="pct">${p!=null?p.toFixed(1)+"%":"—"}</span></div></div></div>`;
+      return unitRow({ id:u.id, type:u.type||"", workers:u.workers||0, plan:u.plan||0,
+        folder, shots:shotsFor(u.id), pct:prog[u.id]!=null?prog[u.id]:null, note:notes[u.id] });
     }).join("");
 
-    // Anything uploaded to a folder with no villa card of its own — Utilities,
+    // Anything uploaded to a folder with no villa row of its own — Utilities,
     // Infra, Receiption — still gets shown, so no photo goes unseen.
     if(PHOTOS && PHOTOS.ok){
       const shown = new Set();
       for(const u of (d.units||[])){ shown.add(u.id); const a=(PHOTOS.alias||{})[u.id]; if(a) shown.add(a); }
       const extra = Object.keys(PHOTOS.photos||{}).filter(k=>!shown.has(k) && PHOTOS.photos[k].length);
-      if(extra.length){
-        $("pgrid").insertAdjacentHTML("beforeend", extra.map(k=>{
-          const shots = PHOTOS.photos[k], first = shots[0];
-          const day = (PHOTOS.dayFolders||{})[k] || (PHOTOS.folders||{})[k];
-          return `<div class="uc"><div class="ph"><span class="pbadge">${esc(k)}</span>`
-            + shotImg(first.id, `Foto ${k}`)
-            + (shots.length>1?`<span class="nshot">+${shots.length-1}</span>`:"")
-            + `</div><div class="bd"><div class="ty">Area umum</div><div class="ft">`
-            + (day?`<a href="https://drive.google.com/drive/folders/${esc(day)}" target="_blank" rel="noopener">Buka folder ↗</a>`:`<span class="pct">—</span>`)
-            + `<span class="pct">${shots.length} foto</span></div></div></div>`;
-        }).join(""));
-      }
+      html += extra.map(k=>{
+        const day = (PHOTOS.dayFolders||{})[k] || (PHOTOS.folders||{})[k];
+        return unitRow({ id:k, type:"Area umum", workers:null, plan:0,
+          folder: day?`https://drive.google.com/drive/folders/${esc(day)}`:null,
+          shots: PHOTOS.photos[k], pct: prog[k]!=null?prog[k]:null, note:notes[k] });
+      }).join("");
+    }
+    // Photos and audit figures land after the first paint, so this re-runs while
+    // a supervisor may be mid-note. The text itself is safe — it is written on
+    // every keystroke — but the caret is not, so put it back where it was.
+    const act = document.activeElement;
+    const editing = act && act.dataset && act.dataset.dk && $("pgrid").contains(act) ? act.dataset.dk : null;
+    $("pgrid").innerHTML = html;
+    if(editing){
+      const back = $("pgrid").querySelector(`[data-dk="${CSS.escape(editing)}"]`);
+      if(back){ back.focus(); const r=document.createRange(); r.selectNodeContents(back); r.collapse(false);
+        const sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); }
     }
 
     const tot = PHOTOS && PHOTOS.ok ? Object.values(PHOTOS.photos||{}).reduce((a,b)=>a+b.length,0) : 0;
@@ -1140,7 +1218,7 @@
     const xF=d=>PL+((d-t0)/span)*iw, yF=v=>PT+(1-Math.max(0,Math.min(100,v))/100)*ih;
     let s="";
     for(const gy of [0,25,50,75,100]){const y=yF(gy);s+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="#e6dfd1"/><text x="${PL-8}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="10" fill="#8f887c" ${MONO}>${gy}</text>`;}
-    monthTicks(t0,t1).forEach(tk=>{const x=xF(tk.date);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#efe9dd"/><text x="${x.toFixed(1)}" y="${H-22}" text-anchor="middle" font-size="9" fill="#8f887c" ${MONO}>${mlabel(tk)}</text>`;});
+    s+=monthAxis(t0,t1,xF,PT,H-PB,H-22);
     const upto=pts.filter(x=>x.a!=null);
     s+=poly(pts.map(x=>[xF(x.t),yF(x.p)]),"#a9822f","5 4",2);
     s+=poly(upto.map(x=>[xF(x.t),yF(x.a)]),"#6f7043",null,2.6);
@@ -1354,6 +1432,16 @@
     try{ localStorage.setItem("klienUnit", KUNIT); }catch{}
     renderKlien();
   });
+  // Unit notes save as they are typed, keyed by the day on show — same contract
+  // as the klien captions above.
+  $("pgrid").addEventListener("input", e=>{
+    const t=e.target.closest("[data-dk]"); if(!t || !DAILY) return;
+    const o=dnotes(DAILY.date);
+    const v=t.textContent.replace(/\s+/g," ").trim();
+    if(v) o[t.dataset.dk]=v; else delete o[t.dataset.dk];
+    dnoteSave(DAILY.date,o);
+  });
+
   $("kPrint").addEventListener("click", ()=>window.print());
   // Captions save as they are typed; the report only re-renders on data or
   // selection changes, so an edit in progress is never wiped mid-keystroke.

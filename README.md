@@ -8,8 +8,9 @@ Two tabs on one page for the Casa Nira Uluwatu build:
 - **Laporan Harian** — the daily site report: month + date pickers for any day the
   sheet covers, day-by-day manpower charted per unit or across all 19 villas with
   value labels, field weather (live from Open-Meteo), head-count per unit vs plan,
-  per-block attendance, daily site photos from the Rekap Drive folder, and
-  auto-generated notes. One attendance
+  per-block attendance, daily site photos from the Rekap Drive folder — one row
+  per unit showing every photo that unit has, each with a supervisor note that
+  prints with the report — and auto-generated notes. One attendance
   colour code (≥100 / 75–99 / 50–74 / 1–49 / 0%) runs across the chart points, the
   table bars and the % cells. The chosen day and unit live in the URL (`?d=&mp=`),
   so a link reopens the same view.
@@ -21,9 +22,18 @@ Two tabs on one page for the Casa Nira Uluwatu build:
 
 Progress percentages, deviation, target and projected dates live **only** in the
 audit tab — they are never restated in the daily report. Where the daily report
-needs a unit's progress (the photo cards), it reads the audit data already loaded
+needs a unit's progress (the photo rows), it reads the audit data already loaded
 in the page, so the two tabs cannot disagree. The daily report owns labour,
 weather, photos and notes; the audit owns everything schedule-derived.
+
+## Typed-in text lives on the device
+
+The supervisor notes on the daily photo rows — like the Client Report's photo
+captions and Highlights — are typed into the page and saved in that browser's
+`localStorage`, keyed by the day being shown. The feeds are read-only, so there
+is nowhere upstream to put them. A note typed on the site phone is **not** visible
+on the office laptop: whoever prints the PDF should be the one who types, or the
+notes should be entered on the machine that prints.
 
 ## Variables
 
