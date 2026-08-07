@@ -501,6 +501,12 @@
   // separate from the feed's extrapolated target. Flagged in orange everywhere.
   const COMMITTED = { A1:"1-Nov-26", A2:"30-Sep-26", B1:"31-Aug-26", C1:"31-Aug-26", C3:"15-Sep-26", C5:"30-Sep-26", C7:"16-Sep-26" };
   const commitOf = (u) => COMMITTED[u] || null;
+  // Agreed target dates that the unit's Time Schedule sheet doesn't reflect yet.
+  // Display-only, and only on the S-curves: the marker and its caption move, but
+  // the audit table, delivery timeline, status and slip-vs-required figures keep
+  // reading the feed's own date. Remove the entry once the sheet is updated.
+  const TARGET_VIZ = { C4:"15-Dec-26" };
+  const vizTarget = (r) => TARGET_VIZ[r.unit] || r.target;
   const uName = (u) => commitOf(u) ? `<span class="uflag">${u}</span>` : u;
 
   const MON3 = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -596,7 +602,7 @@
     const W=960,H=380,PL=42,PR=16,PT=20,PB=44,iw=W-PL-PR,ih=H-PT-PB;
     const pts=r.series.map(w=>({t:pW(w.d),p:w.p,a:w.a})).filter(x=>x.t);
     if(!pts.length){svg.innerHTML=`<text x="16" y="30" font-size="12" fill="#8f887c">No dated schedule for ${which}.</text>`;$("chartLegend").innerHTML="";$("chartHint").textContent="";return;}
-    const target=pW(r.target), proj=projDate(r), now=CHART_NOW, committed=pW(commitOf(which));
+    const tgtStr=vizTarget(r), target=pW(tgtStr), proj=projDate(r), now=CHART_NOW, committed=pW(commitOf(which));
     const t0=pts[0].t; let t1=pts[pts.length-1].t; [target,proj,now,committed].forEach(d=>{if(d&&d>t1)t1=d;});
     t1=new Date(t1.getTime()+10*864e5); const span=(t1-t0)||1;
     const xF=d=>PL+((d-t0)/span)*iw, yF=v=>PT+(1-Math.max(0,Math.min(100,v))/100)*ih;
@@ -615,7 +621,7 @@
     svg.innerHTML=s;
     $("chartLegend").innerHTML = `<span class="lg"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#a9822f" stroke-width="2" stroke-dasharray="5 4"/></svg> Planned</span><span class="lg"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#6f7043" stroke-width="2.6"/></svg> Actual</span><span class="lg" style="color:#a9822f">◆ target</span><span class="lg" style="color:#6f7043">◇ projected</span><span class="lg" style="color:#b4472e">| today</span>${committed?`<span class="lg" style="color:#d9791a">▮ due (committed)</span>`:""}`;
     const slip = (target&&proj)? Math.round((proj-target)/(7*864e5)) : null;
-    $("chartHint").innerHTML = `Actual ${r.actual.toFixed(1)}% vs planned ${r.planned.toFixed(1)}%. Target ${r.target}${r.projDate&&r.projDate!=="done"?`, projected ${r.projDate}`:""}${slip!=null?` — <strong style="color:${slip>2?'#b4472e':'#3f7d4f'}">${slip<=0?Math.abs(slip)+" wk ahead of target":slip+" wk behind target"}</strong>`:""}.`;
+    $("chartHint").innerHTML = `Actual ${r.actual.toFixed(1)}% vs planned ${r.planned.toFixed(1)}%. Target ${tgtStr}${r.projDate&&r.projDate!=="done"?`, projected ${r.projDate}`:""}${slip!=null?` — <strong style="color:${slip>2?'#b4472e':'#3f7d4f'}">${slip<=0?Math.abs(slip)+" wk ahead of target":slip+" wk behind target"}</strong>`:""}.`;
   }
 
   function drawTimeline(){
@@ -1211,7 +1217,7 @@
     // Plan, actual and target only — the pace-based projection is an internal
     // working figure, and the hand-over date already sits in the stats line,
     // so neither is drawn on the owner chart.
-    const target=pW(r.target), now=CHART_NOW;
+    const target=pW(vizTarget(r)), now=CHART_NOW;
     const t0=pts[0].t; let t1=pts[pts.length-1].t;
     [target,now].forEach(d=>{ if(d&&d>t1) t1=d; });
     t1=new Date(t1.getTime()+10*864e5); const span=(t1-t0)||1;
