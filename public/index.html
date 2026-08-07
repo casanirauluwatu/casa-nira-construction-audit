@@ -609,7 +609,10 @@
     if(!pts.length){svg.innerHTML=`<text x="16" y="30" font-size="12" fill="#8f887c">No dated schedule for ${which}.</text>`;$("chartLegend").innerHTML="";$("chartHint").textContent="";return;}
     const tgtStr=vizTarget(r), target=pW(tgtStr), proj=bare?null:projDate(r), now=CHART_NOW, committed=pW(commitOf(which));
     const t0=pts[0].t; let t1=pts[pts.length-1].t; [target,proj,now,committed].forEach(d=>{if(d&&d>t1)t1=d;});
-    t1=new Date(t1.getTime()+10*864e5); const span=(t1-t0)||1;
+    // Pad past the rightmost marker in proportion to the span, not a flat 10
+    // days: when the target itself ends the domain, a flat pad leaves its line
+    // flush with the plot edge, where it reads as the chart frame.
+    t1=new Date(t1.getTime()+Math.max(10*864e5,(t1-t0)*0.05)); const span=(t1-t0)||1;
     const xF=d=>PL+((d-t0)/span)*iw, yF=v=>PT+(1-Math.max(0,Math.min(100,v))/100)*ih;
     let s="";
     for(const gy of [0,25,50,75,100]){const y=yF(gy);s+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="#e6dfd1"/><text x="${PL-8}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="10" fill="#8f887c" ${MONO}>${gy}</text>`;}
@@ -619,7 +622,7 @@
     if(!bare)s+=poly(pts.map(x=>[xF(x.t),yF(x.p)]),"#a9822f","5 4",2);
     s+=poly(upto.map(x=>[xF(x.t),yF(x.a)]),"#6f7043",null,2.6);
     if(proj&&upto.length){const last=upto[upto.length-1];s+=`<line x1="${xF(last.t).toFixed(1)}" y1="${yF(last.a).toFixed(1)}" x2="${xF(proj).toFixed(1)}" y2="${yF(100).toFixed(1)}" stroke="#6f7043" stroke-width="1.4" stroke-dasharray="2 3" opacity="0.7"/><circle cx="${xF(proj).toFixed(1)}" cy="${yF(100).toFixed(1)}" r="4" fill="var(--bg)" stroke="#6f7043" stroke-width="2"/>`;}
-    if(target){const x=xF(target);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#a9822f" stroke-width="1.2" stroke-dasharray="4 3"/>`+diamond(x,yF(100),5,"#a9822f")+`<text x="${x.toFixed(1)}" y="${PT-6}" text-anchor="middle" font-size="9" fill="#a9822f" font-weight="600" ${MONO}>TARGET</text>`;}
+    if(target){const x=xF(target);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#a9822f" stroke-width="${bare?2:1.2}" stroke-dasharray="4 3"/>`+diamond(x,yF(100),5,"#a9822f")+`<text x="${x.toFixed(1)}" y="${PT-6}" text-anchor="middle" font-size="9" fill="#a9822f" font-weight="600" ${MONO}>${bare?`TARGET ${target.getUTCDate()} ${MON3[target.getUTCMonth()].toUpperCase()}`:"TARGET"}</text>`;}
     if(now){const x=xF(now);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#b4472e" stroke-width="1" stroke-dasharray="2 2" opacity="0.7"/><text x="${x.toFixed(1)}" y="${PT-6}" text-anchor="middle" font-size="9" fill="#b4472e" ${MONO}>today</text>`;}
     if(committed){const x=xF(committed);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#d9791a" stroke-width="2"/><path d="M ${(x-4).toFixed(1)} ${PT} L ${(x+4).toFixed(1)} ${PT} L ${x.toFixed(1)} ${(PT+6).toFixed(1)} Z" fill="#d9791a"/><text x="${x.toFixed(1)}" y="${PT-6}" text-anchor="middle" font-size="9.5" fill="#d9791a" font-weight="700" ${MONO}>DUE ${committed.getUTCDate()} ${MON3[committed.getUTCMonth()]}</text>`;}
     if(upto.length){const last=upto[upto.length-1];const lx=xF(last.t),ly=yF(last.a);s+=`<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.6" fill="#6f7043"/><text x="${(lx-7).toFixed(1)}" y="${(ly-7).toFixed(1)}" text-anchor="end" font-size="11.5" font-weight="600" fill="#6f7043" ${MONO}>${last.a.toFixed(1)}%</text>`;}
@@ -1227,7 +1230,9 @@
     const target=pW(vizTarget(r)), now=CHART_NOW, bare=ACTUAL_ONLY.has(r.unit);
     const t0=pts[0].t; let t1=pts[pts.length-1].t;
     [target,now].forEach(d=>{ if(d&&d>t1) t1=d; });
-    t1=new Date(t1.getTime()+10*864e5); const span=(t1-t0)||1;
+    // Same proportional pad as the audit S-curve: a target ending the domain
+    // must not sit on the plot edge.
+    t1=new Date(t1.getTime()+Math.max(10*864e5,(t1-t0)*0.05)); const span=(t1-t0)||1;
     const xF=d=>PL+((d-t0)/span)*iw, yF=v=>PT+(1-Math.max(0,Math.min(100,v))/100)*ih;
     let s="";
     for(const gy of [0,25,50,75,100]){const y=yF(gy);s+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="#e6dfd1"/><text x="${PL-8}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="10" fill="#8f887c" ${MONO}>${gy}</text>`;}
@@ -1238,7 +1243,7 @@
     // Top-row labels near either edge anchor inward instead of centring, so a
     // date sitting at the right margin never clips mid-word.
     const topLbl = (x)=> x>W-110 ? `x="${(x-5).toFixed(1)}" text-anchor="end"` : x<PL+55 ? `x="${(x+5).toFixed(1)}" text-anchor="start"` : `x="${x.toFixed(1)}" text-anchor="middle"`;
-    if(target){const x=xF(target);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#a9822f" stroke-width="1.2" stroke-dasharray="4 3"/>`+diamond(x,yF(100),5,"#a9822f")+`<text ${topLbl(x)} y="${PT-8}" font-size="9" fill="#a9822f" font-weight="600" ${MONO}>TARGET</text>`;}
+    if(target){const x=xF(target);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#a9822f" stroke-width="${bare?2:1.2}" stroke-dasharray="4 3"/>`+diamond(x,yF(100),5,"#a9822f")+`<text ${topLbl(x)} y="${PT-8}" font-size="9" fill="#a9822f" font-weight="600" ${MONO}>${bare?`TARGET ${target.getUTCDate()} ${MON3[target.getUTCMonth()].toUpperCase()}`:"TARGET"}</text>`;}
     if(now){const x=xF(now);s+=`<line x1="${x.toFixed(1)}" y1="${PT}" x2="${x.toFixed(1)}" y2="${H-PB}" stroke="#b4472e" stroke-width="1" stroke-dasharray="2 2" opacity="0.7"/><text ${topLbl(x)} y="${PT-8}" font-size="9" fill="#b4472e" ${MONO}>today</text>`;}
     if(upto.length){const last=upto[upto.length-1];const lx=xF(last.t),ly=yF(last.a);s+=`<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="3.6" fill="#6f7043"/><text x="${(lx-7).toFixed(1)}" y="${(ly-7).toFixed(1)}" text-anchor="end" font-size="11.5" font-weight="600" fill="#6f7043" ${MONO}>${last.a.toFixed(1)}%</text>`;}
     return `<div class="kcurve"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="S-curve ${esc(r.unit)}">${s}</svg>`
