@@ -727,8 +727,22 @@
   $("print").addEventListener("click", ()=>window.print());
   // Printing from the Client Report hides the page header (each report page
   // carries its own strip); the class scopes those print rules to that tab.
-  window.addEventListener("beforeprint", ()=>{ document.body.classList.toggle("print-klien", TAB==="klien"); });
-  window.addEventListener("afterprint", ()=>{ document.body.classList.remove("print-klien"); });
+  // The browser also names a saved PDF after document.title, so while that
+  // dialog is open the title becomes the file name the owner should receive —
+  // "Casa Nira B4 Weekly Report - 9 August 2026" — and reverts on close.
+  const PAGE_TITLE = document.title;
+  function klienFileName(){
+    if(!DAILY || !DAILY.date) return null;
+    const rd = new Date(DAILY.date+"T00:00:00");
+    if(isNaN(rd)) return null;
+    const unit = KUNIT && KUNIT!=="ALL" ? KUNIT+" " : "";
+    return `Casa Nira ${unit}Weekly Report - ${rd.getDate()} ${MON_EN[rd.getMonth()]} ${rd.getFullYear()}`;
+  }
+  window.addEventListener("beforeprint", ()=>{
+    document.body.classList.toggle("print-klien", TAB==="klien");
+    if(TAB==="klien"){ const t=klienFileName(); if(t) document.title=t; }
+  });
+  window.addEventListener("afterprint", ()=>{ document.body.classList.remove("print-klien"); document.title=PAGE_TITLE; });
   // The klien report draws from both sources, so its refresh re-pulls both.
   $("refresh").addEventListener("click", ()=>{
     if(TAB==="audit") load(true);
