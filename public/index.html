@@ -1307,6 +1307,11 @@
       desc:"Production of the loose furniture is in progress. The photos show the progress so far." },
     { id:"COMMUNAL",  title:"Communal",  key:"communal",
       desc:"The entrance signage and a sample palm tree for the communal area have been installed, and electricity is connected. The next step is the pergola at the reception, followed by the works on the main road and the signage for each villa." },
+    // byBlock: the Drive folder holds one subfolder per block (A/B/C) and each
+    // photo carries that letter as `group`, so a single unit's report shows
+    // only its own block's renders.
+    { id:"CARPET", title:"Carpet", key:"carpet", byBlock:true,
+      desc:"We have to make some adjustments on the carpet: the green colour stock is not available in Indonesia. The photos show our proposal in the alternative colourways — off-white, natural, or slightly natural — to give a heads-up on the styling." },
   ];
   // Which parts go into this report. Furniture differs between units, so the
   // person printing can leave a section off for an owner it does not apply to;
@@ -1336,7 +1341,14 @@
     LOADING_AREAS = false;
     renderKlien();
   }
-  const kareaShots = (a) => AREAS && AREAS.ok ? (AREAS.areas[a.key]||[]) : [];
+  const kareaShots = (a) => {
+    const all = AREAS && AREAS.ok ? (AREAS.areas[a.key]||[]) : [];
+    // A byBlock section follows the unit picker: B4 sees block B's photos only.
+    // "All units" keeps every block, labelled per photo instead.
+    if(!a.byBlock || KUNIT==null || KUNIT==="ALL") return all;
+    const b = KUNIT[0].toUpperCase();
+    return all.filter(s=>(s.group||"").trim().toUpperCase()===b);
+  };
 
   // Unit photos over a period, not just the report date. The daily photo
   // endpoint answers one day at a time (and caches each day at the edge), so
@@ -1378,9 +1390,11 @@
     const shots = kareaShots(a);
     const photos = shots.length
       ? `<div class="kphotos">` + shots.map((s)=>
-          `<figure class="kph"><div class="ph">${shotImg(s.id, `Photo ${esc(a.title)}`)}</div></figure>`
+          `<figure class="kph"><div class="ph">${shotImg(s.id, `Photo ${esc(a.title)}`)}`
+          + (a.byBlock && KUNIT==="ALL" && s.group ? `<span class="kday">Block ${esc(s.group)}</span>` : "")
+          + `</div></figure>`
         ).join("") + `</div>`
-      : `<div class="kempty">${AREAS===null?"Loading photos…":"No photos in this folder."}</div>`;
+      : `<div class="kempty">${AREAS===null?"Loading photos…":a.byBlock&&KUNIT!=="ALL"?`No ${esc(a.title.toLowerCase())} photos for this block.`:"No photos in this folder."}</div>`;
     return `<section class="kunit">`
       + `<div class="kuhead"><div><span class="kuid">${esc(a.title)}</span></div></div>`
       + `<div class="kdesc kabout">${esc(a.desc)}</div>`

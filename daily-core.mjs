@@ -81,6 +81,10 @@ const AREA_FOLDERS = {
   amenities: "1MxvIsuPzEoVMHqoATrMB-SrMKpdLbtsS",
   furniture: "1NeJoy-314xldnEb2DvuRo7qaUYg4xKul",
   communal: "10qb-SF-dz5cZZAcfu4yFargvgdDirrm9",
+  // Carpet renders live in per-block subfolders (A, B, C); the flattening below
+  // keeps the subfolder name as `group`, which the report uses to match the
+  // photos to the selected unit's block.
+  carpet: "1ZaWQNE9vQOx73EaV85YnXpfU-NXFViLW",
 };
 
 // One embedded-folder-view read, split into files and subfolders. A folder
