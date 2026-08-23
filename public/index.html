@@ -1330,6 +1330,7 @@
   const ksecSave = () => { try{ localStorage.setItem("klienAreas", JSON.stringify([...KSEC])); }catch{} };
 
   let AREAS = null, LOADING_AREAS = false;
+  let AREAS_RETRY = false;
   async function loadAreas(fresh){
     if(LOADING_AREAS) return;
     LOADING_AREAS = true;
@@ -1339,6 +1340,13 @@
       AREAS = j && j.ok ? j : { ok:false, error:(j&&j.error)||`HTTP ${res.status}`, areas:{} };
     }catch(e){ AREAS = { ok:false, error:e.message, areas:{} }; }
     LOADING_AREAS = false;
+    // A payload cached before a section existed has no entry for it at all, and
+    // a folder listing that errored (Drive rate-limits the folder view) comes
+    // back ok:true but flagged in `errors`. Both mean "data missing", not "no
+    // photos" — one fresh re-pull heals them instead of printing an empty
+    // section for photos that exist.
+    const stale = AREAS.ok && KAREAS.some(a=>!(a.key in (AREAS.areas||{})) || (AREAS.errors||{})[a.key]);
+    if(stale && !AREAS_RETRY){ AREAS_RETRY = true; setTimeout(()=>loadAreas(true), 800); }
     renderKlien();
   }
   const kareaShots = (a) => {
@@ -1394,7 +1402,11 @@
           + (a.byBlock && KUNIT==="ALL" && s.group ? `<span class="kday">Block ${esc(s.group)}</span>` : "")
           + `</div></figure>`
         ).join("") + `</div>`
-      : `<div class="kempty">${AREAS===null?"Loading photos…":a.byBlock&&KUNIT!=="ALL"?`No ${esc(a.title.toLowerCase())} photos for this block.`:"No photos in this folder."}</div>`;
+      : `<div class="kempty">${
+          AREAS===null || (AREAS.ok && !(a.key in (AREAS.areas||{}))) ? "Loading photos…"
+          : !AREAS.ok || (AREAS.errors||{})[a.key] ? "Photos temporarily unavailable — use Refresh data."
+          : a.byBlock&&KUNIT!=="ALL" ? `No ${esc(a.title.toLowerCase())} photos for this block.`
+          : "No photos in this folder."}</div>`;
     return `<section class="kunit">`
       + `<div class="kuhead"><div><span class="kuid">${esc(a.title)}</span></div></div>`
       + `<div class="kdesc kabout">${esc(a.desc)}</div>`
