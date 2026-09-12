@@ -85,6 +85,8 @@ const AREA_FOLDERS = {
   // keeps the subfolder name as `group`, which the report uses to match the
   // photos to the selected unit's block.
   carpet: "1ZaWQNE9vQOx73EaV85YnXpfU-NXFViLW",
+  // The SIPA groundwater licence pages, and later the well/filtration works.
+  deepwell: "1Z44Oefvr8K-DbcYnXh8UQsVnki6ChOq7",
 };
 
 // One embedded-folder-view read, split into files and subfolders. A folder
