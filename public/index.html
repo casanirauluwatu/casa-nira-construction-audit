@@ -1312,6 +1312,10 @@
     // only its own block's renders.
     { id:"CARPET", title:"Carpet", key:"carpet", byBlock:true,
       desc:"We have to make some adjustments on the carpet: the green colour stock is not available in Indonesia. The photos show our proposal in the alternative colourways — off-white, natural, or slightly natural — to give a heads-up on the styling." },
+    // No `key` = a text-only section: the paragraph is the news, there is no
+    // photo folder behind it. Add a key later to attach one.
+    { id:"DEEPWELL", title:"Deep Well",
+      desc:"The groundwater licence for the deep well (Izin Pengusahaan Air Tanah, PB UMKU 060526001115400070001) was issued on 3 September 2026, so the deep well can now be put to use. The remaining works are the water filtering installation and the piping to each villa — really great progress on the resort's water supply." },
   ];
   // Which parts go into this report. Furniture differs between units, so the
   // person printing can leave a section off for an owner it does not apply to;
@@ -1345,7 +1349,7 @@
     // back ok:true but flagged in `errors`. Both mean "data missing", not "no
     // photos" — one fresh re-pull heals them instead of printing an empty
     // section for photos that exist.
-    const stale = AREAS.ok && KAREAS.some(a=>!(a.key in (AREAS.areas||{})) || (AREAS.errors||{})[a.key]);
+    const stale = AREAS.ok && KAREAS.some(a=>a.key && (!(a.key in (AREAS.areas||{})) || (AREAS.errors||{})[a.key]));
     if(stale && !AREAS_RETRY){ AREAS_RETRY = true; setTimeout(()=>loadAreas(true), 800); }
     renderKlien();
   }
@@ -1395,7 +1399,7 @@
   }
   const dayChip = (iso)=>{ const d=new Date(iso+"T00:00:00"); return `${d.getDate()} ${MON3[d.getMonth()]}`; };
   function kareaSec(a){
-    const shots = kareaShots(a);
+    const shots = a.key ? kareaShots(a) : [];
     const photos = shots.length
       ? `<div class="kphotos">` + shots.map((s)=>
           `<figure class="kph"><div class="ph">${shotImg(s.id, `Photo ${esc(a.title)}`)}`
@@ -1410,7 +1414,7 @@
     return `<section class="kunit">`
       + `<div class="kuhead"><div><span class="kuid">${esc(a.title)}</span></div></div>`
       + `<div class="kdesc kabout">${esc(a.desc)}</div>`
-      + `<div class="ksec">Photo Documentation${shots.length?` · ${shots.length}`:""}</div>${photos}`
+      + (a.key ? `<div class="ksec">Photo Documentation${shots.length?` · ${shots.length}`:""}</div>${photos}` : "")
       + `</section>`;
   }
 
