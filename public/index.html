@@ -1300,17 +1300,16 @@
   // /api/daily/areas (server-side folder listing), not the daily photo feed.
   // Each section carries one permanent description instead of per photo
   // captions; the wording is fixed here so every owner reads the same thing.
-  // Furniture production phase per unit; anything unlisted is P1 for now.
-  const FURN_PHASE = { C3:"P2", C7:"P2" };
   const KAREAS = [
     { id:"AMENITIES", title:"Amenities", key:"amenities",
       desc:"All amenities have already been procured and delivered to site, so there is no lead time. The photos show the custom branding applied to the collection, including paintings, plates, bedding, kitchenware and cleaning supplies." },
-    // groupFor: which tagged group of the folder's photos a single unit's
-    // report shows. "All units" shows every group, labelled per photo
-    // (glabel dresses the tag; the raw group is the default).
-    { id:"FURNITURE", title:"Furniture", key:"furniture",
-      groupFor:(u)=>FURN_PHASE[u]||"P1",
-      desc:"Production of the loose furniture is in progress. The photos show the progress so far." },
+    // `group` pins a section to one tagged slice of its folder's photos: the
+    // two furniture phases are separate chips, and whoever prints picks the
+    // phase (or both) per report instead of a per-unit mapping deciding.
+    { id:"FURNITURE_P1", title:"Furniture P1", key:"furniture", group:"P1",
+      desc:"Production of the first phase of loose furniture is in progress. The photos show the progress so far." },
+    { id:"FURNITURE_P2", title:"Furniture P2", key:"furniture", group:"P2",
+      desc:"Production of the second phase of loose furniture is in progress. The photos show the progress so far." },
     { id:"COMMUNAL",  title:"Communal",  key:"communal",
       desc:"The entrance signage and a sample palm tree for the communal area have been installed, and electricity is connected. The next step is the pergola at the reception, followed by the works on the main road and the signage for each villa." },
     // The carpet Drive folder holds one subfolder per block (A/B/C) and each
@@ -1360,8 +1359,10 @@
   }
   const kareaShots = (a) => {
     const all = AREAS && AREAS.ok ? (AREAS.areas[a.key]||[]) : [];
-    // A grouped section follows the unit picker: B4 sees block B's carpet, C3
-    // sees phase-2 furniture. "All units" keeps every group, labelled instead.
+    // A fixed `group` pins the section to one slice of the folder (Furniture
+    // P1 vs P2); `groupFor` instead follows the unit picker (block carpets),
+    // with "All units" keeping every group, labelled per photo.
+    if(a.group) return all.filter(s=>(s.group||"").trim().toUpperCase()===a.group.toUpperCase());
     if(!a.groupFor || KUNIT==null || KUNIT==="ALL") return all;
     const g = String(a.groupFor(KUNIT)).toUpperCase();
     return all.filter(s=>(s.group||"").trim().toUpperCase()===g);
@@ -1414,6 +1415,7 @@
       : `<div class="kempty">${
           AREAS===null || (AREAS.ok && !(a.key in (AREAS.areas||{}))) ? "Loading photos…"
           : !AREAS.ok || (AREAS.errors||{})[a.key] ? "Photos temporarily unavailable — use Refresh data."
+          : a.group ? "No photos for this phase yet."
           : a.groupFor&&KUNIT!=="ALL" ? `No ${esc(a.title.toLowerCase())} photos for this unit yet.`
           : "No photos in this folder."}</div>`;
     return `<section class="kunit">`
