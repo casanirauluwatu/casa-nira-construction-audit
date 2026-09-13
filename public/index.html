@@ -1300,17 +1300,24 @@
   // /api/daily/areas (server-side folder listing), not the daily photo feed.
   // Each section carries one permanent description instead of per photo
   // captions; the wording is fixed here so every owner reads the same thing.
+  // Furniture production phase per unit; anything unlisted is P1 for now.
+  const FURN_PHASE = { C3:"P2", C7:"P2" };
   const KAREAS = [
     { id:"AMENITIES", title:"Amenities", key:"amenities",
       desc:"All amenities have already been procured and delivered to site, so there is no lead time. The photos show the custom branding applied to the collection, including paintings, plates, bedding, kitchenware and cleaning supplies." },
+    // groupFor: which tagged group of the folder's photos a single unit's
+    // report shows. "All units" shows every group, labelled per photo
+    // (glabel dresses the tag; the raw group is the default).
     { id:"FURNITURE", title:"Furniture", key:"furniture",
+      groupFor:(u)=>FURN_PHASE[u]||"P1",
       desc:"Production of the loose furniture is in progress. The photos show the progress so far." },
     { id:"COMMUNAL",  title:"Communal",  key:"communal",
       desc:"The entrance signage and a sample palm tree for the communal area have been installed, and electricity is connected. The next step is the pergola at the reception, followed by the works on the main road and the signage for each villa." },
-    // byBlock: the Drive folder holds one subfolder per block (A/B/C) and each
+    // The carpet Drive folder holds one subfolder per block (A/B/C) and each
     // photo carries that letter as `group`, so a single unit's report shows
     // only its own block's renders.
-    { id:"CARPET", title:"Carpet", key:"carpet", byBlock:true,
+    { id:"CARPET", title:"Carpet", key:"carpet",
+      groupFor:(u)=>u[0], glabel:(g)=>"Block "+g,
       desc:"We have to make some adjustments on the carpet: the green colour stock is not available in Indonesia. The photos show our proposal in the alternative colourways — off-white, natural, or slightly natural — to give a heads-up on the styling." },
     { id:"DEEPWELL", title:"Deep Well", key:"deepwell",
       desc:"The groundwater licence for the deep well (Izin Pengusahaan Air Tanah, PB UMKU 060526001115400070001) was issued on 3 September 2026, so the deep well can now be put to use. The remaining works are the water filtering installation and the piping to each villa — really great progress on the resort's water supply." },
@@ -1353,11 +1360,11 @@
   }
   const kareaShots = (a) => {
     const all = AREAS && AREAS.ok ? (AREAS.areas[a.key]||[]) : [];
-    // A byBlock section follows the unit picker: B4 sees block B's photos only.
-    // "All units" keeps every block, labelled per photo instead.
-    if(!a.byBlock || KUNIT==null || KUNIT==="ALL") return all;
-    const b = KUNIT[0].toUpperCase();
-    return all.filter(s=>(s.group||"").trim().toUpperCase()===b);
+    // A grouped section follows the unit picker: B4 sees block B's carpet, C3
+    // sees phase-2 furniture. "All units" keeps every group, labelled instead.
+    if(!a.groupFor || KUNIT==null || KUNIT==="ALL") return all;
+    const g = String(a.groupFor(KUNIT)).toUpperCase();
+    return all.filter(s=>(s.group||"").trim().toUpperCase()===g);
   };
 
   // Unit photos over a period, not just the report date. The daily photo
@@ -1401,13 +1408,13 @@
     const photos = shots.length
       ? `<div class="kphotos">` + shots.map((s)=>
           `<figure class="kph"><div class="ph">${shotImg(s.id, `Photo ${esc(a.title)}`)}`
-          + (a.byBlock && KUNIT==="ALL" && s.group ? `<span class="kday">Block ${esc(s.group)}</span>` : "")
+          + (a.groupFor && KUNIT==="ALL" && s.group ? `<span class="kday">${esc(a.glabel?a.glabel(s.group):s.group)}</span>` : "")
           + `</div></figure>`
         ).join("") + `</div>`
       : `<div class="kempty">${
           AREAS===null || (AREAS.ok && !(a.key in (AREAS.areas||{}))) ? "Loading photos…"
           : !AREAS.ok || (AREAS.errors||{})[a.key] ? "Photos temporarily unavailable — use Refresh data."
-          : a.byBlock&&KUNIT!=="ALL" ? `No ${esc(a.title.toLowerCase())} photos for this block.`
+          : a.groupFor&&KUNIT!=="ALL" ? `No ${esc(a.title.toLowerCase())} photos for this unit yet.`
           : "No photos in this folder."}</div>`;
     return `<section class="kunit">`
       + `<div class="kuhead"><div><span class="kuid">${esc(a.title)}</span></div></div>`

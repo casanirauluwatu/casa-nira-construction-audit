@@ -79,7 +79,13 @@ async function fetchFeed(url, ms) {
 // lets the embedded folder view be read without credentials or an API key.
 const AREA_FOLDERS = {
   amenities: "1MxvIsuPzEoVMHqoATrMB-SrMKpdLbtsS",
-  furniture: "1NeJoy-314xldnEb2DvuRo7qaUYg4xKul",
+  // Furniture ships in phases, one folder per phase; the listings concatenate
+  // and each photo is tagged with its phase so the report can match a unit to
+  // the phase it belongs to.
+  furniture: [
+    { id: "1NeJoy-314xldnEb2DvuRo7qaUYg4xKul", group: "P1" },
+    { id: "1V6iGVaajhh-jO8KSfe-VrgWYxM4bIGpu", group: "P2" },
+  ],
   communal: "10qb-SF-dz5cZZAcfu4yFargvgdDirrm9",
   // Carpet renders live in per-block subfolders (A, B, C); the flattening below
   // keeps the subfolder name as `group`, which the report uses to match the
@@ -115,18 +121,24 @@ async function listDriveFolder(folderId) {
 /** Current photos in the fixed common-area folders (Amenities, Communal). */
 export async function getAreaPhotos() {
   const out = { ok: true, areas: {}, folders: { ...AREA_FOLDERS } };
-  await Promise.all(Object.entries(AREA_FOLDERS).map(async ([key, folderId]) => {
+  await Promise.all(Object.entries(AREA_FOLDERS).map(async ([key, spec]) => {
+    // A key holds one folder id, or several { id, group } entries whose
+    // listings concatenate with every photo tagged by its entry's group.
+    const entries = Array.isArray(spec) ? spec : [{ id: spec }];
     try {
-      const top = await listDriveFolder(folderId);
-      const shots = [...top.files];
-      // Pictures are sometimes grouped one level down ("Pohon palem",
-      // "Signage") — flatten those in, keeping the subfolder name as `group`
-      // so the report can use the human-written label as a default caption.
-      await Promise.all(top.folders.slice(0, 12).map(async (f) => {
-        try {
-          const sub = await listDriveFolder(f.id);
-          shots.push(...sub.files.map((s) => ({ ...s, group: f.name })));
-        } catch { /* an unreadable subfolder skips; the rest still show */ }
+      const shots = [];
+      await Promise.all(entries.map(async (ent) => {
+        const top = await listDriveFolder(ent.id);
+        shots.push(...top.files.map((s) => (ent.group ? { ...s, group: ent.group } : s)));
+        // Pictures are sometimes grouped one level down ("Pohon palem",
+        // "Signage") — flatten those in, keeping the subfolder name as `group`
+        // unless the entry carries its own: phase membership beats a label.
+        await Promise.all(top.folders.slice(0, 12).map(async (f) => {
+          try {
+            const sub = await listDriveFolder(f.id);
+            shots.push(...sub.files.map((s) => ({ ...s, group: ent.group || f.name })));
+          } catch { /* an unreadable subfolder skips; the rest still show */ }
+        }));
       }));
       out.areas[key] = shots.slice(0, 200);
     } catch (e) {
