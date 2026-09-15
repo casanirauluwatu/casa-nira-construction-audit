@@ -93,6 +93,10 @@ const AREA_FOLDERS = {
   carpet: "1ZaWQNE9vQOx73EaV85YnXpfU-NXFViLW",
   // The SIPA groundwater licence pages, and later the well/filtration works.
   deepwell: "1Z44Oefvr8K-DbcYnXh8UQsVnki6ChOq7",
+  // Solar PV layouts, one subfolder per block ("Unit A".."Unit D") — the
+  // subfolder name becomes each photo's group, which the four Solar sections
+  // pin themselves to.
+  solar: "1v8gMsy-dSHEcqLSrWv5-TusKLQeN5u9X",
 };
 
 // One embedded-folder-view read, split into files and subfolders. A folder
