@@ -1,3 +1,5 @@
+// Build stamp 2026-09-15: Vercel keys a function's cached bundle on this entry
+// file, so shared-module fixes only ship when this file changes too.
 import { getPhotos } from "../../daily-core.mjs";
 
 // Site photos for one day, from the Rekap Drive folder via the Apps Script.

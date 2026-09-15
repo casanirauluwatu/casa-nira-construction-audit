@@ -6,7 +6,12 @@ import { getDaily } from "./daily-core.mjs";
 // Stamped into every response: Vercel can serve current static files while
 // reusing a cached build of a function, which presents as the page ignoring the
 // date picker. apiVersion says which function build actually answered.
-export const API_VERSION = "v2-date-month";
+// v3: nothing in the API changed — the bump (with the entry-file stamps in
+// api/) forces Vercel to rebuild the function bundles. Prod was caught serving
+// a bundle frozen at 2f88702, with the pre-27d89c9 daily-core inside: its
+// spurious-abort bug read as random "feed timeout", which dropped the page to
+// the snapshot and disabled the date pickers while the feed itself was fine.
+export const API_VERSION = "v3-fn-rebuild";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_RE = /^\d{4}-\d{2}$/;

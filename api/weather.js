@@ -1,3 +1,5 @@
+// Build stamp 2026-09-15: Vercel keys a function's cached bundle on this entry
+// file, so shared-module fixes only ship when this file changes too.
 import { getWeather } from "../weather-core.mjs";
 
 // Field weather for the Laporan Harian tab. Served from here rather than fetched
