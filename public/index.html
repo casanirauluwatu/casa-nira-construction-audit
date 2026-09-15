@@ -1310,12 +1310,54 @@
   // captions; the wording is fixed here so every owner reads the same thing.
   // The solar copy for blocks whose package is not priced yet.
   const SOLAR_PENDING = "We can equip this villa with a hybrid solar system sized for this villa type: bifacial roof panels, a three-phase hybrid inverter and battery storage. Uluwatu has had several power outages recently — with the battery, the villa rides through them without interruption — and for a villa running a jacuzzi, sauna or ice bath, electricity use is high enough that solar becomes a serious long-term saving. We are finalising the sizing and pricing for this villa type — if you are interested we will prepare a detailed proposal for your villa.";
-  // Owner-facing solar offer. Specs come from the Satuwatt proposals
-  // (039 = A, 034 = B, 040 = C); the saving lines assume ~1,500 kWh per kWp
-  // per year in Bali at PLN's ~Rp 1,700/kWh residential tariff. ROI divides
-  // that saving into the price: B's published CCO total, and for A and C
-  // (price still "to be confirmed") the proposals' own quotes of IDR 153M
-  // and 145M — revise those two ROI lines if the final prices differ.
+  // ---- Solar investment engine ----
+  // A line-for-line port of the "Casa Nira Solar Panel Investment Analysis"
+  // workbook (Noel / B2, Sep 2026), so the report's figures always agree with
+  // the spreadsheet behind the offer. Year n: energy = kWp × yield ×
+  // (1-degradation)^(n-1); tariff = PLN R3 × (1+PPJ) × (1+inflation)^(n-1);
+  // saving = self-used energy at the full tariff + exported energy at 65% of
+  // it; net = saving − maintenance. Payback interpolates the cumulative cash
+  // flow's zero crossing, ROI divides 25 years of net cash by the base
+  // investment (for B, the workbook uses the incl-PPN system cost), IRR runs
+  // over the same flows, and CO2 is lifetime generation × 0.75 kg/kWh.
+  const SOLAR_ECON = {
+    yieldKwh: 1690,      // kWh per kWp per year (Bali)
+    degradation: 0.005,  // panel output lost per year
+    life: 25,            // years
+    tariff: 1699.5,      // PLN R3, IDR/kWh
+    ppj: 0.07,           // street-lighting tax on top of the tariff
+    inflation: 0.05,     // electricity price growth per year
+    selfUse: 0.85,       // share of generation consumed in the villa
+    exportPct: 0.65,     // exported energy credited at this share of tariff
+    maint: 1300000,      // IDR per year
+    co2PerKwh: 0.75,     // kg CO2 avoided per kWh generated
+  };
+  function solarCalc(kwp, invest, roiBase){
+    const A=SOLAR_ECON, eff=A.tariff*(1+A.ppj), flows=[-invest];
+    let cum=-invest, energy=0, savings=0, net=0, save1=0, payback=null;
+    for(let n=1;n<=A.life;n++){
+      const e=kwp*A.yieldKwh*Math.pow(1-A.degradation,n-1);
+      const s=e*(A.selfUse+(1-A.selfUse)*A.exportPct)*eff*Math.pow(1+A.inflation,n-1);
+      const nf=s-A.maint, prev=cum;
+      cum+=nf; energy+=e; savings+=s; net+=nf; flows.push(nf);
+      if(n===1) save1=s;
+      if(payback==null && cum>=0) payback=(n-1)+(-prev)/nf;
+    }
+    const npvAt=(r)=>flows.reduce((a,c,i)=>a+c/Math.pow(1+r,i),0);
+    let lo=0, hi=1; for(let i=0;i<60;i++){ const m=(lo+hi)/2; if(npvAt(m)>0) lo=m; else hi=m; }
+    return { save1, savings, payback, roi: net/(roiBase||invest), irr:(lo+hi)/2, co2: energy*A.co2PerKwh/1000 };
+  }
+  const juta=(v)=>`IDR ${Math.round(v/1e6)} million`;
+  const solarRows=(m,indicative)=>{
+    const tag = indicative ? " — indicative, against the preliminary quote" : "";
+    return [
+      ["Potential saving",`${juta(m.save1)} in the first year, growing with the electricity tariff`],
+      ["Savings over 25 years",`${juta(m.savings)} over the system's 25-year life`],
+      ["Payback",`Around ${m.payback.toFixed(1)} years${tag}`],
+      ["ROI",`${m.roi.toFixed(1)}× the investment over 25 years (IRR ${(m.irr*100).toFixed(1)}% per year)${tag}`],
+      ["CO2 avoided",`About ${Math.round(m.co2)} tons over 25 years — roughly ${(m.co2/SOLAR_ECON.life).toFixed(1)} tons a year`],
+    ];
+  };
   const SOLAR_PITCH = "We can equip this villa with a hybrid solar system with battery backup. Uluwatu has had several power outages recently — with the battery, the villa rides through them without interruption. And for a villa running a jacuzzi, sauna or ice bath, electricity use is high enough that solar becomes a serious long-term saving. If you are interested we will prepare a detailed breakdown for your villa.";
   const SOLAR_BATT16 = "16 kWh LiFePO4 — outage backup of 7 h at 2 kW, 5 h at 3 kW, or 3 h at 5 kW";
   const SOLAR_PAY = "50% down payment · 50% with the 4th installment";
@@ -1341,38 +1383,36 @@
       desc:"We have to make some adjustments on the carpet: the green colour stock is not available in Indonesia. The photos show our proposal in the alternative colourways — off-white, natural, or slightly natural — to give a heads-up on the styling." },
     { id:"DEEPWELL", title:"Deep Well", key:"deepwell",
       desc:"The groundwater licence for the deep well (Izin Pengusahaan Air Tanah, PB UMKU 060526001115400070001) was issued on 3 September 2026, so the deep well can now be put to use. The remaining works are the water filtering installation and the piping to each villa — really great progress on the resort's water supply." },
-    // Solar offer, one chip per block, each pinned to its block subfolder of the
-    // solar Drive folder. B carries the concrete package from change order
-    // 010/CR/MKI/VIII/2026 (AO-02); the savings and payback lines assume
-    // ~1,500 kWh per kWp per year in Bali at PLN's ~Rp 1,700/kWh residential
-    // tariff. The other blocks take their own figures once each is priced.
+    // Solar offer, one chip per block, each pinned to its block subfolder of
+    // the solar Drive folder. Every financial line comes from solarCalc above.
+    // A and C run the engine on their Satuwatt proposal quotes (039: 6.4 kWp
+    // at 153M; 040: 5.12 kWp at 145M) — indicative until each price is
+    // published. B is the investment-analysis package (5.9 kWp of Jinko
+    // 590 Wp panels on a Deye 6 kW with the 10 kWh battery): year-0 outflow
+    // is the CCO total 218.75M (system incl PPN 194.25M + extra battery 18M
+    // + 5-yr maintenance pack 6.5M), and ROI keeps the workbook's incl-PPN
+    // base of 194.25M.
     { id:"SOLAR_A", title:"Solar - A", key:"solar", group:"Unit A", desc: SOLAR_PITCH, rows:[
       ["System","6,400 Wp — 10 × 640 Wp bifacial panels"],
       ["Inverter","6 kW three-phase hybrid"],
       ["Battery",SOLAR_BATT16],
-      ["Potential saving","Up to IDR 16 million per year"],
-      ["ROI","Around 9-10 years — indicative"],
+      ...solarRows(solarCalc(6.4, 153000000), true),
       ["Price",SOLAR_TBC],
       ["Payment",SOLAR_PAY],
       ["Warranty",SOLAR_WTY] ] },
-    // B is the CCO package (010/CR/MKI/VIII/2026, AO-02) — price and spec
-    // travel together, so the whole row set follows the CCO, not the
-    // Satuwatt proposal the other blocks quote from.
     { id:"SOLAR_B", title:"Solar - B", key:"solar", group:"Unit B", desc: SOLAR_PITCH, rows:[
-      ["System","6.3 kWp — 10 × 630 Wp bifacial panels"],
-      ["Inverter","6 kW three-phase hybrid"],
-      ["Battery","10.24 kWh with smart metering — outage backup of about 5 h at 2 kW or 3.5 h at 3 kW"],
-      ["Potential saving","Up to IDR 16 million per year"],
-      ["ROI","Around 13 years — indicative"],
-      ["Price","IDR 218,750,000 — supplied, installed and commissioned, including the PLN application and a 5-year maintenance pack"],
+      ["System","5.9 kWp — 10 × 590 Wp Jinko panels"],
+      ["Inverter","Deye 6 kW three-phase hybrid"],
+      ["Battery","10 kWh LiFePO4, 9 kWh usable — outage backup of about 4.5 h at 2 kW or 3 h at 3 kW"],
+      ...solarRows(solarCalc(5.9, 218750000, 194250000), false),
+      ["Price","IDR 218,750,000 — supplied, installed and commissioned, including the additional battery, the PLN application and a 5-year maintenance pack"],
       ["Payment",SOLAR_PAY],
-      ["Warranty",SOLAR_WTY] ] },
+      ["Warranty","Panels 12 yr product / 30 yr performance · inverter 5 yr · battery 10 yr or 6,000 cycles · mounting 10 yr · installation 1 yr"] ] },
     { id:"SOLAR_C", title:"Solar - C", key:"solar", group:"Unit C", desc: SOLAR_PITCH, rows:[
       ["System","5,120 Wp — 8 × 640 Wp bifacial panels"],
       ["Inverter","5 kW three-phase hybrid"],
       ["Battery",SOLAR_BATT16],
-      ["Potential saving","Up to IDR 13 million per year"],
-      ["ROI","Around 11 years — indicative"],
+      ...solarRows(solarCalc(5.12, 145000000), true),
       ["Price",SOLAR_TBC],
       ["Payment",SOLAR_PAY],
       ["Warranty",SOLAR_WTY] ] },
