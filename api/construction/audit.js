@@ -1,3 +1,5 @@
+// Build stamp 2026-09-15: Vercel keys a function's cached bundle on this entry
+// file, so shared-module fixes only ship when this file changes too.
 import { auditAll, feedsFromEnv } from "../../audit-core.mjs";
 
 // Vercel serverless function. Reads CONSTRUCTION_FEEDS and returns the audit.
