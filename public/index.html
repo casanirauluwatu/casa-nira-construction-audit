@@ -1309,12 +1309,14 @@
   // Each section carries one permanent description instead of per photo
   // captions; the wording is fixed here so every owner reads the same thing.
   // The solar copy for blocks whose package is not priced yet.
-  const SOLAR_PENDING = "We can equip this villa with a hybrid solar system sized for this villa type: bifacial roof panels, a three-phase hybrid inverter and battery storage. The battery keeps the villa running through the power outages that are quite common in Uluwatu, and the system pays for itself through the electricity it saves. We are finalising the sizing and pricing for this villa type — if you are interested we will prepare a detailed proposal for your villa.";
+  const SOLAR_PENDING = "We can equip this villa with a hybrid solar system sized for this villa type: bifacial roof panels, a three-phase hybrid inverter and battery storage. Uluwatu has had several power outages recently — with the battery, the villa rides through them without interruption — and for a villa running a jacuzzi, sauna or ice bath, electricity use is high enough that solar becomes a serious long-term saving. We are finalising the sizing and pricing for this villa type — if you are interested we will prepare a detailed proposal for your villa.";
   // Owner-facing solar offer. Specs come from the Satuwatt proposals
-  // (039 = A, 034 = B, 040 = C); the savings lines assume ~1,500 kWh per kWp
-  // per year in Bali at PLN's ~Rp 1,700/kWh residential tariff, and B's
-  // payback is that saving against the published price.
-  const SOLAR_PITCH = "We can equip this villa with a hybrid solar system with battery backup — the battery keeps the villa running through the power outages that are quite common in Uluwatu. If you are interested we will prepare a detailed breakdown for your villa.";
+  // (039 = A, 034 = B, 040 = C); the saving lines assume ~1,500 kWh per kWp
+  // per year in Bali at PLN's ~Rp 1,700/kWh residential tariff. ROI divides
+  // that saving into the price: B's published CCO total, and for A and C
+  // (price still "to be confirmed") the proposals' own quotes of IDR 153M
+  // and 145M — revise those two ROI lines if the final prices differ.
+  const SOLAR_PITCH = "We can equip this villa with a hybrid solar system with battery backup. Uluwatu has had several power outages recently — with the battery, the villa rides through them without interruption. And for a villa running a jacuzzi, sauna or ice bath, electricity use is high enough that solar becomes a serious long-term saving. If you are interested we will prepare a detailed breakdown for your villa.";
   const SOLAR_BATT16 = "16 kWh LiFePO4 — outage backup of 7 h at 2 kW, 5 h at 3 kW, or 3 h at 5 kW";
   const SOLAR_PAY = "50% down payment · 50% with the 4th installment";
   const SOLAR_WTY = "Panels 15 yr product / 30 yr performance · inverter up to 10 yr · battery 10 yr";
@@ -1348,7 +1350,8 @@
       ["System","6,400 Wp — 10 × 640 Wp bifacial panels"],
       ["Inverter","6 kW three-phase hybrid"],
       ["Battery",SOLAR_BATT16],
-      ["Electricity savings","Up to IDR 16 million per year"],
+      ["Potential saving","Up to IDR 16 million per year"],
+      ["ROI","Around 9-10 years — indicative"],
       ["Price",SOLAR_TBC],
       ["Payment",SOLAR_PAY],
       ["Warranty",SOLAR_WTY] ] },
@@ -1359,8 +1362,8 @@
       ["System","6.3 kWp — 10 × 630 Wp bifacial panels"],
       ["Inverter","6 kW three-phase hybrid"],
       ["Battery","10.24 kWh with smart metering — outage backup of about 5 h at 2 kW or 3.5 h at 3 kW"],
-      ["Electricity savings","Up to IDR 16 million per year"],
-      ["Indicative payback","Around 13 years"],
+      ["Potential saving","Up to IDR 16 million per year"],
+      ["ROI","Around 13 years — indicative"],
       ["Price","IDR 218,750,000 — supplied, installed and commissioned, including the PLN application and a 5-year maintenance pack"],
       ["Payment",SOLAR_PAY],
       ["Warranty",SOLAR_WTY] ] },
@@ -1368,7 +1371,8 @@
       ["System","5,120 Wp — 8 × 640 Wp bifacial panels"],
       ["Inverter","5 kW three-phase hybrid"],
       ["Battery",SOLAR_BATT16],
-      ["Electricity savings","Up to IDR 13 million per year"],
+      ["Potential saving","Up to IDR 13 million per year"],
+      ["ROI","Around 11 years — indicative"],
       ["Price",SOLAR_TBC],
       ["Payment",SOLAR_PAY],
       ["Warranty",SOLAR_WTY] ] },
