@@ -1300,6 +1300,8 @@
   // /api/daily/areas (server-side folder listing), not the daily photo feed.
   // Each section carries one permanent description instead of per photo
   // captions; the wording is fixed here so every owner reads the same thing.
+  // The solar copy for blocks whose package is not priced yet.
+  const SOLAR_PENDING = "We can equip this villa with a hybrid solar system sized for this villa type: bifacial roof panels, a three-phase hybrid inverter and battery storage. The battery keeps the villa running through the power outages that are quite common in Uluwatu, and the system pays for itself through the electricity it saves. We are finalising the sizing and pricing for this villa type — if you are interested we will prepare a detailed proposal for your villa.";
   const KAREAS = [
     { id:"AMENITIES", title:"Amenities", key:"amenities",
       desc:"All amenities have already been procured and delivered to site, so there is no lead time. The photos show the custom branding applied to the collection, including paintings, plates, bedding, kitchenware and cleaning supplies." },
@@ -1320,6 +1322,16 @@
       desc:"We have to make some adjustments on the carpet: the green colour stock is not available in Indonesia. The photos show our proposal in the alternative colourways — off-white, natural, or slightly natural — to give a heads-up on the styling." },
     { id:"DEEPWELL", title:"Deep Well", key:"deepwell",
       desc:"The groundwater licence for the deep well (Izin Pengusahaan Air Tanah, PB UMKU 060526001115400070001) was issued on 3 September 2026, so the deep well can now be put to use. The remaining works are the water filtering installation and the piping to each villa — really great progress on the resort's water supply." },
+    // Solar offer, one chip per block, text-only until the visual folder is
+    // attached. B carries the concrete package from change order
+    // 010/CR/MKI/VIII/2026 (AO-02); the savings and payback lines assume
+    // ~1,500 kWh per kWp per year in Bali at PLN's ~Rp 1,700/kWh residential
+    // tariff. The other blocks take their own figures once each is priced.
+    { id:"SOLAR_A", title:"Solar - A", desc: SOLAR_PENDING },
+    { id:"SOLAR_B", title:"Solar - B",
+      desc:"We can equip this villa with a 6.3 kWp hybrid solar system: 10 bifacial roof panels, a 6 kW three-phase hybrid inverter and 10.24 kWh of battery storage with smart metering. The battery keeps the villa running through the power outages that are quite common in Uluwatu, and the system can cut the villa's electricity bill by up to IDR 16 million a year — an indicative payback of around 13 years. Indicative price: around IDR 220 million, including installation, the PLN application and a 5-year maintenance pack. If you are interested we will prepare a detailed breakdown for your villa." },
+    { id:"SOLAR_C", title:"Solar - C", desc: SOLAR_PENDING },
+    { id:"SOLAR_D", title:"Solar - D", desc: SOLAR_PENDING },
   ];
   // Which parts go into this report. Furniture differs between units, so the
   // person printing can leave a section off for an owner it does not apply to;
