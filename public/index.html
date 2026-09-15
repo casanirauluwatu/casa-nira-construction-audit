@@ -1384,14 +1384,13 @@
     { id:"DEEPWELL", title:"Deep Well", key:"deepwell",
       desc:"The groundwater licence for the deep well (Izin Pengusahaan Air Tanah, PB UMKU 060526001115400070001) was issued on 3 September 2026, so the deep well can now be put to use. The remaining works are the water filtering installation and the piping to each villa — really great progress on the resort's water supply." },
     // Solar offer, one chip per block, each pinned to its block subfolder of
-    // the solar Drive folder. Every financial line comes from solarCalc above.
-    // A and C run the engine on their Satuwatt proposal quotes (039: 6.4 kWp
-    // at 153M; 040: 5.12 kWp at 145M) — indicative until each price is
-    // published. B is the investment-analysis package (5.9 kWp of Jinko
-    // 590 Wp panels on a Deye 6 kW with the 10 kWh battery): year-0 outflow
-    // is the CCO total 218.75M (system incl PPN 194.25M + extra battery 18M
-    // + 5-yr maintenance pack 6.5M), and ROI keeps the workbook's incl-PPN
-    // base of 194.25M.
+    // the solar Drive folder. Every spec shown is the Satuwatt proposal for
+    // that block (039 = A, 034 = B, 040 = C) — the investment-analysis
+    // workbook contributed the methodology in solarCalc, not the hardware.
+    // Every financial line comes from solarCalc: A and C run on their
+    // proposal quotes (153M / 145M, indicative until each price is
+    // published); B runs its 5.12 kWp spec against the CCO total of 218.75M,
+    // which is the published price per 010/CR/MKI/VIII/2026.
     { id:"SOLAR_A", title:"Solar - A", key:"solar", group:"Unit A", desc: SOLAR_PITCH, rows:[
       ["System","6,400 Wp — 10 × 640 Wp bifacial panels"],
       ["Inverter","6 kW three-phase hybrid"],
@@ -1401,13 +1400,13 @@
       ["Payment",SOLAR_PAY],
       ["Warranty",SOLAR_WTY] ] },
     { id:"SOLAR_B", title:"Solar - B", key:"solar", group:"Unit B", desc: SOLAR_PITCH, rows:[
-      ["System","5.9 kWp — 10 × 590 Wp Jinko panels"],
-      ["Inverter","Deye 6 kW three-phase hybrid"],
-      ["Battery","10 kWh LiFePO4, 9 kWh usable — outage backup of about 4.5 h at 2 kW or 3 h at 3 kW"],
-      ...solarRows(solarCalc(5.9, 218750000, 194250000), false),
-      ["Price","IDR 218,750,000 — supplied, installed and commissioned, including the additional battery, the PLN application and a 5-year maintenance pack"],
+      ["System","5,120 Wp — 8 × 640 Wp bifacial panels"],
+      ["Inverter","5 kW three-phase hybrid"],
+      ["Battery",SOLAR_BATT16],
+      ...solarRows(solarCalc(5.12, 218750000), false),
+      ["Price","IDR 218,750,000 — supplied, installed and commissioned, including the PLN application and a 5-year maintenance pack"],
       ["Payment",SOLAR_PAY],
-      ["Warranty","Panels 12 yr product / 30 yr performance · inverter 5 yr · battery 10 yr or 6,000 cycles · mounting 10 yr · installation 1 yr"] ] },
+      ["Warranty",SOLAR_WTY] ] },
     { id:"SOLAR_C", title:"Solar - C", key:"solar", group:"Unit C", desc: SOLAR_PITCH, rows:[
       ["System","5,120 Wp — 8 × 640 Wp bifacial panels"],
       ["Inverter","5 kW three-phase hybrid"],
