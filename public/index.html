@@ -171,6 +171,11 @@
   .kunit,.krep{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(43,38,32,.05);}
   .krep .khl{margin-top:0;}
   .kabout{margin:2px 0 4px;}
+  /* Compact spec table under a section's intro (the solar offers). */
+  .ktbl{width:100%;border-collapse:collapse;margin:6px 0 4px;}
+  .ktbl td{padding:6px 10px;border-top:1px solid #f0eadd;font-size:12.5px;line-height:1.5;vertical-align:top;text-align:left;}
+  .ktbl tr:last-child td{border-bottom:1px solid #f0eadd;}
+  .ktbl td:first-child{width:160px;font:600 9.5px ui-monospace,Menlo,monospace;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding-top:9px;white-space:nowrap;}
   .kutop{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;font:600 12px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:10px;}
   .kutop .kd{font-size:10px;}
   .kutop .kd{color:var(--muted);letter-spacing:.04em;}
@@ -348,6 +353,9 @@
     .kuid{font-size:14pt;}
     .kuty{font-size:7.5pt;}
     .kustats{font-size:8pt;gap:10px;}
+    .ktbl{break-inside:avoid;margin:3px 0;}
+    .ktbl td{font-size:8pt;padding:3px 7px;}
+    .ktbl td:first-child{font-size:6.5pt;width:110px;padding-top:4.5px;}
     .ksec{margin:7px 0 4px;font-size:6.5pt;break-after:avoid;}
     .kuhead{break-after:avoid;}
     .kdesc{break-inside:avoid;break-after:avoid;}
@@ -1302,6 +1310,15 @@
   // captions; the wording is fixed here so every owner reads the same thing.
   // The solar copy for blocks whose package is not priced yet.
   const SOLAR_PENDING = "We can equip this villa with a hybrid solar system sized for this villa type: bifacial roof panels, a three-phase hybrid inverter and battery storage. The battery keeps the villa running through the power outages that are quite common in Uluwatu, and the system pays for itself through the electricity it saves. We are finalising the sizing and pricing for this villa type — if you are interested we will prepare a detailed proposal for your villa.";
+  // Owner-facing solar offer. Specs come from the Satuwatt proposals
+  // (039 = A, 034 = B, 040 = C); the savings lines assume ~1,500 kWh per kWp
+  // per year in Bali at PLN's ~Rp 1,700/kWh residential tariff, and B's
+  // payback is that saving against the published price.
+  const SOLAR_PITCH = "We can equip this villa with a hybrid solar system with battery backup — the battery keeps the villa running through the power outages that are quite common in Uluwatu. If you are interested we will prepare a detailed breakdown for your villa.";
+  const SOLAR_BATT16 = "16 kWh LiFePO4 — outage backup of 7 h at 2 kW, 5 h at 3 kW, or 3 h at 5 kW";
+  const SOLAR_PAY = "50% down payment · 50% with the 4th installment";
+  const SOLAR_WTY = "Panels 15 yr product / 30 yr performance · inverter up to 10 yr · battery 10 yr";
+  const SOLAR_TBC = "To be confirmed — detailed offer on request";
   const KAREAS = [
     { id:"AMENITIES", title:"Amenities", key:"amenities",
       desc:"All amenities have already been procured and delivered to site, so there is no lead time. The photos show the custom branding applied to the collection, including paintings, plates, bedding, kitchenware and cleaning supplies." },
@@ -1327,10 +1344,31 @@
     // 010/CR/MKI/VIII/2026 (AO-02); the savings and payback lines assume
     // ~1,500 kWh per kWp per year in Bali at PLN's ~Rp 1,700/kWh residential
     // tariff. The other blocks take their own figures once each is priced.
-    { id:"SOLAR_A", title:"Solar - A", key:"solar", group:"Unit A", desc: SOLAR_PENDING },
-    { id:"SOLAR_B", title:"Solar - B", key:"solar", group:"Unit B",
-      desc:"We can equip this villa with a 6.3 kWp hybrid solar system: 10 bifacial roof panels, a 6 kW three-phase hybrid inverter and 10.24 kWh of battery storage with smart metering. The battery keeps the villa running through the power outages that are quite common in Uluwatu, and the system can cut the villa's electricity bill by up to IDR 16 million a year — an indicative payback of around 13 years. Indicative price: around IDR 220 million, including installation, the PLN application and a 5-year maintenance pack. If you are interested we will prepare a detailed breakdown for your villa." },
-    { id:"SOLAR_C", title:"Solar - C", key:"solar", group:"Unit C", desc: SOLAR_PENDING },
+    { id:"SOLAR_A", title:"Solar - A", key:"solar", group:"Unit A", desc: SOLAR_PITCH, rows:[
+      ["System","6,400 Wp — 10 × 640 Wp bifacial panels"],
+      ["Inverter","6 kW three-phase hybrid"],
+      ["Battery",SOLAR_BATT16],
+      ["Electricity savings","Up to IDR 16 million per year"],
+      ["Price",SOLAR_TBC],
+      ["Payment",SOLAR_PAY],
+      ["Warranty",SOLAR_WTY] ] },
+    { id:"SOLAR_B", title:"Solar - B", key:"solar", group:"Unit B", desc: SOLAR_PITCH, rows:[
+      ["System","5,120 Wp — 8 × 640 Wp bifacial panels"],
+      ["Inverter","5 kW three-phase hybrid"],
+      ["Battery",SOLAR_BATT16],
+      ["Electricity savings","Up to IDR 13 million per year"],
+      ["Indicative payback","Around 11 years"],
+      ["Price","IDR 145,000,000 — includes installation, PLN & ESDM permit applications and 2 years maintenance"],
+      ["Payment",SOLAR_PAY],
+      ["Warranty",SOLAR_WTY] ] },
+    { id:"SOLAR_C", title:"Solar - C", key:"solar", group:"Unit C", desc: SOLAR_PITCH, rows:[
+      ["System","5,120 Wp — 8 × 640 Wp bifacial panels"],
+      ["Inverter","5 kW three-phase hybrid"],
+      ["Battery",SOLAR_BATT16],
+      ["Electricity savings","Up to IDR 13 million per year"],
+      ["Price",SOLAR_TBC],
+      ["Payment",SOLAR_PAY],
+      ["Warranty",SOLAR_WTY] ] },
     { id:"SOLAR_D", title:"Solar - D", key:"solar", group:"Unit D", desc: SOLAR_PENDING },
   ];
   // Which parts go into this report. Furniture differs between units, so the
@@ -1433,6 +1471,7 @@
     return `<section class="kunit">`
       + `<div class="kuhead"><div><span class="kuid">${esc(a.title)}</span></div></div>`
       + `<div class="kdesc kabout">${esc(a.desc)}</div>`
+      + (a.rows ? `<table class="ktbl">${a.rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join("")}</table>` : "")
       + (a.key ? `<div class="ksec">Photo Documentation${shots.length?` · ${shots.length}`:""}</div>${photos}` : "")
       + `</section>`;
   }
