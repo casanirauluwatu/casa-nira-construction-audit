@@ -71,13 +71,21 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(500, { "content-type": "application/json", "cache-control": "no-store" }).end('{"error":"CONSTRUCTION_FEEDS not set"}');
       return;
     }
-    await serveJson(res, "audit", fresh, () => auditAll(feeds, { staleDays: STALE_DAYS }));
+    // An audit with failed rows re-tries sooner: a transient feed 404 must not
+    // pin "Unreachable" for six hours. (Ten minutes, not one: a re-pull costs
+    // twenty feed fetches, unlike the single-fetch daily fallback below.)
+    await serveJson(res, "audit", fresh, () => auditAll(feeds, { staleDays: STALE_DAYS }),
+      (a) => (a && a.rows && a.rows.every((r) => r.ok) ? TTL_MS : 600000));
     return;
   }
   if (url.pathname === "/api/daily/day" || url.pathname === "/api/daily/report") {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get("date") || "") ? url.searchParams.get("date") : null;
     const month = /^\d{4}-\d{2}$/.test(url.searchParams.get("month") || "") ? url.searchParams.get("month") : null;
-    await serveJson(res, `daily:${date || month || "today"}`, fresh, () => getDaily({ date, month, fresh }));
+    // Only a live answer earns the long TTL. A snapshot fallback cached for
+    // six hours — in memory and, via max-age, at the CDN — held the date
+    // pickers disabled long after a single feed timeout had passed.
+    await serveJson(res, `daily:${date || month || "today"}`, fresh, () => getDaily({ date, month, fresh }),
+      (d) => (d && d.live ? TTL_MS : 60000));
     return;
   }
 
@@ -89,7 +97,8 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === "/api/daily/areas") {
-    await serveJson(res, "areas", fresh, getAreaPhotos);
+    await serveJson(res, "areas", fresh, getAreaPhotos,
+      (a) => (a && a.ok && !a.errors ? TTL_MS : 60000));
     return;
   }
 
