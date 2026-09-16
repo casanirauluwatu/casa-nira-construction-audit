@@ -758,7 +758,10 @@
     else if(TAB==="harian") loadDaily(true);
     else {
       loadDaily(true); load(true); loadAreas(true);
-      if(DAILY && KRANGE) loadKPhotos(DAILY.date, KRANGE, true);
+      // The per-day photo lookups hit the same Apps Script as the daily feed;
+      // firing them together made the daily call itself time out. Let the
+      // daily pull get in first.
+      if(DAILY && KRANGE) setTimeout(()=>loadKPhotos(DAILY.date, KRANGE, true), 2500);
     }
   });
   $("unitSel").addEventListener("change", e=>drawChart(e.target.value));
@@ -799,6 +802,7 @@
   const band = (pct) => (pct == null ? BANDS[4] : BANDS.find(b => pct >= b.min) || BANDS[4]);
   const bandLegend = () => BANDS.map(b=>`<span class="lg" style="color:${b.c}">■ <i class="lgw">${b.n} ·</i> ${b.r}</span>`).join("");
 
+  let DAILY_HEAL = 0;   // fresh re-pulls attempted since the last live answer
   async function loadDaily(fresh, date, month){
     LOADING_DAILY = true;
     PH_FRESH = !!fresh;   // renderDaily kicks off the photo fetch; carry the flag over
@@ -826,6 +830,17 @@
           + `<strong>${esc(D_MONTH||D_DATE)}</strong> dan mengembalikan <strong>${esc(DAILY.date)}</strong>. `
           + `Fungsi API di server masih versi lama (<code>apiVersion: ${esc(DAILY.apiVersion||"tidak ada")}</code>) — `
           + `deploy ulang di Vercel tanpa build cache.`;
+      }
+      // A transient feed failure ("feed timeout", "feed HTTP 503") answers as
+      // the one-day snapshot and every date picker switches off. Heal with a
+      // fresh re-pull a few seconds later — after the photo burst that often
+      // causes the contention has passed — instead of parking on the snapshot
+      // until someone presses Refresh data. A snapshot with no feed note is
+      // configuration (DAILY_FEED unset), which no retry can fix.
+      if(DAILY.live) DAILY_HEAL = 0;
+      else if(/^feed/.test(DAILY.note||"") && DAILY_HEAL < 2){
+        DAILY_HEAL++;
+        setTimeout(()=>loadDaily(true), 4000);
       }
       if(!WX) fetchWeather();
     }catch(e){
