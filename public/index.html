@@ -742,7 +742,7 @@
   const PAGE_TITLE = document.title;
   function klienFileName(){
     if(!DAILY || !DAILY.date) return null;
-    const rd = new Date(DAILY.date+"T00:00:00");
+    const rd = new Date((KDATE||DAILY.date)+"T00:00:00");
     if(isNaN(rd)) return null;
     const unit = KUNIT && KUNIT!=="ALL" ? KUNIT+" " : "";
     return `Casa Nira ${unit}Weekly Report - ${rd.getDate()} ${MON_EN[rd.getMonth()]} ${rd.getFullYear()}`;
@@ -761,7 +761,7 @@
       // The per-day photo lookups hit the same Apps Script as the daily feed;
       // firing them together made the daily call itself time out. Let the
       // daily pull get in first.
-      if(DAILY && KRANGE) setTimeout(()=>loadKPhotos(DAILY.date, KRANGE, true), 2500);
+      if(DAILY && KRANGE) setTimeout(()=>loadKPhotos(KDATE||DAILY.date, KRANGE, true), 2500);
     }
   });
   $("unitSel").addEventListener("change", e=>drawChart(e.target.value));
@@ -1267,6 +1267,11 @@
      Reads the same DAILY / PHOTOS / AUDIT state as the other tabs — no data of
      its own except the captions, which live in localStorage on this device. */
   let KUNIT = null;   // "ALL" or one unit id
+  // The klien report date. The labour feed has no say here: the report only
+  // needs a date for its header, the photo window, the print file name and
+  // the saved notes — an empty labour day must not snap the report back to
+  // the feed's latest filled day. Defaults to the feed date until picked.
+  let KDATE = null;
 
   // The owners read English; the internal tabs stay Indonesian.
   const DAY_EN = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -1564,12 +1569,11 @@
       kn.className="note"; kn.textContent="Loading daily data…"; rep.innerHTML="";
       return;
     }
-    const d=DAILY, rd=new Date(d.date+"T00:00:00");
+    const d=DAILY, kd=KDATE||d.date, rd=new Date(kd+"T00:00:00");
     const units=d.units||[], ids=units.map(u=>u.id);
     if(KUNIT==null){ try{ KUNIT=localStorage.getItem("klienUnit")||"ALL"; }catch{ KUNIT="ALL"; } }
     if(KUNIT!=="ALL" && !ids.includes(KUNIT)) KUNIT="ALL";
-    $("kDate").value = d.date||"";
-    $("kDate").disabled = !d.live;   // snapshot mode answers exactly one day
+    $("kDate").value = kd||"";
 
     $("kUnit").innerHTML = `<option value="ALL">All units · one page each</option>` + units.map(u=>{
       const n=kShots(u.id).length;
@@ -1581,7 +1585,7 @@
     if(KRANGE==null){ try{ KRANGE=+localStorage.getItem("klienRange")||7; }catch{ KRANGE=7; } }
     if(![1,7,14,30].includes(KRANGE)) KRANGE=7;
     $("kRange").value = String(KRANGE);
-    loadKPhotos(d.date, KRANGE);   // no-op when this date+range is already loaded
+    loadKPhotos(kd, KRANGE);   // no-op when this date+range is already loaded
 
     const sec = ksecInit();
     $("kAreas").innerHTML = [{id:"SCURVE", title:"S-curve"}, ...KAREAS].map(a=>
@@ -1601,7 +1605,7 @@
       + `Photo descriptions, Highlights &amp; Next Week Focus are click-to-edit; entries are saved on this device.`;
 
     const am={}; if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok) am[r.unit]=r;
-    const caps=kcaps(d.date);
+    const caps=kcaps(kd);
     // One Highlights / Next Week Focus for the whole report, up top — the
     // strip prints once here, so the first unit page below drops its own.
     const hl = caps["h:@"] != null ? caps["h:@"] : "";
@@ -1618,7 +1622,7 @@
       + areasOn.map(a=>kareaSec(a)).join("");
   }
 
-  $("kDate").addEventListener("change", e=>{ if(e.target.value) loadDaily(false, e.target.value); });
+  $("kDate").addEventListener("change", e=>{ if(e.target.value){ KDATE=e.target.value; renderKlien(); } });
   $("kRange").addEventListener("change", e=>{
     KRANGE=+e.target.value||7;
     try{ localStorage.setItem("klienRange", String(KRANGE)); }catch{}
@@ -1649,7 +1653,7 @@
   // selection changes, so an edit in progress is never wiped mid-keystroke.
   $("kreport").addEventListener("input", e=>{
     const t=e.target.closest("[data-ck]"); if(!t || !DAILY) return;
-    const o=kcaps(DAILY.date);
+    const o=kcaps(KDATE||DAILY.date);
     o[t.dataset.ck]=t.textContent.replace(/\s+/g," ").trim();
     kcapSave(DAILY.date,o);
   });
