@@ -802,7 +802,8 @@
   const band = (pct) => (pct == null ? BANDS[4] : BANDS.find(b => pct >= b.min) || BANDS[4]);
   const bandLegend = () => BANDS.map(b=>`<span class="lg" style="color:${b.c}">■ <i class="lgw">${b.n} ·</i> ${b.r}</span>`).join("");
 
-  let DAILY_HEAL = 0;   // fresh re-pulls attempted since the last live answer
+  let DAILY_HEAL = 0;      // fresh re-pulls attempted since the last live answer
+  let DAILY_DROPPED = null; // a dated request the feed failed, now shown as today
   async function loadDaily(fresh, date, month){
     LOADING_DAILY = true;
     PH_FRESH = !!fresh;   // renderDaily kicks off the photo fetch; carry the flag over
@@ -831,16 +832,35 @@
           + `Fungsi API di server masih versi lama (<code>apiVersion: ${esc(DAILY.apiVersion||"tidak ada")}</code>) — `
           + `deploy ulang di Vercel tanpa build cache.`;
       }
-      // A transient feed failure ("feed timeout", "feed HTTP 503") answers as
-      // the one-day snapshot and every date picker switches off. Heal with a
-      // fresh re-pull a few seconds later — after the photo burst that often
-      // causes the contention has passed — instead of parking on the snapshot
-      // until someone presses Refresh data. A snapshot with no feed note is
-      // configuration (DAILY_FEED unset), which no retry can fix.
-      if(DAILY.live) DAILY_HEAL = 0;
-      else if(/^feed/.test(DAILY.note||"") && DAILY_HEAL < 2){
-        DAILY_HEAL++;
-        setTimeout(()=>loadDaily(true), 4000);
+      // A feed failure answers as the one-day snapshot and every date picker
+      // switches off. What happens next depends on what was asked for:
+      //
+      // A DATED request that failed must never maroon the page — computing an
+      // uncached day re-reads a four-month workbook and regularly outruns the
+      // feed budget, and a date pinned in the URL then locks the page onto the
+      // snapshot forever. Drop the date and load the feed's own latest day,
+      // which its warmup keeps cached, then say which day was skipped.
+      //
+      // An UNDATED failure is transient (the today answer is kept warm), so a
+      // fresh re-pull a few seconds later heals it. A snapshot with no feed
+      // note at all is configuration (DAILY_FEED unset) — no retry fixes that.
+      if(DAILY.live){
+        DAILY_HEAL = 0;
+        if(DAILY_DROPPED){
+          $("dnote").className="note err";
+          $("dnote").innerHTML = `Feed tidak sempat menjawab untuk <strong>${esc(DAILY_DROPPED)}</strong> — menampilkan ${esc(DAILY.date)}. Pilih tanggal itu lagi untuk mencoba ulang.`;
+          DAILY_DROPPED = null;
+        }
+      }
+      else if(/^feed/.test(DAILY.note||"")){
+        if(D_DATE || D_MONTH){
+          DAILY_DROPPED = D_DATE || D_MONTH;
+          D_DATE = null; D_MONTH = null;
+          setTimeout(()=>loadDaily(true), 300);
+        } else if(DAILY_HEAL < 2){
+          DAILY_HEAL++;
+          setTimeout(()=>loadDaily(true), 4000);
+        }
       }
       if(!WX) fetchWeather();
     }catch(e){
