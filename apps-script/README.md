@@ -201,3 +201,60 @@ icon) if you'd rather not.
 | Re-deployed but `series` / `months` still missing | The `/exec` URL is on an old version — see [Re-deploying after an edit](#re-deploying-after-an-edit). Check `scriptVersion` in the response. |
 | Only one month in the dropdown, no chart | Same cause: an older script sends no `months` / `series`. Typing a date still works. |
 | Months listed but selecting one does nothing | The **Vercel function** is stale, not the script — it drops `?date=`/`?month=`. Check `apiVersion` in `/api/daily/report`; it should read `v2-date-month`. Redeploy on Vercel with **Use existing Build Cache** unchecked. |
+
+## Batch export — Client Report PDFs to Drive
+
+`batch-export.gs` is a **second, separate web app** behind the dashboard's
+**Batch Export → Drive** button (Client Report tab). One click renders every
+listed unit to its own PDF and files them all in a new Drive folder per run —
+instead of saving one print dialog per unit.
+
+It lives on its own spreadsheet, **“Casa Nira — Batch Export Laporan Klien”**
+(`1mPOm4EtN2j93cMwx4BRVWXQLiNjRwExuad2V-KWIZvA`), whose `Batch` tab is the
+batch's configuration — one row per unit:
+
+| Column | Meaning |
+| --- | --- |
+| Unit | `A1` … `D1`, matching the daily feed. |
+| Tanggal Mulai / Akhir | The date range the unit's photos cover, `YYYY-MM-DD`. Both empty = the last 7 days ending today (WITA); only Akhir = the 7 days ending on it; only Mulai = Mulai through today. |
+| Ikut Batch | `YA` runs the unit, `TIDAK` skips it. |
+| Catatan | Free text, not read by the script. |
+
+### Deploy
+
+1. Open the batch sheet → **Extensions › Apps Script**, paste
+   **`batch-export.gs`**, Save. (`SHEET_ID` is already set.)
+2. **Deploy › New deployment › Web app** — *Execute as* **Me**, *Who has
+   access* **Anyone** (the dashboard calls it server-side).
+3. Authorise when prompted — it needs Drive (folders + photo thumbnails),
+   Docs (it builds each PDF as a temporary Google Doc) and external requests.
+4. Test `<exec-url>?pretty=1` → `{"ok":true,"script":"batch-export",…}`, and
+   `<exec-url>?action=config&pretty=1` → the sheet's rows.
+5. Set the `/exec` URL as **`BATCH_FEED`** on the dashboard (Vercel env var →
+   Redeploy; locally in `.env`). Re-deploying after an edit follows the same
+   [New version rule](#re-deploying-after-an-edit) as the labour script.
+
+### How a run works
+
+The **browser** gathers everything — audit stats + S-curve series (already
+loaded for the page), the photo ids for each unit's range (one
+`/api/daily/photos` call per distinct day, shared across units), and the
+captions / Highlights / Next Week Focus typed **on that device** — then POSTs
+one JSON payload per unit through `/api/klien/batch` (which only forwards to
+`BATCH_FEED`; the URL stays server-side because it can write to Drive).
+
+The script creates `Casa Nira — Client Reports / Batch <timestamp>` in the
+deploying account's My Drive, and for each payload builds a Google Doc —
+header, stats strip, plan-vs-actual chart (Charts service), highlight blocks,
+photos 2-up with captions (Drive thumbnails, HEIC transcoded) — exports it as
+`Casa Nira <unit> Progress Report - <range>.pdf`, and trashes the temp Doc.
+
+Notes:
+
+- A unit that times out at the proxy (60 s) usually **still lands its PDF** —
+  Apps Script keeps executing after the client gives up. Check the folder
+  before re-running, or set finished units to `TIDAK` and run again.
+- Captions live in the browser's `localStorage`, so run the batch from the
+  machine where they were typed.
+- The common-area sections (Amenities, Furniture, …) are not in the batch
+  PDFs — they are per-report choices on screen; print those one-off.

@@ -493,9 +493,11 @@
       <span class="dbar-f">Sections</span>
       <div class="kareas" id="kAreas"></div>
       <button type="button" class="refresh kexp" id="kPrint">Print for Owner</button>
+      <button type="button" class="print kexp" id="kBatch" title="Export every unit on the batch Google Sheet to PDFs in a new Drive folder">Batch Export → Drive</button>
       <span class="dbar-h" id="kHint"></span>
     </div>
     <div class="note" id="knote">Loading client report…</div>
+    <div class="note" id="kbatchNote" hidden></div>
     <div id="kreport"></div>
   </section>
 </div>
@@ -1602,7 +1604,8 @@
     kn.className="note";
     kn.innerHTML = `Compact owner report — pick a unit, then <strong>Print for Owner</strong> (choose “Save as PDF” in the print dialog to send it). `
       + `Toggle the Amenities, Furniture &amp; Communal sections off for an owner they do not apply to — furniture differs between units. `
-      + `Photo descriptions, Highlights &amp; Next Week Focus are click-to-edit; entries are saved on this device.`;
+      + `Photo descriptions, Highlights &amp; Next Week Focus are click-to-edit; entries are saved on this device. `
+      + `<strong>Batch Export → Drive</strong> renders every unit on the batch Google Sheet — one PDF per unit, date range per unit from the sheet — into a new Drive folder.`;
 
     const am={}; if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok) am[r.unit]=r;
     const caps=kcaps(kd);
@@ -1649,6 +1652,112 @@
   });
 
   $("kPrint").addEventListener("click", ()=>window.print());
+
+  /* ---------- batch export → Drive ----------
+     One click renders every unit listed on the batch Google Sheet to its own
+     PDF in a new Drive folder — the sheet carries a date range per unit, so
+     nobody saves 19 print dialogs by hand. The browser gathers the data (it
+     already knows how to read the audit and the per-day photo listings, and
+     it holds the captions typed on this device); the Apps Script behind
+     BATCH_FEED renders each payload into a PDF and files it. */
+  const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+  function kbNote(html, err){ const n=$("kbatchNote"); n.hidden=false; n.className="note"+(err?" err":""); n.innerHTML=html; }
+  async function kbCall(url, body){
+    const res = await fetch(url, body ? { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(body) } : { cache:"no-store" });
+    let j=null; try{ j=await res.json(); }catch{}
+    if(!j) throw new Error(`HTTP ${res.status}`);
+    if(!j.ok) throw new Error(j.error||`HTTP ${res.status}`);
+    return j;
+  }
+  // Every photo caption typed on this device, photo id → text. Captions are
+  // stored per report date, but a photo only ever has one caption — scan all
+  // the dates and let the newest win.
+  function kAllCaps(){
+    const out={};
+    try{
+      for(const k of Object.keys(localStorage).filter(k=>k.startsWith("kcap:")).sort()){
+        let o; try{ o=JSON.parse(localStorage.getItem(k)||"{}"); }catch{ continue; }
+        for(const ck of Object.keys(o)) if(ck.startsWith("p:") && o[ck]) out[ck.slice(2)]=o[ck];
+      }
+    }catch{}
+    return out;
+  }
+  const kbDates = (start,end)=>{ const out=[]; let d=start,g=0; while(d<=end&&g++<62){ out.push(d); d=shiftDay(d,1); } return out; };
+
+  let KBATCH=false;
+  async function batchExport(){
+    if(KBATCH) return;
+    KBATCH=true;
+    const btn=$("kBatch"); btn.disabled=true; btn.textContent="Exporting…";
+    try{
+      kbNote("Reading the batch sheet…");
+      const cfg = await kbCall("/api/klien/batch?action=config");
+      const ticked = (cfg.rows||[]).filter(r=>r.include);
+      if(!ticked.length) throw new Error("no unit is set to YA on the batch sheet.");
+      if(!DAILY) await loadDaily();
+      if(!AUDIT) await load();
+      const units = new Map(((DAILY&&DAILY.units)||[]).map(u=>[u.id,u]));
+      const runs=[], skippedRows=[];
+      for(const r of ticked){
+        if(r.error) skippedRows.push(`${esc(r.unit)} (${esc(r.error)})`);
+        else if(!units.has(r.unit)) skippedRows.push(`${esc(r.unit)} (not on the daily feed)`);
+        else if(!ISO_DATE.test(r.start)||!ISO_DATE.test(r.end)) skippedRows.push(`${esc(r.unit)} (bad date range)`);
+        else runs.push(r);
+      }
+      if(!runs.length) throw new Error("no runnable unit on the batch sheet — "+(skippedRows.join(" · ")||"check the sheet."));
+
+      // One photo lookup per distinct day across every range, shared by units.
+      const days=[...new Set(runs.flatMap(r=>kbDates(r.start,r.end)))].sort();
+      kbNote(`Fetching photo listings for ${days.length} day${days.length===1?"":"s"}…`);
+      const dayPhotos=new Map();
+      let di=0;
+      await Promise.all(Array.from({length:4},async()=>{
+        for(;;){
+          const day=days[di++]; if(!day) return;
+          try{ const res=await fetch("/api/daily/photos?date="+day); const j=await res.json(); if(j&&j.ok) dayPhotos.set(day,j); }catch{}
+        }
+      }));
+
+      const start = await kbCall("/api/klien/batch",{action:"start"});
+      const caps=kAllCaps();
+      const audit={}; if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok) audit[r.unit]=r;
+      const done=[], failed=[];
+      for(let i=0;i<runs.length;i++){
+        const r=runs[i], u=units.get(r.unit), a=audit[r.unit];
+        kbNote(`Exporting <strong>${esc(r.unit)}</strong> (${i+1}/${runs.length}) · ${esc(r.start)} → ${esc(r.end)}… `
+          + `<span class="dim">${done.length} saved${failed.length?` · ${failed.length} failed`:""}</span>`);
+        const shots=[], seen=new Set();
+        for(const day of kbDates(r.start,r.end)){
+          const j=dayPhotos.get(day); if(!j) continue;
+          const arr=(j.photos||{})[r.unit] || (j.photos||{})[(j.alias||{})[r.unit]] || [];
+          for(const s of arr){ if(seen.has(s.id)) continue; seen.add(s.id); shots.push({ id:s.id, day, caption:caps[s.id]||"" }); }
+        }
+        const hl=kcaps(r.end);
+        try{
+          const out = await kbCall("/api/klien/batch",{
+            action:"unit", folderId:start.folderId, unit:r.unit, type:u.type||"",
+            start:r.start, end:r.end,
+            stats: a ? { actual:a.actual, planned:a.planned, deviation:a.deviation,
+              target:vizTarget(a), committed:commitOf(r.unit), bare:ACTUAL_ONLY.has(r.unit) } : null,
+            series: a && Array.isArray(a.series)
+              ? a.series.map(w=>{ const t=pW(w.d); return t?{ d:t.toISOString().slice(0,10), p:w.p, a:w.a }:null; }).filter(Boolean)
+              : [],
+            photos:shots, highlights:hl["h:@"]||"", nextFocus:hl["f:@"]||"",
+          });
+          done.push({ unit:r.unit, n:(out.photos||0) });
+        }catch(e){ failed.push({ unit:r.unit, err:e.message }); }
+      }
+      const link=`<a href="${esc(start.folderUrl)}" target="_blank" rel="noopener">${esc(start.folderName||"Drive folder")} ↗</a>`;
+      kbNote(`Batch export finished — <strong>${done.length}</strong> of ${runs.length} PDF${runs.length===1?"":"s"} saved to ${link}.`
+        + (failed.length?`<br>Failed: ${failed.map(f=>`<strong>${esc(f.unit)}</strong> — ${esc(f.err)}`).join(" · ")}. Set the finished units to TIDAK on the sheet and run again to retry just these.`:"")
+        + (skippedRows.length?`<br>Skipped: ${skippedRows.join(" · ")}.`:""), !!failed.length);
+    }catch(e){
+      kbNote(`Batch export failed — ${esc(e.message||String(e))}`, true);
+    }finally{
+      KBATCH=false; btn.disabled=false; btn.textContent="Batch Export → Drive";
+    }
+  }
+  $("kBatch").addEventListener("click", batchExport);
   // Captions save as they are typed; the report only re-renders on data or
   // selection changes, so an edit in progress is never wiped mid-keystroke.
   $("kreport").addEventListener("input", e=>{

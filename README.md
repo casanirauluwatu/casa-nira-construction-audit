@@ -41,6 +41,7 @@ notes should be entered on the machine that prints.
 | --- | --- | --- |
 | `CONSTRUCTION_FEEDS` | yes | JSON map of villa → Apps Script `/exec` URL. Keep it out of git — those URLs are effectively credentials. |
 | `DAILY_FEED` | no | Apps Script `/exec` URL for the labour sheet — deploy `apps-script/daily-labour.gs`, see [`apps-script/README.md`](apps-script/README.md). Unset = serve the snapshot committed in `daily-data.mjs`. |
+| `BATCH_FEED` | no | Apps Script `/exec` URL for the Client Report batch export — deploy `apps-script/batch-export.gs` on the batch Google Sheet, see [batch export](#batch-export-to-drive). Unset = the **Batch Export → Drive** button reports it is not configured. Keep it out of git — this URL can write PDFs into Drive. |
 | `STALE_DAYS` | no | Staleness threshold in days (default 10). |
 | `CACHE_TTL_MIN` | no | Node-server in-memory cache, minutes (default 360). |
 
@@ -73,6 +74,31 @@ attendance are villa concepts.
 
 Actuals on dates after today are reported as absent rather than as measurements;
 see [days that haven't happened](apps-script/README.md#days-that-havent-happened).
+
+## Batch export to Drive
+
+**Batch Export → Drive** on the Client Report tab replaces saving one print
+dialog per unit: one click renders every listed unit to its own PDF and files
+them all in a **new Drive folder** per run (inside *Casa Nira — Client
+Reports*).
+
+Which units run — and the **date range each unit's photos cover** — live on a
+dedicated Google Sheet, **“Casa Nira — Batch Export Laporan Klien”**
+(`1mPOm4EtN2j93cMwx4BRVWXQLiNjRwExuad2V-KWIZvA`): one row per unit with
+*Tanggal Mulai*, *Tanggal Akhir* and *Ikut Batch* (YA/TIDAK). Both dates empty
+means the last 7 days ending today (WITA).
+
+Each PDF carries the unit's progress stats, the plan-vs-actual S-curve, the
+Highlights / Next Week Focus typed on the exporting device, and every photo the
+unit has in its range — with the captions typed on that device (captions live
+in `localStorage`, so export from the machine that wrote them). The layout is
+rebuilt in Google Docs by the Apps Script, so it mirrors the printed report
+rather than reproducing it pixel-for-pixel.
+
+Setup once: open the batch sheet → Extensions › Apps Script → paste
+`apps-script/batch-export.gs` → deploy as a web app (*Execute as me*, access
+*Anyone*) → set **`BATCH_FEED`** to the `/exec` URL (Vercel env var or `.env`).
+See [`apps-script/README.md`](apps-script/README.md#batch-export--client-report-pdfs-to-drive).
 
 ## CLI
 

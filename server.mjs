@@ -11,6 +11,7 @@ import { dirname, join, normalize } from "node:path";
 import { auditAll, feedsFromEnv } from "./audit-core.mjs";
 import { getDaily, getPhotos, getAreaPhotos } from "./daily-core.mjs";
 import { getWeather } from "./weather-core.mjs";
+import { handleBatch } from "./batch-core.mjs";
 
 const PORT = Number(process.env.PORT || 3000);
 const STALE_DAYS = Number(process.env.STALE_DAYS || 10);
@@ -104,6 +105,20 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === "/api/weather") {
     await serveJson(res, "weather", fresh, getWeather);
+    return;
+  }
+
+  // Batch export (Client Report → PDFs in Drive). Never cached: each call is a
+  // command — read the batch sheet, create the run folder, render one unit.
+  if (url.pathname === "/api/klien/batch") {
+    let body = null;
+    if (req.method === "POST") {
+      const chunks = [];
+      for await (const c of req) chunks.push(c);
+      try { body = JSON.parse(Buffer.concat(chunks).toString("utf8")); } catch {}
+    }
+    const out = await handleBatch({ method: req.method, action: url.searchParams.get("action") || "", body });
+    res.writeHead(out.status, { "content-type": "application/json", "cache-control": "no-store" }).end(JSON.stringify(out.data));
     return;
   }
 
