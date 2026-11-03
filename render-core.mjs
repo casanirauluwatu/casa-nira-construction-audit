@@ -9,30 +9,51 @@
 // The imports are dynamic so everything else in the repo (CLI, audit, the
 // plain Node server without this route) stays runnable with no node_modules.
 
-export async function renderPdf(html) {
-  let puppeteer, launchOpts;
-  try {
-    puppeteer = (await import("puppeteer-core")).default;
-    if (process.env.CHROME_PATH) {
-      launchOpts = {
-        executablePath: process.env.CHROME_PATH,
-        args: ["--headless", "--no-sandbox", "--disable-dev-shm-usage"],
-      };
-    } else {
-      const chromium = (await import("@sparticuz/chromium")).default;
-      launchOpts = {
-        executablePath: await chromium.executablePath(),
-        args: chromium.args,
-        headless: chromium.headless,
-      };
-    }
-  } catch (e) {
-    return { ok: false, error: "PDF renderer unavailable — install dependencies (npm install) or set CHROME_PATH to a Chrome binary. (" + (e && e.message ? e.message : e) + ")" };
+// One browser per warm instance, shared across requests: launching Chromium
+// is the expensive, memory-spiky part, and a batch run sends 19 sequential
+// renders at the same instance — relaunching each time is what ran earlier
+// runs out of memory mid-batch. Reuse also keeps Chromium's image cache, so
+// the common-area photos repeated in every unit's report download once.
+let browserPromise = null;
+
+async function launch_() {
+  const puppeteer = (await import("puppeteer-core")).default;
+  if (process.env.CHROME_PATH) {
+    return puppeteer.launch({
+      executablePath: process.env.CHROME_PATH,
+      args: ["--headless", "--no-sandbox", "--disable-dev-shm-usage"],
+    });
   }
+  const chromium = (await import("@sparticuz/chromium")).default;
+  return puppeteer.launch({
+    executablePath: await chromium.executablePath(),
+    args: chromium.args,
+    headless: chromium.headless,
+  });
+}
+
+async function getBrowser_() {
+  if (browserPromise) {
+    const b = await browserPromise.catch(() => null);
+    const alive = b && (typeof b.connected === "boolean" ? b.connected : b.isConnected());
+    if (alive) return b;
+    browserPromise = null;
+  }
+  browserPromise = launch_();
+  return browserPromise;
+}
+
+export async function renderPdf(html) {
   let browser;
   try {
-    browser = await puppeteer.launch(launchOpts);
-    const page = await browser.newPage();
+    browser = await getBrowser_();
+  } catch (e) {
+    browserPromise = null;
+    return { ok: false, error: "PDF renderer unavailable — install dependencies (npm install) or set CHROME_PATH to a Chrome binary. (" + (e && e.message ? e.message : e) + ")" };
+  }
+  let page;
+  try {
+    page = await browser.newPage();
     // Drive can be slow on a cold thumbnail; a late image should degrade to
     // its placeholder, not kill the whole unit.
     await page.setContent(html, { waitUntil: "networkidle0", timeout: 25000 }).catch(() => {});
@@ -52,8 +73,12 @@ export async function renderPdf(html) {
     });
     return { ok: true, pdf };
   } catch (e) {
+    // A dying browser would poison every later render in this warm instance —
+    // drop it so the next request relaunches fresh.
+    try { await browser.close(); } catch {}
+    browserPromise = null;
     return { ok: false, error: "render failed: " + (e && e.message ? e.message : e) };
   } finally {
-    try { if (browser) await browser.close(); } catch {}
+    try { if (page) await page.close(); } catch {}
   }
 }

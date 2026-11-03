@@ -100,9 +100,11 @@ templates and stylesheet as the page and printed by headless Chromium at
 `/api/klien/render` — the same engine as the browser's own print dialog — so
 the batch output matches **Print for Owner** exactly, minus the S-curve,
 which the owners' batch copies leave out. It carries the report strip with
-the row's Highlights (green) and Lowlights (amber), and every photo the unit
+the row's Highlights (green) and Lowlights (amber), every photo the unit
 has in the 7-day window with the captions typed on the exporting device
-(captions live in `localStorage`; Highlights/Lowlights travel on the sheet).
+(captions live in `localStorage`; Highlights/Lowlights travel on the sheet),
+and the **Amenities, Furniture P1 and Communal** sections. Units render
+three at a time with two automatic retries each.
 
 The renderer is the repo's one exception to "zero dependencies":
 `puppeteer-core` + `@sparticuz/chromium`, pinned in `package.json`. Vercel
