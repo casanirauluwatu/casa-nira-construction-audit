@@ -11,6 +11,26 @@ Yang dibutuhkan:
 
 ---
 
+## Bagian 0 — Deploy dulu kode dashboard-nya (sekali, sebelum semuanya)
+
+Tombol **Batch Export → Drive** baru muncul setelah kode fiturnya masuk ke
+branch **`main`** — situs produksi di Vercel men-deploy dari `main`, bukan dari
+branch pengembangan.
+
+1. Buka GitHub → repo `casa-nira-construction-audit` → buat **pull request**
+   dari branch `claude/optimistic-ramanujan-1rnvc6` ke `main`, lalu **Merge**
+   (sama seperti PR-PR dashboard sebelumnya).
+2. Vercel otomatis men-deploy `main` setelah merge (±1 menit). Kalau ragu, cek
+   tab **Deployments** di Vercel — harus ada deployment Production baru.
+3. Buka dashboard → tab **Client Report** → tombol **Batch Export → Drive**
+   sekarang terlihat di toolbar, di sebelah *Print for Owner*.
+
+   ⚠️ Tombolnya **boleh diklik sebelum Bagian A–B selesai** — hanya saja akan
+   menjawab `BATCH_FEED not set`. Itu memang urutannya: Bagian 0 memunculkan
+   tombol, Bagian A–B membuatnya berfungsi.
+
+---
+
 ## Bagian A — Pasang skrip di Google Sheet (±5 menit)
 
 1. Buka sheet batch:
