@@ -58,7 +58,7 @@ var TZ = 'Asia/Makassar'; // WITA — the clock the ranges and run names use
 var DEFAULT_RANGE_DAYS = 7;
 var MAX_RANGE_DAYS = 62; // a runaway range would fetch months of photos
 var PHOTO_WIDTH_PX = 800; // thumbnail size fetched from Drive (HEIC → JPEG)
-var SCRIPT_VERSION = 'v2-log-sheet';
+var SCRIPT_VERSION = 'v3-para-fix';
 
 // Palette — same inks as the dashboard, so the PDFs read as the same report.
 var C_GOLD = '#a9822f', C_OLIVE = '#6f7043', C_INK = '#2b2620',
@@ -285,10 +285,15 @@ function finishRun_(p) {
 
 function para_(body, text, o, reuseFirst) {
   // A fresh Doc starts with one empty paragraph; the first write reuses it so
-  // the PDF doesn't open with a blank line.
-  var pg = reuseFirst && body.getNumChildren() === 1 && body.getChild(0).asParagraph().getText() === ''
-    ? body.getChild(0).asParagraph().setText(text)
-    : body.appendParagraph(text);
+  // the PDF doesn't open with a blank line. Paragraph.setText() returns void
+  // (unlike most Document setters), so it must never be chained from.
+  var pg;
+  if (reuseFirst && body.getNumChildren() === 1 && body.getChild(0).asParagraph().getText() === '') {
+    pg = body.getChild(0).asParagraph();
+    pg.setText(text);
+  } else {
+    pg = body.appendParagraph(text);
+  }
   var at = {};
   at[DocumentApp.Attribute.FONT_SIZE] = o.size || 10;
   at[DocumentApp.Attribute.BOLD] = !!o.bold;

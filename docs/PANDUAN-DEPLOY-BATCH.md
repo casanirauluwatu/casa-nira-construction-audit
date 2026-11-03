@@ -68,8 +68,10 @@ branch pengembangan.
 
    - `<URL>?pretty=1` → harus muncul:
      ```json
-     { "ok": true, "script": "batch-export", "scriptVersion": "v2-log-sheet", … }
+     { "ok": true, "script": "batch-export", "scriptVersion": "v3-para-fix", … }
      ```
+     (`scriptVersion` harus sama dengan `SCRIPT_VERSION` di file `.gs` yang
+     di-paste — kalau beda, yang hidup masih kode lama.)
    - `<URL>?action=config&pretty=1` → harus muncul daftar unit beserta tanggalnya
      dari tab `Batch`.
 
