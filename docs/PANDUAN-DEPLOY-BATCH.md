@@ -115,7 +115,9 @@ branch pengembangan.
    (1/19, 2/19, …).
 4. Selesai: browser **mengunduh satu file ZIP** —
    `Casa Nira Client Reports - <tanggal>.zip`, berisi satu PDF per unit.
-   Tidak ada yang tersimpan di Drive.
+   Tidak ada yang tersimpan di Drive. Format PDF-nya **sama persis dengan
+   Print for Owner** (dirender mesin cetak browser yang sama di server),
+   hanya tanpa S-curve.
 
 ✅ Setup selesai. Baris yang dilewati (tanggal salah, rentang tak mencakup
 tanggal terpilih, unit tak dikenal) disebut di catatan hasil, lengkap dengan
@@ -171,6 +173,7 @@ Menyimpan kode **tidak** otomatis mengubah URL `/exec` yang sudah hidup:
 | Baris di-skip: `Tanggal Akhir kosong` | *Tanggal Akhir* wajib diisi; hanya *Tanggal Mulai* yang boleh kosong. |
 | Unit di-skip: `no sheet row covers <tanggal>` | Tidak ada baris unit itu yang rentangnya mencakup tanggal terpilih — tambah barisnya di sheet, atau ganti **Date** di dashboard. |
 | `no sheet row covers <tanggal>` (semua) | Tanggal terpilih di luar semua rentang di sheet — biasanya lupa menambah baris minggu ini. |
-| Satu unit: `Too large to download through the dashboard` | PDF unit itu > ±3 MB (foto sangat banyak) sehingga tidak muat lewat proxy — file-nya diparkir di folder Drive *Casa Nira — Client Reports* dan ditautkan di catatan hasil; sisanya tetap masuk ZIP. |
-| Satu unit `batch feed timeout` | Render unit itu kehabisan waktu di proxy (60 dtk) — jalankan ulang batch; biasanya berhasil pada percobaan kedua karena thumbnail foto sudah hangat. |
+| Satu unit: `PDF is … MB — too large` | PDF unit itu > ±4 MB (foto luar biasa banyak) sehingga tidak muat dalam satu jawaban server — cetak unit itu manual lewat *Print for Owner*; sisanya tetap masuk ZIP. |
+| `PDF renderer unavailable …` | Hanya di server Node sendiri (bukan Vercel): jalankan `npm install`, atau set `CHROME_PATH` ke binary Chrome lokal. Di Vercel dependensinya terpasang otomatis saat deploy. |
+| Satu unit `render failed …` / `HTTP 500` | Render unit itu gagal (biasanya start dingin Chromium atau foto lambat) — jalankan ulang batch; percobaan kedua hampir selalu berhasil. |
 | Foto di PDF jadi `[photo could not be fetched]` | File Drive-nya tidak terbaca akun skrip — pastikan folder *Rekap* dibagikan ke akun yang men-deploy (atau *anyone with link — Viewer*). |

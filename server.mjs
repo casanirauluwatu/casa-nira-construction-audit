@@ -108,8 +108,28 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Batch export (Client Report → PDFs in Drive). Never cached: each call is a
-  // command — read the batch sheet, create the run folder, render one unit.
+  // Batch export: HTML → PDF via headless Chromium (same engine as the print
+  // dialog, so the PDFs match "Print for Owner" exactly). Needs npm install
+  // or CHROME_PATH; without either it answers a clear error and everything
+  // else keeps running dep-free.
+  if (url.pathname === "/api/klien/render") {
+    if (req.method !== "POST") { res.writeHead(405, { "content-type": "application/json" }).end('{"ok":false,"error":"POST {html} only"}'); return; }
+    const chunks = [];
+    for await (const c of req) chunks.push(c);
+    let html = null;
+    try { html = JSON.parse(Buffer.concat(chunks).toString("utf8")).html; } catch {}
+    if (typeof html !== "string" || !html || html.length > 2e6) {
+      res.writeHead(400, { "content-type": "application/json" }).end('{"ok":false,"error":"html required (JSON {html}, ≤ 2 MB)"}');
+      return;
+    }
+    const { renderPdf } = await import("./render-core.mjs");
+    const out = await renderPdf(html);
+    if (!out.ok) { res.writeHead(500, { "content-type": "application/json", "cache-control": "no-store" }).end(JSON.stringify(out)); return; }
+    res.writeHead(200, { "content-type": "application/pdf", "cache-control": "no-store" }).end(Buffer.from(out.pdf));
+    return;
+  }
+
+  // Batch sheet config (which rows cover the picked date). Never cached.
   if (url.pathname === "/api/klien/batch") {
     let body = null;
     if (req.method === "POST") {

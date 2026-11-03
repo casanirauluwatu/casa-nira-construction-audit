@@ -1318,11 +1318,11 @@
   // One compact unit page: project strip, unit + progress stats, S-curve,
   // highlight/lowlight, then the photos. Progress figures only — labour and
   // manpower stay on the internal tabs; this page goes to the owner.
-  function kunitSec(u, r, caps){
+  function kunitSec(u, r, caps, noCurve){
     const shots=kShots(u.id);
-    // The S-curve chip pulls the chart from every unit page; the stats line
-    // above it keeps carrying the progress figures either way.
-    const curve = !(KSEC && KSEC.has("SCURVE")) ? ""
+    // The S-curve chip pulls the chart from every unit page; the batch export
+    // passes noCurve because its PDFs never carry the curve.
+    const curve = noCurve || !(KSEC && KSEC.has("SCURVE")) ? ""
       : r ? kcurve(r)
       : `<div class="kempty">${AUDIT?`No S-curve data available for ${esc(u.id)}.`:"Loading progress data…"}</div>`;
     // Captions start empty on purpose: camera file names ("IMG 8841",
@@ -1605,7 +1605,7 @@
     kn.innerHTML = `Compact owner report — pick a unit, then <strong>Print for Owner</strong> (choose “Save as PDF” in the print dialog to send it). `
       + `Toggle the Amenities, Furniture &amp; Communal sections off for an owner they do not apply to — furniture differs between units. `
       + `Photo descriptions, Highlights &amp; Next Week Focus are click-to-edit; entries are saved on this device. `
-      + `<strong>Batch Export ZIP</strong> downloads one PDF per unit as a single ZIP — always the last 7 days ending on the date picked above; Highlights &amp; Lowlights come from the batch sheet row covering that date.`;
+      + `<strong>Batch Export ZIP</strong> downloads one PDF per unit as a single ZIP — the exact “Print for Owner” layout minus the S-curve, always the last 7 days ending on the date picked above; Highlights &amp; Lowlights come from the batch sheet row covering that date.`;
 
     const am={}; if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok) am[r.unit]=r;
     const caps=kcaps(kd);
@@ -1658,8 +1658,11 @@
      ending on the tab's picked date — and downloads them as ONE ZIP, so
      nobody saves 19 print dialogs by hand. The batch Google Sheet supplies
      each unit's Highlights/Lowlights via the row whose date range CONTAINS
-     the picked date. The browser gathers the data and assembles the archive;
-     the Apps Script behind BATCH_FEED only renders payloads into PDFs. */
+     the picked date (reading the sheet is all BATCH_FEED is used for now).
+     Each PDF is the EXACT printed report: the unit's section is built with
+     the same templates, wrapped in the page's own stylesheet, and printed by
+     headless Chromium at /api/klien/render — the same engine as the print
+     dialog — minus the S-curve, which the owners' batch copies leave out. */
   function kbNote(html, err){ const n=$("kbatchNote"); n.hidden=false; n.className="note"+(err?" err":""); n.innerHTML=html; }
   async function kbCall(url, body){
     const res = await fetch(url, body ? { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(body) } : { cache:"no-store" });
@@ -1668,21 +1671,6 @@
     if(!j.ok) throw new Error(j.error||`HTTP ${res.status}`);
     return j;
   }
-  // Every photo caption typed on this device, photo id → text. Captions are
-  // stored per report date, but a photo only ever has one caption — scan all
-  // the dates and let the newest win.
-  function kAllCaps(){
-    const out={};
-    try{
-      for(const k of Object.keys(localStorage).filter(k=>k.startsWith("kcap:")).sort()){
-        let o; try{ o=JSON.parse(localStorage.getItem(k)||"{}"); }catch{ continue; }
-        for(const ck of Object.keys(o)) if(ck.startsWith("p:") && o[ck]) out[ck.slice(2)]=o[ck];
-      }
-    }catch{}
-    return out;
-  }
-  const kbDates = (start,end)=>{ const out=[]; let d=start,g=0; while(d<=end&&g++<62){ out.push(d); d=shiftDay(d,1); } return out; };
-
   // Minimal ZIP writer (STORE — the PDFs are already compressed), so the
   // archive is assembled right in the browser with zero dependencies and
   // handed over as a normal download.
@@ -1708,10 +1696,24 @@
     parts.push(...cdir, new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cs),...u32(off),...u16(0)]));
     return new Blob(parts,{type:"application/zip"});
   }
-  function kbB64(b64){
-    const bin=atob(b64), out=new Uint8Array(bin.length);
-    for(let i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i);
-    return out;
+  // One unit's report as a standalone page: the SAME templates and the SAME
+  // stylesheet the print dialog uses — the top strip with the period and the
+  // sheet's Highlights/Lowlights, then the unit section (photos, captions),
+  // no S-curve. print-klien on <body> applies the owner-print rules.
+  function kbUnitHtml(r, u, a, D){
+    const rd = new Date(D+"T00:00:00");
+    const caps = kcaps(D);
+    // data-ck keeps the print CSS working: an empty block hides itself, and
+    // both empty hides the whole strip — exactly as in the manual print.
+    const krep = `<div class="krep">`
+      + `<div class="kutop"><span>Casa Nira Uluwatu · Weekly Progress Report</span><span class="kd">Week ending ${fmtEN(rd)}</span></div>`
+      + `<div class="khlwrap"><div class="khl">`
+      + `<div class="kdesc kh"><span class="kdl">Highlights</span><div data-ck="h:@">${esc(r.highlights||"")}</div></div>`
+      + `<div class="kdesc kl"><span class="kdl">Lowlights</span><div data-ck="f:@">${esc(r.lowlights||"")}</div></div>`
+      + `</div></div></div>`;
+    const css = document.querySelector("style").textContent;
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><style>${css}</style></head>`
+      + `<body class="print-klien"><div class="wrap">${krep}${kunitSec(u, a, caps, true)}</div></body></html>`;
   }
 
   let KBATCH=false;
@@ -1741,57 +1743,39 @@
       }
       if(!runs.length) throw new Error(`no sheet row covers ${D}`+(skippedRows.length?" — "+skippedRows.join(" · "):"."));
 
-      // One photo lookup per day of the 7-day window, shared by every unit.
-      const days=kbDates(D0, D);
-      kbNote(`Fetching photo listings for ${days.length} days (${esc(D0)} → ${esc(D)})…`);
-      const dayPhotos=new Map();
-      let di=0;
-      await Promise.all(Array.from({length:4},async()=>{
-        for(;;){
-          const day=days[di++]; if(!day) return;
-          try{ const res=await fetch("/api/daily/photos?date="+day); const j=await res.json(); if(j&&j.ok) dayPhotos.set(day,j); }catch{}
-        }
-      }));
+      // Load the exact photo set the printed report would show: the 7-day
+      // window ending on D, through the same loader the tab itself uses.
+      kbNote(`Fetching photos for the 7 days ending <strong>${esc(D)}</strong>…`);
+      const prevRange=KRANGE; KRANGE=7;
+      await loadKPhotos(D, 7);
 
-      const caps=kAllCaps();
       const audit={}; if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok) audit[r.unit]=r;
-      const done=[], failed=[], parked=[];
+      const done=[], failed=[];
+      const rd=new Date(D+"T00:00:00");
+      const dEn=`${rd.getDate()} ${MON_EN[rd.getMonth()]} ${rd.getFullYear()}`;
       for(let i=0;i<runs.length;i++){
-        const r=runs[i], u=units.get(r.unit), a=audit[r.unit];
+        const r=runs[i], u=units.get(r.unit);
         kbNote(`Exporting <strong>${esc(r.unit)}</strong> (${i+1}/${runs.length}) · ${esc(D0)} → ${esc(D)}… `
           + `<span class="dim">${done.length} ready${failed.length?` · ${failed.length} failed`:""}</span>`);
-        const shots=[], seen=new Set();
-        for(const day of days){
-          const j=dayPhotos.get(day); if(!j) continue;
-          const arr=(j.photos||{})[r.unit] || (j.photos||{})[(j.alias||{})[r.unit]] || [];
-          for(const s of arr){ if(seen.has(s.id)) continue; seen.add(s.id); shots.push({ id:s.id, day, caption:caps[s.id]||"" }); }
-        }
         try{
-          const out = await kbCall("/api/klien/batch",{
-            action:"unit", unit:r.unit, type:u.type||"",
-            start:D0, end:D,
-            stats: a ? { actual:a.actual, planned:a.planned, deviation:a.deviation,
-              target:vizTarget(a), committed:commitOf(r.unit), bare:ACTUAL_ONLY.has(r.unit) } : null,
-            series: a && Array.isArray(a.series)
-              ? a.series.map(w=>{ const t=pW(w.d); return t?{ d:t.toISOString().slice(0,10), p:w.p, a:w.a }:null; }).filter(Boolean)
-              : [],
-            // Highlights/Lowlights travel on the sheet's row, so the whole
-            // batch works from any machine — only photo captions are local.
-            photos:shots, highlights:r.highlights||"", lowlights:r.lowlights||"",
-          });
-          // Normal answer carries the PDF itself; a PDF too big for the
-          // proxy comes back as a Drive link instead.
-          if(out.pdf) done.push({ name:out.name||`Casa Nira ${r.unit}.pdf`, data:kbB64(out.pdf) });
-          else if(out.tooLarge && out.file) parked.push({ unit:r.unit, url:out.file.url });
-          else throw new Error("no PDF in the answer");
+          const res = await fetch("/api/klien/render",{ method:"POST",
+            headers:{"content-type":"application/json"},
+            body:JSON.stringify({ html: kbUnitHtml(r, u, audit[r.unit], D) }) });
+          if(res.ok && (res.headers.get("content-type")||"").includes("pdf")){
+            // Same file name the manual print would save under.
+            done.push({ name:`Casa Nira ${r.unit} Weekly Report - ${dEn}.pdf`, data:new Uint8Array(await res.arrayBuffer()) });
+          }else{
+            let j=null; try{ j=await res.json(); }catch{}
+            throw new Error((j&&j.error)||`HTTP ${res.status}`);
+          }
         }catch(e){ failed.push({ unit:r.unit, err:e.message }); }
       }
+      KRANGE=prevRange;
       // Assemble the archive right here and hand it over as a download —
-      // nothing stays on Drive (bar the rare oversized PDF linked below).
+      // nothing is stored anywhere.
       let zipName=null;
       if(done.length){
-        const rd=new Date(D+"T00:00:00");
-        zipName=`Casa Nira Client Reports - ${rd.getDate()} ${MON_EN[rd.getMonth()]} ${rd.getFullYear()}.zip`;
+        zipName=`Casa Nira Client Reports - ${dEn}.zip`;
         const url=URL.createObjectURL(kbZip(done));
         const aEl=document.createElement("a");
         aEl.href=url; aEl.download=zipName;
@@ -1799,7 +1783,6 @@
         setTimeout(()=>URL.revokeObjectURL(url), 60000);
       }
       kbNote(`Batch export finished — <strong>${done.length}</strong> of ${runs.length} PDF${runs.length===1?"":"s"}${zipName?` downloaded as <strong>${esc(zipName)}</strong>`:""} · last 7 days ending ${esc(D)}.`
-        + (parked.length?`<br>Too large to download through the dashboard, saved on Drive instead: ${parked.map(p=>`<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.unit)} ↗</a>`).join(" · ")}.`:"")
         + (failed.length?`<br>Failed: ${failed.map(f=>`<strong>${esc(f.unit)}</strong> — ${esc(f.err)}`).join(" · ")}. Run the batch again to retry.`:"")
         + (skippedRows.length?`<br>Skipped: ${skippedRows.join(" · ")}.`:""), !!failed.length);
     }catch(e){

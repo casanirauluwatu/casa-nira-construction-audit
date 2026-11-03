@@ -250,30 +250,24 @@ number, never silently dropped.
 
 ### How a run works
 
-The **browser** gathers everything — audit stats + S-curve series (already
-loaded for the page), the photo ids for the 7-day window (one
-`/api/daily/photos` call per day, shared across units), the photo captions
-typed **on that device**, and the matching row's Highlights / Lowlights —
-then POSTs one JSON payload per unit through `/api/klien/batch` (which only
-forwards to `BATCH_FEED`; the URL stays server-side because it can still
-write to Drive in the oversize case).
-
-For each payload the script builds a Google Doc — header, stats strip,
-plan-vs-actual chart (Charts service), Highlights/Lowlights blocks, photos
-2-up with captions (Drive thumbnails, HEIC transcoded) — exports it as
-`Casa Nira <unit> Progress Report - <range>.pdf`, trashes the temp Doc, and
-answers the **PDF itself, base64**. The dashboard assembles the ZIP in the
-browser (a ~40-line STORE zip writer, zero dependencies) and downloads it as
+Since the PDFs must match **Print for Owner** exactly, this script no longer
+renders anything: the dashboard builds each unit's report section with the
+page's own templates and stylesheet (no S-curve), POSTs the HTML to
+`/api/klien/render`, where **headless Chromium** — the same engine as the
+print dialog — prints it to PDF. The browser then assembles the ZIP (a small
+dependency-free STORE zip writer) and downloads it as
 `Casa Nira Client Reports - <date>.zip`.
+
+What this script still does: **serve the sheet** — `?action=config&date=…`
+answers the row containing that date per unit, with Highlights/Lowlights.
+The `unit` render action from v4 remains deployed but is no longer called;
+no re-deploy is needed when only the dashboard changes.
 
 Notes:
 
-- A PDF over ~3 MB cannot travel through the Vercel proxy (4.5 MB response
-  cap): the script parks that one in the *Casa Nira — Client Reports* Drive
-  folder and answers a link, which the result note lists separately.
 - The dashboard refuses to run against an older deployment (it checks
-  `scriptVersion`), so a forgotten re-paste fails loudly instead of exporting
-  the wrong rows.
+  `scriptVersion`), so a stale script fails loudly instead of exporting the
+  wrong rows.
 - Photo captions live in the browser's `localStorage`, so run the batch from
   the machine where they were typed; Highlights/Lowlights travel on the sheet
   and work from anywhere.
