@@ -271,5 +271,8 @@ Notes:
 - Photo captions live in the browser's `localStorage`, so run the batch from
   the machine where they were typed; Highlights/Lowlights travel on the sheet
   and work from anywhere.
-- The common-area sections (Amenities, Furniture, …) are not in the batch
-  PDFs — they are per-report choices on screen; print those one-off.
+- Every batch PDF also carries the **Amenities, Furniture P1 and Communal**
+  sections (same templates as the screen); the other area sections stay
+  per-report choices for the manual print.
+- Units render three at a time with two automatic retries each — a
+  "Failed to fetch" blip costs one retry, not the unit.

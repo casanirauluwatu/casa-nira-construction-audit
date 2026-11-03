@@ -1605,7 +1605,7 @@
     kn.innerHTML = `Compact owner report — pick a unit, then <strong>Print for Owner</strong> (choose “Save as PDF” in the print dialog to send it). `
       + `Toggle the Amenities, Furniture &amp; Communal sections off for an owner they do not apply to — furniture differs between units. `
       + `Photo descriptions, Highlights &amp; Next Week Focus are click-to-edit; entries are saved on this device. `
-      + `<strong>Batch Export ZIP</strong> downloads one PDF per unit as a single ZIP — the exact “Print for Owner” layout minus the S-curve, always the last 7 days ending on the date picked above; Highlights &amp; Lowlights come from the batch sheet row covering that date.`;
+      + `<strong>Batch Export ZIP</strong> downloads one PDF per unit as a single ZIP — the exact “Print for Owner” layout minus the S-curve, plus the Amenities, Furniture P1 &amp; Communal sections, always the last 7 days ending on the date picked above; Highlights &amp; Lowlights come from the batch sheet row covering that date.`;
 
     const am={}; if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok) am[r.unit]=r;
     const caps=kcaps(kd);
@@ -1711,9 +1711,14 @@
       + `<div class="kdesc kh"><span class="kdl">Highlights</span><div data-ck="h:@">${esc(r.highlights||"")}</div></div>`
       + `<div class="kdesc kl"><span class="kdl">Lowlights</span><div data-ck="f:@">${esc(r.lowlights||"")}</div></div>`
       + `</div></div></div>`;
+    // Every owner copy also carries the three site-wide sections, built with
+    // the same templates the screen and the manual print use.
+    const areas = ["AMENITIES", "FURNITURE_P1", "COMMUNAL"]
+      .map(id=>KAREAS.find(x=>x.id===id)).filter(Boolean)
+      .map(a=>kareaSec(a)).join("");
     const css = document.querySelector("style").textContent;
     return `<!doctype html><html lang="en"><head><meta charset="utf-8"><style>${css}</style></head>`
-      + `<body class="print-klien"><div class="wrap">${krep}${kunitSec(u, a, caps, true)}</div></body></html>`;
+      + `<body class="print-klien"><div class="wrap">${krep}${kunitSec(u, a, caps, true)}${areas}</div></body></html>`;
   }
 
   let KBATCH=false;
@@ -1743,33 +1748,54 @@
       }
       if(!runs.length) throw new Error(`no sheet row covers ${D}`+(skippedRows.length?" — "+skippedRows.join(" · "):"."));
 
-      // Load the exact photo set the printed report would show: the 7-day
-      // window ending on D, through the same loader the tab itself uses.
+      // Load the exact photo set the printed report would show (the 7-day
+      // window, through the tab's own loader) and the common-area photos the
+      // report sections embed.
       kbNote(`Fetching photos for the 7 days ending <strong>${esc(D)}</strong>…`);
       const prevRange=KRANGE; KRANGE=7;
-      await loadKPhotos(D, 7);
+      const areasReady = (async()=>{
+        if(AREAS===null && !LOADING_AREAS) return loadAreas();
+        while(LOADING_AREAS) await new Promise(rs=>setTimeout(rs,300));
+      })();
+      await Promise.all([loadKPhotos(D, 7), areasReady]);
 
       const audit={}; if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok) audit[r.unit]=r;
       const done=[], failed=[];
       const rd=new Date(D+"T00:00:00");
       const dEn=`${rd.getDate()} ${MON_EN[rd.getMonth()]} ${rd.getFullYear()}`;
-      for(let i=0;i<runs.length;i++){
-        const r=runs[i], u=units.get(r.unit);
-        kbNote(`Exporting <strong>${esc(r.unit)}</strong> (${i+1}/${runs.length}) · ${esc(D0)} → ${esc(D)}… `
-          + `<span class="dim">${done.length} ready${failed.length?` · ${failed.length} failed`:""}</span>`);
-        try{
-          const res = await fetch("/api/klien/render",{ method:"POST",
-            headers:{"content-type":"application/json"},
-            body:JSON.stringify({ html: kbUnitHtml(r, u, audit[r.unit], D) }) });
-          if(res.ok && (res.headers.get("content-type")||"").includes("pdf")){
-            // Same file name the manual print would save under.
-            done.push({ name:`Casa Nira ${r.unit} Weekly Report - ${dEn}.pdf`, data:new Uint8Array(await res.arrayBuffer()) });
-          }else{
-            let j=null; try{ j=await res.json(); }catch{}
-            throw new Error((j&&j.error)||`HTTP ${res.status}`);
+      // Three renders in flight at once — the server keeps one browser per
+      // instance warm, so this cuts a 19-unit run to a few minutes — and a
+      // unit retries twice before it counts as failed: a "Failed to fetch"
+      // here is a connection blip, not a verdict.
+      const tick=()=>kbNote(`Exporting ${runs.length} units · last 7 days ${esc(D0)} → ${esc(D)} — `
+        + `<strong>${done.length}</strong> ready${failed.length?` · ${failed.length} failed`:""}…`);
+      tick();
+      let qi=0;
+      await Promise.all(Array.from({length:Math.min(3,runs.length)},async()=>{
+        for(;;){
+          const r=runs[qi++]; if(!r) return;
+          const html=kbUnitHtml(r, units.get(r.unit), audit[r.unit], D);
+          let data=null, lastErr=null;
+          for(let at=0; at<3 && !data; at++){
+            if(at) await new Promise(rs=>setTimeout(rs, 1500*at));
+            try{
+              const res = await fetch("/api/klien/render",{ method:"POST",
+                headers:{"content-type":"application/json"}, body:JSON.stringify({ html }) });
+              if(res.ok && (res.headers.get("content-type")||"").includes("pdf")){
+                data=new Uint8Array(await res.arrayBuffer()); break;
+              }
+              let j=null; try{ j=await res.json(); }catch{}
+              lastErr=(j&&j.error)||`HTTP ${res.status}`;
+              if(res.status===400||res.status===413) break;   // not transient — retrying can't help
+            }catch(e){ lastErr=e.message||"network error"; }
           }
-        }catch(e){ failed.push({ unit:r.unit, err:e.message }); }
-      }
+          // Same file name the manual print would save under.
+          if(data) done.push({ name:`Casa Nira ${r.unit} Weekly Report - ${dEn}.pdf`, data });
+          else failed.push({ unit:r.unit, err:(lastErr||"?")+" (3 attempts)" });
+          tick();
+        }
+      }));
+      done.sort((x,y)=>x.name<y.name?-1:x.name>y.name?1:0);
       KRANGE=prevRange;
       // Assemble the archive right here and hand it over as a download —
       // nothing is stored anywhere.
