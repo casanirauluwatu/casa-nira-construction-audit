@@ -99,10 +99,12 @@ unit has in its range — with the captions typed on the exporting device
 layout is rebuilt in Google Docs by the Apps Script, so it mirrors the printed
 report rather than reproducing it pixel-for-pixel.
 
-Setup once: open the batch sheet → Extensions › Apps Script → paste
-`apps-script/batch-export.gs` → deploy as a web app (*Execute as me*, access
-*Anyone*) → set **`BATCH_FEED`** to the `/exec` URL (Vercel env var or `.env`).
-See [`apps-script/README.md`](apps-script/README.md#batch-export--client-report-pdfs-to-drive).
+Setup once (±10 minutes, click-by-click, in Indonesian):
+**[`docs/PANDUAN-DEPLOY-BATCH.md`](docs/PANDUAN-DEPLOY-BATCH.md)** — paste
+`apps-script/batch-export.gs` on the batch sheet, deploy as a web app, set
+**`BATCH_FEED`** to its `/exec` URL on Vercel, redeploy, press the button.
+Mechanics and payload details:
+[`apps-script/README.md`](apps-script/README.md#batch-export--client-report-pdfs-to-drive).
 
 ## CLI
 

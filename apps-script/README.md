@@ -229,6 +229,9 @@ reported by row number, never silently dropped.
 
 ### Deploy
 
+> Step-by-step with screenshots-level detail (ID):
+> [`docs/PANDUAN-DEPLOY-BATCH.md`](../docs/PANDUAN-DEPLOY-BATCH.md)
+
 1. Open the batch sheet → **Extensions › Apps Script**, paste
    **`batch-export.gs`**, Save. (`SHEET_ID` is already set.)
 2. **Deploy › New deployment › Web app** — *Execute as* **Me**, *Who has
