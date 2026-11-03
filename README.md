@@ -15,8 +15,10 @@ Two tabs on one page for the Casa Nira Uluwatu build:
   table bars and the % cells. The chosen day and unit live in the URL (`?d=&mp=`),
   so a link reopens the same view.
 
-**Zero dependencies** (Node 18+). Three ways to run it: **CLI** (audit only), a
-**plain Node server**, or **Vercel**.
+**Zero dependencies** (Node 18+) — with one exception: the Client Report
+batch-PDF renderer (`api/klien/render.js`) uses headless Chromium, see
+[batch export](#batch-export-zip). Everything else runs dep-free. Three ways
+to run it: **CLI** (audit only), a **plain Node server**, or **Vercel**.
 
 ### One source per figure
 
@@ -93,15 +95,21 @@ bottom-most wins). Units whose rows don't cover the date are skipped and
 named. *Tanggal Akhir* is required; an empty *Tanggal Mulai* means the 7 days
 ending on it.
 
-Each PDF carries the unit's progress stats, the plan-vs-actual S-curve, the
-row's Highlights (green) and Lowlights (amber), and every photo the unit has
-in the 7-day window — with the captions typed on the exporting device
-(captions live in `localStorage`; everything else travels on the sheet). The
-layout is rebuilt in Google Docs by the Apps Script, so it mirrors the printed
-report rather than reproducing it pixel-for-pixel. A PDF too large to travel
-through the serverless proxy (~3 MB) is parked in the *Casa Nira — Client
-Reports* Drive folder and linked from the result note instead — the only case
-Drive is used.
+Each PDF **is the printed report**: the unit's section is built with the same
+templates and stylesheet as the page and printed by headless Chromium at
+`/api/klien/render` — the same engine as the browser's own print dialog — so
+the batch output matches **Print for Owner** exactly, minus the S-curve,
+which the owners' batch copies leave out. It carries the report strip with
+the row's Highlights (green) and Lowlights (amber), and every photo the unit
+has in the 7-day window with the captions typed on the exporting device
+(captions live in `localStorage`; Highlights/Lowlights travel on the sheet).
+
+The renderer is the repo's one exception to "zero dependencies":
+`puppeteer-core` + `@sparticuz/chromium`, pinned in `package.json`. Vercel
+installs them automatically; on the plain Node server set `CHROME_PATH` to a
+local Chrome binary (or `npm install`) — without either, only that route
+reports itself unavailable and everything else stays dep-free. The Apps
+Script (`BATCH_FEED`) is now used solely to read the batch sheet.
 
 Setup once (±10 minutes, click-by-click, in Indonesian):
 **[`docs/PANDUAN-DEPLOY-BATCH.md`](docs/PANDUAN-DEPLOY-BATCH.md)** — paste
