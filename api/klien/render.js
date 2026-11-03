@@ -32,10 +32,10 @@ export default async function handler(req, res) {
     res.status(500).json(out);
     return;
   }
-  if (out.pdf.length > 4400000) {
-    // A Vercel response caps at ~4.5 MB — name the cause instead of letting
-    // the platform cut the body off mid-transfer.
-    res.status(413).json({ ok: false, error: `PDF is ${(out.pdf.length / 1e6).toFixed(1)} MB — too large for the proxy. Fewer photos in the window, or print this unit manually.` });
+  if (out.pdf.length > 25e6) {
+    // Verified in production that ~5 MB PDFs stream through fine, so this is
+    // only a backstop against a truly pathological page.
+    res.status(413).json({ ok: false, error: `PDF is ${(out.pdf.length / 1e6).toFixed(1)} MB — too large to answer. Fewer photos in the window, or print this unit manually.` });
     return;
   }
   res.setHeader("content-type", "application/pdf");

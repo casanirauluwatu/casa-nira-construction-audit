@@ -1742,10 +1742,15 @@
       const units = new Map(((DAILY&&DAILY.units)||[]).map(u=>[u.id,u]));
       const runs=[], skippedRows=(cfg.invalid||[]).map(v=>`row ${v.row} ${esc(v.unit)} (${esc(v.error)})`);
       for(const un of (cfg.unmatched||[])) skippedRows.push(`${esc(un)} (no sheet row covers ${esc(D)})`);
-      for(const r of (cfg.rows||[])){
-        if(!units.has(r.unit)) skippedRows.push(`${esc(r.unit)} (not on the daily feed)`);
-        else runs.push(r);
-      }
+      // The batch sheet decides what exports — a unit missing from the day's
+      // labour feed (a month tab without its block yet) still renders, with
+      // the villa type from this fallback. Photos and captions key on the
+      // unit id, not the feed.
+      const KTYPE={A1:"The Haven",A2:"The Haven",A3:"The Haven+",A4:"The Haven",A5:"The Haven+",
+        B1:"The Essence",B2:"The Essence",B3:"The Essence",B4:"The Essence",B5:"The Essence",
+        C1:"The Sanctuary",C2:"The Sanctuary",C3:"The Sanctuary",C4:"The Sanctuary",
+        C5:"The Sanctuary",C6:"The Sanctuary",C7:"The Sanctuary",C8:"The Sanctuary",D1:"The Eden"};
+      for(const r of (cfg.rows||[])) runs.push(r);
       if(!runs.length) throw new Error(`no sheet row covers ${D}`+(skippedRows.length?" — "+skippedRows.join(" · "):"."));
 
       // Load the exact photo set the printed report would show (the 7-day
@@ -1774,7 +1779,8 @@
       await Promise.all(Array.from({length:Math.min(3,runs.length)},async()=>{
         for(;;){
           const r=runs[qi++]; if(!r) return;
-          const html=kbUnitHtml(r, units.get(r.unit), audit[r.unit], D);
+          const u=units.get(r.unit)||{ id:r.unit, type:KTYPE[r.unit]||"" };
+          const html=kbUnitHtml(r, u, audit[r.unit], D);
           let data=null, lastErr=null;
           for(let at=0; at<3 && !data; at++){
             if(at) await new Promise(rs=>setTimeout(rs, 1500*at));
