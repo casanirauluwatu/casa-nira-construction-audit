@@ -78,22 +78,26 @@ see [days that haven't happened](apps-script/README.md#days-that-havent-happened
 ## Batch export to Drive
 
 **Batch Export → Drive** on the Client Report tab replaces saving one print
-dialog per unit: one click renders every listed unit to its own PDF and files
-them all in a **new Drive folder** per run (inside *Casa Nira — Client
-Reports*).
+dialog per unit: one click renders every unit to its own PDF and delivers them
+as **one ZIP archive** in the *Casa Nira — Client Reports* Drive folder (the
+per-run working folder is zipped and trashed at the end).
 
-Which units run — and the **date range each unit's photos cover** — live on a
-dedicated Google Sheet, **“Casa Nira — Batch Export Laporan Klien”**
-(`1mPOm4EtN2j93cMwx4BRVWXQLiNjRwExuad2V-KWIZvA`): one row per unit with
-*Tanggal Mulai*, *Tanggal Akhir* and *Ikut Batch* (YA/TIDAK). Both dates empty
-means the last 7 days ending today (WITA).
+What runs comes from a dedicated Google Sheet, **“Casa Nira — Batch Export
+Laporan Klien”** (`1mPOm4EtN2j93cMwx4BRVWXQLiNjRwExuad2V-KWIZvA`). Its `Batch`
+tab is an **append-only log**: *Tanggal Mulai · Tanggal Akhir · Unit ·
+Highlights · Lowlights*, one row per unit per period — each week ops add fresh
+rows for the units below the old ones and never delete anything. The dates
+alone decide what exports: the batch takes the **newest row per unit** (latest
+*Tanggal Akhir*; bottom-most row on a tie), so older rows are simply the
+archive. *Tanggal Akhir* is required; an empty *Tanggal Mulai* means the 7
+days ending on it.
 
 Each PDF carries the unit's progress stats, the plan-vs-actual S-curve, the
-Highlights / Next Week Focus typed on the exporting device, and every photo the
-unit has in its range — with the captions typed on that device (captions live
-in `localStorage`, so export from the machine that wrote them). The layout is
-rebuilt in Google Docs by the Apps Script, so it mirrors the printed report
-rather than reproducing it pixel-for-pixel.
+row's own **Highlights** (green) and **Lowlights** (amber), and every photo the
+unit has in its range — with the captions typed on the exporting device
+(captions live in `localStorage`; everything else travels on the sheet). The
+layout is rebuilt in Google Docs by the Apps Script, so it mirrors the printed
+report rather than reproducing it pixel-for-pixel.
 
 Setup once: open the batch sheet → Extensions › Apps Script → paste
 `apps-script/batch-export.gs` → deploy as a web app (*Execute as me*, access
