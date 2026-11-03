@@ -41,7 +41,7 @@ notes should be entered on the machine that prints.
 | --- | --- | --- |
 | `CONSTRUCTION_FEEDS` | yes | JSON map of villa → Apps Script `/exec` URL. Keep it out of git — those URLs are effectively credentials. |
 | `DAILY_FEED` | no | Apps Script `/exec` URL for the labour sheet — deploy `apps-script/daily-labour.gs`, see [`apps-script/README.md`](apps-script/README.md). Unset = serve the snapshot committed in `daily-data.mjs`. |
-| `BATCH_FEED` | no | Apps Script `/exec` URL for the Client Report batch export — deploy `apps-script/batch-export.gs` on the batch Google Sheet, see [batch export](#batch-export-to-drive). Unset = the **Batch Export → Drive** button reports it is not configured. Keep it out of git — this URL can write PDFs into Drive. |
+| `BATCH_FEED` | no | Apps Script `/exec` URL for the Client Report batch export — deploy `apps-script/batch-export.gs` on the batch Google Sheet, see [batch export](#batch-export-zip). Unset = the **Batch Export ZIP** button reports it is not configured. Keep it out of git — this URL reads the sheet and can still park oversized PDFs in Drive. |
 | `STALE_DAYS` | no | Staleness threshold in days (default 10). |
 | `CACHE_TTL_MIN` | no | Node-server in-memory cache, minutes (default 360). |
 
@@ -75,29 +75,33 @@ attendance are villa concepts.
 Actuals on dates after today are reported as absent rather than as measurements;
 see [days that haven't happened](apps-script/README.md#days-that-havent-happened).
 
-## Batch export to Drive
+## Batch export ZIP
 
-**Batch Export → Drive** on the Client Report tab replaces saving one print
-dialog per unit: one click renders every unit to its own PDF and delivers them
-as **one ZIP archive** in the *Casa Nira — Client Reports* Drive folder (the
-per-run working folder is zipped and trashed at the end).
+**Batch Export ZIP** on the Client Report tab replaces saving one print dialog
+per unit: one click renders every unit to its own PDF and **downloads them as
+one ZIP** — assembled in the browser, nothing left on Drive. The report window
+is always the **last 7 days ending on the date picked on the tab**.
 
-What runs comes from a dedicated Google Sheet, **“Casa Nira — Batch Export
-Laporan Klien”** (`1mPOm4EtN2j93cMwx4BRVWXQLiNjRwExuad2V-KWIZvA`). Its `Batch`
-tab is an **append-only log**: *Tanggal Mulai · Tanggal Akhir · Unit ·
-Highlights · Lowlights*, one row per unit per period — each week ops add fresh
-rows for the units below the old ones and never delete anything. The dates
-alone decide what exports: the batch takes the **newest row per unit** (latest
-*Tanggal Akhir*; bottom-most row on a tie), so older rows are simply the
-archive. *Tanggal Akhir* is required; an empty *Tanggal Mulai* means the 7
-days ending on it.
+Each unit's **Highlights** and **Lowlights** come from a dedicated Google
+Sheet, **“Casa Nira — Batch Export Laporan Klien”**
+(`1mPOm4EtN2j93cMwx4BRVWXQLiNjRwExuad2V-KWIZvA`). Its `Batch` tab is an
+**append-only log**: *Tanggal Mulai · Tanggal Akhir · Unit · Highlights ·
+Lowlights*, one row per unit per period — each week ops add fresh rows below
+the old ones and never delete anything. A unit exports when one of its rows
+**contains the picked date** (Mulai ≤ date ≤ Akhir; several containing rows:
+bottom-most wins). Units whose rows don't cover the date are skipped and
+named. *Tanggal Akhir* is required; an empty *Tanggal Mulai* means the 7 days
+ending on it.
 
 Each PDF carries the unit's progress stats, the plan-vs-actual S-curve, the
-row's own **Highlights** (green) and **Lowlights** (amber), and every photo the
-unit has in its range — with the captions typed on the exporting device
+row's Highlights (green) and Lowlights (amber), and every photo the unit has
+in the 7-day window — with the captions typed on the exporting device
 (captions live in `localStorage`; everything else travels on the sheet). The
 layout is rebuilt in Google Docs by the Apps Script, so it mirrors the printed
-report rather than reproducing it pixel-for-pixel.
+report rather than reproducing it pixel-for-pixel. A PDF too large to travel
+through the serverless proxy (~3 MB) is parked in the *Casa Nira — Client
+Reports* Drive folder and linked from the result note instead — the only case
+Drive is used.
 
 Setup once (±10 minutes, click-by-click, in Indonesian):
 **[`docs/PANDUAN-DEPLOY-BATCH.md`](docs/PANDUAN-DEPLOY-BATCH.md)** — paste

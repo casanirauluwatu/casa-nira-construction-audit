@@ -117,7 +117,13 @@ const server = http.createServer(async (req, res) => {
       for await (const c of req) chunks.push(c);
       try { body = JSON.parse(Buffer.concat(chunks).toString("utf8")); } catch {}
     }
-    const out = await handleBatch({ method: req.method, action: url.searchParams.get("action") || "", body });
+    const qd = url.searchParams.get("date") || "";
+    const out = await handleBatch({
+      method: req.method,
+      action: url.searchParams.get("action") || "",
+      date: /^\d{4}-\d{2}-\d{2}$/.test(qd) ? qd : "",
+      body,
+    });
     res.writeHead(out.status, { "content-type": "application/json", "cache-control": "no-store" }).end(JSON.stringify(out.data));
     return;
   }
