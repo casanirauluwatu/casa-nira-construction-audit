@@ -201,3 +201,78 @@ icon) if you'd rather not.
 | Re-deployed but `series` / `months` still missing | The `/exec` URL is on an old version — see [Re-deploying after an edit](#re-deploying-after-an-edit). Check `scriptVersion` in the response. |
 | Only one month in the dropdown, no chart | Same cause: an older script sends no `months` / `series`. Typing a date still works. |
 | Months listed but selecting one does nothing | The **Vercel function** is stale, not the script — it drops `?date=`/`?month=`. Check `apiVersion` in `/api/daily/report`; it should read `v2-date-month`. Redeploy on Vercel with **Use existing Build Cache** unchecked. |
+
+## Batch export — Client Report PDFs to Drive
+
+`batch-export.gs` is a **second, separate web app** behind the dashboard's
+**Batch Export → Drive** button (Client Report tab). One click renders every
+unit to its own PDF and delivers them as **one ZIP** in Drive — instead of
+saving one print dialog per unit.
+
+It lives on its own spreadsheet, **“Casa Nira — Batch Export Laporan Klien”**
+(`1mPOm4EtN2j93cMwx4BRVWXQLiNjRwExuad2V-KWIZvA`), whose `Batch` tab is an
+**append-only log** — one row per unit per period, fresh rows added below each
+week, nothing deleted:
+
+| Column | Meaning |
+| --- | --- |
+| Tanggal Mulai / Akhir | The date range the unit's photos cover, `YYYY-MM-DD`. **Akhir is required**; an empty Mulai means the 7 days ending on Akhir. |
+| Unit | `A1` … `D1`, matching the daily feed. |
+| Highlights | Key achievements for that period — printed on that unit's PDF (green block). |
+| Lowlights | Issues / needs attention — printed on that unit's PDF (amber block). |
+
+There is no include/exclude column — **the dates decide**: the batch runs the
+newest row per unit (latest *Tanggal Akhir*; on a tie, the bottom-most row,
+since further down means added later). Older rows are the archive and never
+export again. Rows that can't run (no unit, no Akhir, unreadable dates) are
+reported by row number, never silently dropped.
+
+### Deploy
+
+> Step-by-step with screenshots-level detail (ID):
+> [`docs/PANDUAN-DEPLOY-BATCH.md`](../docs/PANDUAN-DEPLOY-BATCH.md)
+
+1. Open the batch sheet → **Extensions › Apps Script**, paste
+   **`batch-export.gs`**, Save. (`SHEET_ID` is already set.)
+2. **Deploy › New deployment › Web app** — *Execute as* **Me**, *Who has
+   access* **Anyone** (the dashboard calls it server-side).
+3. Authorise when prompted — it needs Drive (folders + photo thumbnails),
+   Docs (it builds each PDF as a temporary Google Doc) and external requests.
+4. Test `<exec-url>?pretty=1` → `{"ok":true,"script":"batch-export",…}`, and
+   `<exec-url>?action=config&pretty=1` → the sheet's rows.
+5. Set the `/exec` URL as **`BATCH_FEED`** on the dashboard (Vercel env var →
+   Redeploy; locally in `.env`). Re-deploying after an edit follows the same
+   [New version rule](#re-deploying-after-an-edit) as the labour script.
+
+### How a run works
+
+The **browser** gathers everything — audit stats + S-curve series (already
+loaded for the page), the photo ids for each unit's range (one
+`/api/daily/photos` call per distinct day, shared across units), the photo
+captions typed **on that device**, and the row's own Highlights / Lowlights —
+then POSTs one JSON payload per unit through `/api/klien/batch` (which only
+forwards to `BATCH_FEED`; the URL stays server-side because it can write to
+Drive).
+
+The script creates `Casa Nira — Client Reports / Batch <timestamp>` in the
+deploying account's My Drive as a **workspace**, and for each payload builds a
+Google Doc — header, stats strip, plan-vs-actual chart (Charts service),
+Highlights/Lowlights blocks, photos 2-up with captions (Drive thumbnails, HEIC
+transcoded) — exports it as `Casa Nira <unit> Progress Report - <range>.pdf`,
+and trashes the temp Doc. A final `finish` call then zips every PDF into
+`Batch <timestamp>.zip` **in the parent folder** and trashes the workspace —
+the deliverable is the one ZIP.
+
+Notes:
+
+- A unit that times out at the proxy (60 s) usually **still lands its PDF** —
+  Apps Script keeps executing after the client gives up — but the finish step
+  may have zipped without it. Re-run the batch for a complete archive.
+- If the ZIP itself fails (Apps Script caps a blob around 50 MB — roughly a
+  dozen very photo-heavy units), the run folder with the loose PDFs is kept
+  and the dashboard links it instead.
+- Photo captions live in the browser's `localStorage`, so run the batch from
+  the machine where they were typed; Highlights/Lowlights travel on the sheet
+  and work from anywhere.
+- The common-area sections (Amenities, Furniture, …) are not in the batch
+  PDFs — they are per-report choices on screen; print those one-off.
