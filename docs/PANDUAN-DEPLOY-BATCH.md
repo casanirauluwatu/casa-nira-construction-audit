@@ -1,6 +1,8 @@
-# Panduan Deploy — Batch Export → Drive (step by step)
+# Panduan Deploy — Batch Export ZIP (step by step)
 
-Panduan ini mengaktifkan tombol **Batch Export → Drive** di tab *Client Report*.
+Panduan ini mengaktifkan tombol **Batch Export ZIP** di tab *Client Report*:
+satu klik mengunduh **satu file ZIP** berisi satu PDF per unit — selalu
+**7 hari terakhir** yang berakhir pada tanggal yang dipilih di tab itu.
 Sekali setup (±10 menit), selanjutnya tinggal klik tombol.
 
 Yang dibutuhkan:
@@ -13,16 +15,16 @@ Yang dibutuhkan:
 
 ## Bagian 0 — Deploy dulu kode dashboard-nya (sekali, sebelum semuanya)
 
-Tombol **Batch Export → Drive** baru muncul setelah kode fiturnya masuk ke
-branch **`main`** — situs produksi di Vercel men-deploy dari `main`, bukan dari
+Tombol **Batch Export ZIP** baru muncul setelah kode fiturnya masuk ke branch
+**`main`** — situs produksi di Vercel men-deploy dari `main`, bukan dari
 branch pengembangan.
 
 1. Buka GitHub → repo `casa-nira-construction-audit` → buat **pull request**
-   dari branch `claude/optimistic-ramanujan-1rnvc6` ke `main`, lalu **Merge**
-   (sama seperti PR-PR dashboard sebelumnya).
+   dari branch pengembangan ke `main`, lalu **Merge** (sama seperti PR-PR
+   dashboard sebelumnya).
 2. Vercel otomatis men-deploy `main` setelah merge (±1 menit). Kalau ragu, cek
    tab **Deployments** di Vercel — harus ada deployment Production baru.
-3. Buka dashboard → tab **Client Report** → tombol **Batch Export → Drive**
+3. Buka dashboard → tab **Client Report** → tombol **Batch Export ZIP**
    sekarang terlihat di toolbar, di sebelah *Print for Owner*.
 
    ⚠️ Tombolnya **boleh diklik sebelum Bagian A–B selesai** — hanya saja akan
@@ -68,12 +70,13 @@ branch pengembangan.
 
    - `<URL>?pretty=1` → harus muncul:
      ```json
-     { "ok": true, "script": "batch-export", "scriptVersion": "v3-para-fix", … }
+     { "ok": true, "script": "batch-export", "scriptVersion": "v4-zip-download", … }
      ```
      (`scriptVersion` harus sama dengan `SCRIPT_VERSION` di file `.gs` yang
      di-paste — kalau beda, yang hidup masih kode lama.)
-   - `<URL>?action=config&pretty=1` → harus muncul daftar unit beserta tanggalnya
-     dari tab `Batch`.
+   - `<URL>?action=config&date=2026-11-03&pretty=1` (ganti tanggalnya dengan
+     tanggal yang tercakup di sheet) → harus muncul baris-baris unit yang
+     rentang tanggalnya mencakup tanggal itu.
 
    ✅ Kalau dua-duanya tampil, Bagian A selesai. Kalau yang muncul halaman
    login/HTML, cek lagi *Who has access = Anyone* dan pakai URL `/exec`.
@@ -105,14 +108,18 @@ branch pengembangan.
 
 1. Buka dashboard → tab **Client Report**
    (<https://casa-nira-construction-audit.vercel.app/#klien>).
-2. Klik **Batch Export → Drive**. Catatan progres muncul di bawah toolbar:
-   baca sheet → ambil daftar foto → ekspor unit satu per satu (1/19, 2/19, …)
-   → zip.
-3. Selesai: muncul **link ZIP** — satu arsip berisi satu PDF per unit, tersimpan
-   di folder Drive **Casa Nira — Client Reports**.
+2. Pastikan **Date** di toolbar menunjuk tanggal yang **tercakup rentang di
+   sheet** (mis. 3 November, bila ada baris 2026-10-28 → 2026-11-03).
+3. Klik **Batch Export ZIP**. Catatan progres muncul di bawah toolbar:
+   baca sheet → ambil daftar foto 7 hari → ekspor unit satu per satu
+   (1/19, 2/19, …).
+4. Selesai: browser **mengunduh satu file ZIP** —
+   `Casa Nira Client Reports - <tanggal>.zip`, berisi satu PDF per unit.
+   Tidak ada yang tersimpan di Drive.
 
-✅ Setup selesai. Baris yang dilewati (tanggal salah, unit tak dikenal) disebut
-di catatan hasil, lengkap dengan nomor barisnya.
+✅ Setup selesai. Baris yang dilewati (tanggal salah, rentang tak mencakup
+tanggal terpilih, unit tak dikenal) disebut di catatan hasil, lengkap dengan
+nomor barisnya.
 
 ---
 
@@ -123,9 +130,14 @@ di catatan hasil, lengkap dengan nomor barisnya.
    itu arsip): isi *Tanggal Mulai*, *Tanggal Akhir* (wajib, format
    `YYYY-MM-DD`), *Unit*, *Highlights*, *Lowlights*.
    - *Tanggal Mulai* kosong = otomatis 7 hari sampai *Tanggal Akhir*.
-   - Yang diekspor selalu **baris terbaru per unit** (Tanggal Akhir paling
-     baru; kalau sama, baris paling bawah).
-3. Di dashboard, klik **Batch Export → Drive** → tunggu → ambil ZIP-nya.
+3. Di dashboard, pilih **Date**, lalu klik **Batch Export ZIP** → tunggu →
+   ZIP terunduh.
+
+Cara pemilihan barisnya: untuk tiap unit dipakai **baris yang rentang
+tanggalnya mencakup tanggal yang dipilih** (Mulai ≤ tanggal ≤ Akhir; kalau ada
+dua baris yang sama-sama mencakup, baris paling bawah yang menang). Isi
+laporannya sendiri selalu **7 hari terakhir** sampai tanggal terpilih — jadi
+memilih tanggal minggu lalu otomatis memakai baris arsip minggu itu.
 
 Keterangan foto (caption) diketik di tab Client Report dan tersimpan di
 browser itu — jadi jalankan batch dari komputer tempat caption diketik.
@@ -154,9 +166,11 @@ Menyimpan kode **tidak** otomatis mengubah URL `/exec` yang sudah hidup:
 | `batch feed answered non-JSON (HTTP …)` | *Who has access* bukan **Anyone**, atau URL-nya `/dev` bukan `/exec`, atau salah salin. Ulangi A.5–A.8. |
 | Layar *"Google hasn't verified this app"* saat otorisasi | Normal — Advanced → Go to … → Allow (lihat A.6). |
 | `Exception: … Drive` / soal izin saat run pertama | Otorisasi belum lengkap: di editor Apps Script jalankan fungsi `doGet` sekali (tombol Run) dan setujui semua izin, lalu coba lagi. |
+| `batch-export.gs behind BATCH_FEED is outdated (…)` | Kode di Apps Script belum versi terbaru — paste ulang file `.gs` lalu **Manage deployments › Edit › New version** (lihat bagian update di bawah). |
 | Baris di-skip: `tanggal tidak terbaca — pakai YYYY-MM-DD` | Isi tanggal dengan format `2026-11-03` (atau biarkan Google Sheet mengenalinya sebagai tanggal betulan). |
 | Baris di-skip: `Tanggal Akhir kosong` | *Tanggal Akhir* wajib diisi; hanya *Tanggal Mulai* yang boleh kosong. |
-| `no runnable row on the batch sheet` | Semua baris kosong/rusak — cek tab `Batch`. |
-| `ZIP step failed … ~50 MB` | Run terlalu besar untuk satu arsip. PDF-nya tetap aman di folder run yang ditautkan — unduh dari sana, atau pecah ekspor jadi dua minggu. |
-| Satu unit `batch feed timeout` | Apps Script biasanya tetap menyelesaikan PDF-nya setelah dashboard menyerah, tapi ZIP mungkin terlanjur dibuat tanpa unit itu — jalankan ulang batch untuk arsip yang lengkap. |
+| Unit di-skip: `no sheet row covers <tanggal>` | Tidak ada baris unit itu yang rentangnya mencakup tanggal terpilih — tambah barisnya di sheet, atau ganti **Date** di dashboard. |
+| `no sheet row covers <tanggal>` (semua) | Tanggal terpilih di luar semua rentang di sheet — biasanya lupa menambah baris minggu ini. |
+| Satu unit: `Too large to download through the dashboard` | PDF unit itu > ±3 MB (foto sangat banyak) sehingga tidak muat lewat proxy — file-nya diparkir di folder Drive *Casa Nira — Client Reports* dan ditautkan di catatan hasil; sisanya tetap masuk ZIP. |
+| Satu unit `batch feed timeout` | Render unit itu kehabisan waktu di proxy (60 dtk) — jalankan ulang batch; biasanya berhasil pada percobaan kedua karena thumbnail foto sudah hangat. |
 | Foto di PDF jadi `[photo could not be fetched]` | File Drive-nya tidak terbaca akun skrip — pastikan folder *Rekap* dibagikan ke akun yang men-deploy (atau *anyone with link — Viewer*). |

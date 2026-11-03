@@ -205,9 +205,11 @@ icon) if you'd rather not.
 ## Batch export — Client Report PDFs to Drive
 
 `batch-export.gs` is a **second, separate web app** behind the dashboard's
-**Batch Export → Drive** button (Client Report tab). One click renders every
-unit to its own PDF and delivers them as **one ZIP** in Drive — instead of
-saving one print dialog per unit.
+**Batch Export ZIP** button (Client Report tab). One click renders every unit
+to its own PDF — always the **last 7 days ending on the date picked on the
+tab** — and the browser downloads them as **one ZIP**, instead of saving one
+print dialog per unit. Nothing is stored in Drive (bar a PDF too big for the
+proxy, see Notes).
 
 It lives on its own spreadsheet, **“Casa Nira — Batch Export Laporan Klien”**
 (`1mPOm4EtN2j93cMwx4BRVWXQLiNjRwExuad2V-KWIZvA`), whose `Batch` tab is an
@@ -216,16 +218,18 @@ week, nothing deleted:
 
 | Column | Meaning |
 | --- | --- |
-| Tanggal Mulai / Akhir | The date range the unit's photos cover, `YYYY-MM-DD`. **Akhir is required**; an empty Mulai means the 7 days ending on Akhir. |
+| Tanggal Mulai / Akhir | The period this row covers, `YYYY-MM-DD`. **Akhir is required**; an empty Mulai means the 7 days ending on Akhir. |
 | Unit | `A1` … `D1`, matching the daily feed. |
 | Highlights | Key achievements for that period — printed on that unit's PDF (green block). |
 | Lowlights | Issues / needs attention — printed on that unit's PDF (amber block). |
 
-There is no include/exclude column — **the dates decide**: the batch runs the
-newest row per unit (latest *Tanggal Akhir*; on a tie, the bottom-most row,
-since further down means added later). Older rows are the archive and never
-export again. Rows that can't run (no unit, no Akhir, unreadable dates) are
-reported by row number, never silently dropped.
+There is no include/exclude column — **the picked date decides**: a unit
+exports when one of its rows **contains** that date (Mulai ≤ date ≤ Akhir;
+with several containing rows the bottom-most wins, since further down means
+added later). Units whose rows don't cover the date are skipped and named, so
+old archive rows still serve old dates and never leak into a new week. Rows
+that can't be read (no unit, no Akhir, unreadable dates) are reported by row
+number, never silently dropped.
 
 ### Deploy
 
@@ -247,30 +251,29 @@ reported by row number, never silently dropped.
 ### How a run works
 
 The **browser** gathers everything — audit stats + S-curve series (already
-loaded for the page), the photo ids for each unit's range (one
-`/api/daily/photos` call per distinct day, shared across units), the photo
-captions typed **on that device**, and the row's own Highlights / Lowlights —
+loaded for the page), the photo ids for the 7-day window (one
+`/api/daily/photos` call per day, shared across units), the photo captions
+typed **on that device**, and the matching row's Highlights / Lowlights —
 then POSTs one JSON payload per unit through `/api/klien/batch` (which only
-forwards to `BATCH_FEED`; the URL stays server-side because it can write to
-Drive).
+forwards to `BATCH_FEED`; the URL stays server-side because it can still
+write to Drive in the oversize case).
 
-The script creates `Casa Nira — Client Reports / Batch <timestamp>` in the
-deploying account's My Drive as a **workspace**, and for each payload builds a
-Google Doc — header, stats strip, plan-vs-actual chart (Charts service),
-Highlights/Lowlights blocks, photos 2-up with captions (Drive thumbnails, HEIC
-transcoded) — exports it as `Casa Nira <unit> Progress Report - <range>.pdf`,
-and trashes the temp Doc. A final `finish` call then zips every PDF into
-`Batch <timestamp>.zip` **in the parent folder** and trashes the workspace —
-the deliverable is the one ZIP.
+For each payload the script builds a Google Doc — header, stats strip,
+plan-vs-actual chart (Charts service), Highlights/Lowlights blocks, photos
+2-up with captions (Drive thumbnails, HEIC transcoded) — exports it as
+`Casa Nira <unit> Progress Report - <range>.pdf`, trashes the temp Doc, and
+answers the **PDF itself, base64**. The dashboard assembles the ZIP in the
+browser (a ~40-line STORE zip writer, zero dependencies) and downloads it as
+`Casa Nira Client Reports - <date>.zip`.
 
 Notes:
 
-- A unit that times out at the proxy (60 s) usually **still lands its PDF** —
-  Apps Script keeps executing after the client gives up — but the finish step
-  may have zipped without it. Re-run the batch for a complete archive.
-- If the ZIP itself fails (Apps Script caps a blob around 50 MB — roughly a
-  dozen very photo-heavy units), the run folder with the loose PDFs is kept
-  and the dashboard links it instead.
+- A PDF over ~3 MB cannot travel through the Vercel proxy (4.5 MB response
+  cap): the script parks that one in the *Casa Nira — Client Reports* Drive
+  folder and answers a link, which the result note lists separately.
+- The dashboard refuses to run against an older deployment (it checks
+  `scriptVersion`), so a forgotten re-paste fails loudly instead of exporting
+  the wrong rows.
 - Photo captions live in the browser's `localStorage`, so run the batch from
   the machine where they were typed; Highlights/Lowlights travel on the sheet
   and work from anywhere.

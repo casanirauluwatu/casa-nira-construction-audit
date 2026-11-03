@@ -62,14 +62,17 @@ export async function callBatchFeed({ method = "GET", search = "", body = null }
   }
 }
 
-// One entry point for both servers: GET forwards ?action=…, POST forwards the
+// One entry point for both servers: GET forwards ?action=… (plus ?date=, which
+// config uses to pick the sheet rows containing that day), POST forwards the
 // JSON body (which carries its own action).
-export async function handleBatch({ method, action, body }) {
+export async function handleBatch({ method, action, date, body }) {
   if (method === "POST") {
     if (!body || typeof body !== "object") {
       return { status: 400, data: { ok: false, error: "POST a JSON body with an \"action\"" } };
     }
     return callBatchFeed({ method: "POST", body });
   }
-  return callBatchFeed({ search: "action=" + encodeURIComponent(action || "") });
+  let search = "action=" + encodeURIComponent(action || "");
+  if (date) search += "&date=" + encodeURIComponent(date);
+  return callBatchFeed({ search });
 }

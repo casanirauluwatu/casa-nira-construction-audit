@@ -493,7 +493,7 @@
       <span class="dbar-f">Sections</span>
       <div class="kareas" id="kAreas"></div>
       <button type="button" class="refresh kexp" id="kPrint">Print for Owner</button>
-      <button type="button" class="print kexp" id="kBatch" title="Export the batch Google Sheet's newest row per unit to PDFs, zipped into one archive on Drive">Batch Export → Drive</button>
+      <button type="button" class="print kexp" id="kBatch" title="One PDF per unit — last 7 days ending on the picked date, Highlights/Lowlights from the batch sheet — downloaded as one ZIP">Batch Export ZIP</button>
       <span class="dbar-h" id="kHint"></span>
     </div>
     <div class="note" id="knote">Loading client report…</div>
@@ -1605,7 +1605,7 @@
     kn.innerHTML = `Compact owner report — pick a unit, then <strong>Print for Owner</strong> (choose “Save as PDF” in the print dialog to send it). `
       + `Toggle the Amenities, Furniture &amp; Communal sections off for an owner they do not apply to — furniture differs between units. `
       + `Photo descriptions, Highlights &amp; Next Week Focus are click-to-edit; entries are saved on this device. `
-      + `<strong>Batch Export → Drive</strong> renders one PDF per unit from the batch Google Sheet — newest row per unit decides the date range, Highlights &amp; Lowlights come from the sheet — zipped into one archive on Drive.`;
+      + `<strong>Batch Export ZIP</strong> downloads one PDF per unit as a single ZIP — always the last 7 days ending on the date picked above; Highlights &amp; Lowlights come from the batch sheet row covering that date.`;
 
     const am={}; if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok) am[r.unit]=r;
     const caps=kcaps(kd);
@@ -1653,14 +1653,13 @@
 
   $("kPrint").addEventListener("click", ()=>window.print());
 
-  /* ---------- batch export → Drive ----------
-     One click renders every unit listed on the batch Google Sheet to its own
-     PDF in a new Drive folder — the sheet carries a date range per unit, so
-     nobody saves 19 print dialogs by hand. The browser gathers the data (it
-     already knows how to read the audit and the per-day photo listings, and
-     it holds the captions typed on this device); the Apps Script behind
-     BATCH_FEED renders each payload into a PDF and files it. */
-  const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+  /* ---------- batch export → one downloadable ZIP ----------
+     One click renders every unit to its own PDF — always the LAST 7 DAYS
+     ending on the tab's picked date — and downloads them as ONE ZIP, so
+     nobody saves 19 print dialogs by hand. The batch Google Sheet supplies
+     each unit's Highlights/Lowlights via the row whose date range CONTAINS
+     the picked date. The browser gathers the data and assembles the archive;
+     the Apps Script behind BATCH_FEED only renders payloads into PDFs. */
   function kbNote(html, err){ const n=$("kbatchNote"); n.hidden=false; n.className="note"+(err?" err":""); n.innerHTML=html; }
   async function kbCall(url, body){
     const res = await fetch(url, body ? { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(body) } : { cache:"no-store" });
@@ -1684,31 +1683,67 @@
   }
   const kbDates = (start,end)=>{ const out=[]; let d=start,g=0; while(d<=end&&g++<62){ out.push(d); d=shiftDay(d,1); } return out; };
 
+  // Minimal ZIP writer (STORE — the PDFs are already compressed), so the
+  // archive is assembled right in the browser with zero dependencies and
+  // handed over as a normal download.
+  function kbCrc(d){
+    const t=kbCrc.t||(kbCrc.t=(()=>{const t=new Int32Array(256);for(let i=0;i<256;i++){let c=i;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[i]=c;}return t;})());
+    let c=-1; for(let i=0;i<d.length;i++) c=t[(c^d[i])&255]^(c>>>8); return (c^-1)>>>0;
+  }
+  function kbZip(files){ // files: [{name, data:Uint8Array}]
+    const te=new TextEncoder(), now=new Date();
+    const dT=((now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1))&0xffff;
+    const dD=(((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate())&0xffff;
+    const u16=v=>[v&255,(v>>>8)&255], u32=v=>[v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255];
+    const parts=[], cdir=[]; let off=0;
+    for(const f of files){
+      const nm=te.encode(f.name), crc=kbCrc(f.data), sz=f.data.length;
+      // 0x0800 flags the names as UTF-8; method 0 = STORE.
+      const common=[...u16(20),...u16(0x0800),...u16(0),...u16(dT),...u16(dD),...u32(crc),...u32(sz),...u32(sz),...u16(nm.length),...u16(0)];
+      parts.push(new Uint8Array([...u32(0x04034b50),...common]), nm, f.data);
+      cdir.push(new Uint8Array([...u32(0x02014b50),...u16(20),...common,...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]), nm);
+      off+=30+nm.length+sz;
+    }
+    let cs=0; for(const c of cdir) cs+=c.length;
+    parts.push(...cdir, new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cs),...u32(off),...u16(0)]));
+    return new Blob(parts,{type:"application/zip"});
+  }
+  function kbB64(b64){
+    const bin=atob(b64), out=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i);
+    return out;
+  }
+
   let KBATCH=false;
   async function batchExport(){
     if(KBATCH) return;
     KBATCH=true;
     const btn=$("kBatch"); btn.disabled=true; btn.textContent="Exporting…";
     try{
-      kbNote("Reading the batch sheet…");
-      // The sheet is an append-only log — config already answers with the
-      // newest row per unit (latest Tanggal Akhir; bottom-most on a tie), so
-      // the dates alone decide what exports. Older rows are the archive.
-      const cfg = await kbCall("/api/klien/batch?action=config");
+      // The window is always the last 7 days ending on the tab's picked date;
+      // the sheet row whose range contains that date supplies the unit's
+      // Highlights/Lowlights (several containing rows: bottom-most wins).
+      const D = KDATE || (DAILY&&DAILY.date) || dstr(new Date());
+      const D0 = shiftDay(D, -6);
+      kbNote(`Reading the batch sheet for <strong>${esc(D)}</strong>…`);
+      const cfg = await kbCall("/api/klien/batch?action=config&date="+encodeURIComponent(D));
+      // An older deployment would answer with different semantics — refuse
+      // loudly instead of exporting the wrong rows.
+      if(!/^v4/.test(cfg.scriptVersion||"")) throw new Error(`batch-export.gs behind BATCH_FEED is outdated (${cfg.scriptVersion||"?"}) — paste the current file in Apps Script and deploy a New version.`);
       if(!DAILY) await loadDaily();
       if(!AUDIT) await load();
       const units = new Map(((DAILY&&DAILY.units)||[]).map(u=>[u.id,u]));
       const runs=[], skippedRows=(cfg.invalid||[]).map(v=>`row ${v.row} ${esc(v.unit)} (${esc(v.error)})`);
+      for(const un of (cfg.unmatched||[])) skippedRows.push(`${esc(un)} (no sheet row covers ${esc(D)})`);
       for(const r of (cfg.rows||[])){
         if(!units.has(r.unit)) skippedRows.push(`${esc(r.unit)} (not on the daily feed)`);
-        else if(!ISO_DATE.test(r.start||"")||!ISO_DATE.test(r.end||"")) skippedRows.push(`${esc(r.unit)} (bad date range)`);
         else runs.push(r);
       }
-      if(!runs.length) throw new Error("no runnable row on the batch sheet"+(skippedRows.length?" — "+skippedRows.join(" · "):"."));
+      if(!runs.length) throw new Error(`no sheet row covers ${D}`+(skippedRows.length?" — "+skippedRows.join(" · "):"."));
 
-      // One photo lookup per distinct day across every range, shared by units.
-      const days=[...new Set(runs.flatMap(r=>kbDates(r.start,r.end)))].sort();
-      kbNote(`Fetching photo listings for ${days.length} day${days.length===1?"":"s"}…`);
+      // One photo lookup per day of the 7-day window, shared by every unit.
+      const days=kbDates(D0, D);
+      kbNote(`Fetching photo listings for ${days.length} days (${esc(D0)} → ${esc(D)})…`);
       const dayPhotos=new Map();
       let di=0;
       await Promise.all(Array.from({length:4},async()=>{
@@ -1718,24 +1753,23 @@
         }
       }));
 
-      const start = await kbCall("/api/klien/batch",{action:"start"});
       const caps=kAllCaps();
       const audit={}; if(AUDIT) for(const r of (AUDIT.rows||[])) if(r.ok) audit[r.unit]=r;
-      const done=[], failed=[];
+      const done=[], failed=[], parked=[];
       for(let i=0;i<runs.length;i++){
         const r=runs[i], u=units.get(r.unit), a=audit[r.unit];
-        kbNote(`Exporting <strong>${esc(r.unit)}</strong> (${i+1}/${runs.length}) · ${esc(r.start)} → ${esc(r.end)}… `
-          + `<span class="dim">${done.length} saved${failed.length?` · ${failed.length} failed`:""}</span>`);
+        kbNote(`Exporting <strong>${esc(r.unit)}</strong> (${i+1}/${runs.length}) · ${esc(D0)} → ${esc(D)}… `
+          + `<span class="dim">${done.length} ready${failed.length?` · ${failed.length} failed`:""}</span>`);
         const shots=[], seen=new Set();
-        for(const day of kbDates(r.start,r.end)){
+        for(const day of days){
           const j=dayPhotos.get(day); if(!j) continue;
           const arr=(j.photos||{})[r.unit] || (j.photos||{})[(j.alias||{})[r.unit]] || [];
           for(const s of arr){ if(seen.has(s.id)) continue; seen.add(s.id); shots.push({ id:s.id, day, caption:caps[s.id]||"" }); }
         }
         try{
           const out = await kbCall("/api/klien/batch",{
-            action:"unit", folderId:start.folderId, unit:r.unit, type:u.type||"",
-            start:r.start, end:r.end,
+            action:"unit", unit:r.unit, type:u.type||"",
+            start:D0, end:D,
             stats: a ? { actual:a.actual, planned:a.planned, deviation:a.deviation,
               target:vizTarget(a), committed:commitOf(r.unit), bare:ACTUAL_ONLY.has(r.unit) } : null,
             series: a && Array.isArray(a.series)
@@ -1745,28 +1779,33 @@
             // batch works from any machine — only photo captions are local.
             photos:shots, highlights:r.highlights||"", lowlights:r.lowlights||"",
           });
-          done.push({ unit:r.unit, n:(out.photos||0) });
+          // Normal answer carries the PDF itself; a PDF too big for the
+          // proxy comes back as a Drive link instead.
+          if(out.pdf) done.push({ name:out.name||`Casa Nira ${r.unit}.pdf`, data:kbB64(out.pdf) });
+          else if(out.tooLarge && out.file) parked.push({ unit:r.unit, url:out.file.url });
+          else throw new Error("no PDF in the answer");
         }catch(e){ failed.push({ unit:r.unit, err:e.message }); }
       }
-      // The deliverable is one ZIP: the run folder is a workspace that the
-      // finish step archives into the parent folder and trashes.
-      let zip=null, zipErr=null;
+      // Assemble the archive right here and hand it over as a download —
+      // nothing stays on Drive (bar the rare oversized PDF linked below).
+      let zipName=null;
       if(done.length){
-        kbNote(`Zipping ${done.length} PDF${done.length===1?"":"s"}…`);
-        try{ zip = await kbCall("/api/klien/batch",{ action:"finish", folderId:start.folderId }); }
-        catch(e){ zipErr=e.message; }
+        const rd=new Date(D+"T00:00:00");
+        zipName=`Casa Nira Client Reports - ${rd.getDate()} ${MON_EN[rd.getMonth()]} ${rd.getFullYear()}.zip`;
+        const url=URL.createObjectURL(kbZip(done));
+        const aEl=document.createElement("a");
+        aEl.href=url; aEl.download=zipName;
+        document.body.appendChild(aEl); aEl.click(); aEl.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 60000);
       }
-      const link = zip
-        ? `<a href="${esc(zip.zip.url)}" target="_blank" rel="noopener">${esc(zip.zip.name)} ↗</a>`
-        : `<a href="${esc(start.folderUrl)}" target="_blank" rel="noopener">${esc(start.folderName||"Drive folder")} ↗</a>`;
-      kbNote(`Batch export finished — <strong>${done.length}</strong> of ${runs.length} PDF${runs.length===1?"":"s"} in ${link} on Drive.`
-        + (zipErr?`<br>ZIP step failed: ${esc(zipErr)} — the PDFs are in the run folder linked above.`:"")
-        + (failed.length?`<br>Failed: ${failed.map(f=>`<strong>${esc(f.unit)}</strong> — ${esc(f.err)}`).join(" · ")}. Run the batch again to retry — each run makes a fresh archive.`:"")
-        + (skippedRows.length?`<br>Skipped: ${skippedRows.join(" · ")}.`:""), !!(failed.length||zipErr));
+      kbNote(`Batch export finished — <strong>${done.length}</strong> of ${runs.length} PDF${runs.length===1?"":"s"}${zipName?` downloaded as <strong>${esc(zipName)}</strong>`:""} · last 7 days ending ${esc(D)}.`
+        + (parked.length?`<br>Too large to download through the dashboard, saved on Drive instead: ${parked.map(p=>`<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.unit)} ↗</a>`).join(" · ")}.`:"")
+        + (failed.length?`<br>Failed: ${failed.map(f=>`<strong>${esc(f.unit)}</strong> — ${esc(f.err)}`).join(" · ")}. Run the batch again to retry.`:"")
+        + (skippedRows.length?`<br>Skipped: ${skippedRows.join(" · ")}.`:""), !!failed.length);
     }catch(e){
       kbNote(`Batch export failed — ${esc(e.message||String(e))}`, true);
     }finally{
-      KBATCH=false; btn.disabled=false; btn.textContent="Batch Export → Drive";
+      KBATCH=false; btn.disabled=false; btn.textContent="Batch Export ZIP";
     }
   }
   $("kBatch").addEventListener("click", batchExport);

@@ -1,11 +1,13 @@
 /**
- * Casa Nira — Batch Export Laporan Klien → PDFs in Drive.
+ * Casa Nira — Batch Export Laporan Klien → a ZIP the browser downloads.
  *
- * Renders one owner-facing progress-report PDF per unit and files them all in
- * a NEW Drive folder per run, so nobody prints 19 reports by hand. Which units
- * run, and the date range each unit's photos cover, live on a dedicated
- * Google Sheet ("Casa Nira — Batch Export Laporan Klien") — ops edit the
- * ranges there, the dashboard's "Batch Export → Drive" button does the rest.
+ * Renders one owner-facing progress-report PDF per unit and hands each PDF
+ * back (base64) for the dashboard to bundle into ONE ZIP and download — no
+ * printing 19 reports by hand, and nothing parked in Drive. The report window
+ * is always the LAST 7 DAYS ending on the date picked on the Client Report
+ * tab; the dedicated Google Sheet ("Casa Nira — Batch Export Laporan Klien")
+ * supplies each unit's Highlights/Lowlights via the row whose date range
+ * CONTAINS that picked date.
  *
  * DIVISION OF LABOUR — this script renders, it does not gather. The dashboard
  * already knows how to read the audit feeds and the per-day photo listings, so
@@ -21,9 +23,11 @@
  *   A Tanggal Mulai · B Tanggal Akhir · C Unit · D Highlights · E Lowlights
  *   Tanggal Akhir is required; an empty Tanggal Mulai means the 7 days ending
  *   on Akhir. Highlights / Lowlights print on that unit's PDF (green / amber).
- *   The batch runs the NEWEST row per unit — latest Tanggal Akhir, bottom-most
- *   row on a tie — so the dates alone decide what exports; older rows are the
- *   archive. There is no include/exclude column.
+ *   A unit exports when one of its rows CONTAINS the picked date (Mulai ≤
+ *   date ≤ Akhir); with several containing rows the bottom-most wins, since
+ *   further down means added later. Units whose rows don't cover the date are
+ *   skipped and named — so the dates alone decide what exports; older rows
+ *   are the archive. There is no include/exclude column.
  *
  * DEPLOY (same recipe as daily-labour.gs)
  *   Open the batch sheet → Extensions → Apps Script, paste this file, Save.
@@ -38,27 +42,27 @@
  *   Verify with /exec?pretty=1 — `scriptVersion` should read the value below.
  *
  * ENDPOINTS
- *   GET  /exec                   { ok, script, scriptVersion }  (health check)
- *   GET  /exec?action=config     newest row per unit, date defaults resolved
- *   POST /exec  {action:"start"}                    → creates the run folder
- *   POST /exec  {action:"unit", folderId, unit, …}  → renders one PDF into it
- *   POST /exec  {action:"finish", folderId}         → zips the PDFs into ONE
- *        archive in the parent folder and trashes the run folder — the
- *        deliverable is the ZIP, not a folder of loose files.
+ *   GET  /exec                        { ok, script, scriptVersion }
+ *   GET  /exec?action=config&date=…   the row containing that date, per unit
+ *   POST /exec  {action:"unit", …}    → renders one PDF, returns it base64
+ *        (an oversized PDF — too big for the dashboard's proxy — is parked in
+ *        Drive instead and answered as a link; that is the only Drive use).
  */
 
 // Leave blank to use the spreadsheet this script is bound to.
 var SHEET_ID = '1mPOm4EtN2j93cMwx4BRVWXQLiNjRwExuad2V-KWIZvA';
 var SHEET_TAB = 'Batch';
-// All run folders are created inside this one (made in My Drive on first run).
-// Set PARENT_FOLDER_ID to pin an existing folder instead of finding by name.
+// Only PDFs too big to answer inline are parked here (made in My Drive on
+// first use). Set PARENT_FOLDER_ID to pin an existing folder instead.
 var PARENT_FOLDER_NAME = 'Casa Nira — Client Reports';
 var PARENT_FOLDER_ID = '';
-var TZ = 'Asia/Makassar'; // WITA — the clock the ranges and run names use
+var TZ = 'Asia/Makassar'; // WITA — the clock the ranges use
 var DEFAULT_RANGE_DAYS = 7;
-var MAX_RANGE_DAYS = 62; // a runaway range would fetch months of photos
 var PHOTO_WIDTH_PX = 800; // thumbnail size fetched from Drive (HEIC → JPEG)
-var SCRIPT_VERSION = 'v3-para-fix';
+// Raw-PDF bytes that still fit through the dashboard's serverless proxy
+// (Vercel caps a response ~4.5 MB; base64 adds a third on top).
+var MAX_INLINE_PDF = 3200000;
+var SCRIPT_VERSION = 'v4-zip-download';
 
 // Palette — same inks as the dashboard, so the PDFs read as the same report.
 var C_GOLD = '#a9822f', C_OLIVE = '#6f7043', C_INK = '#2b2620',
@@ -73,9 +77,9 @@ function doGet(e) {
   var p = (e && e.parameter) || {};
   var pretty = p.pretty != null;
   try {
-    if (p.action === 'config') return out_(config_(), pretty);
+    if (p.action === 'config') return out_(config_(p.date), pretty);
     return out_({ ok: true, script: 'batch-export', scriptVersion: SCRIPT_VERSION,
-      usage: 'GET ?action=config · POST {action:"start"} · POST {action:"unit",…}' }, pretty);
+      usage: 'GET ?action=config&date=YYYY-MM-DD · POST {action:"unit",…}' }, pretty);
   } catch (err) {
     return out_({ ok: false, error: String(err && err.message || err), scriptVersion: SCRIPT_VERSION }, pretty);
   }
@@ -86,9 +90,7 @@ function doPost(e) {
   try { body = JSON.parse(e.postData.contents); } catch (err) {}
   if (!body || !body.action) return out_({ ok: false, error: 'POST a JSON body with an "action"' });
   try {
-    if (body.action === 'start') return out_(startRun_());
     if (body.action === 'unit') return out_(renderUnit_(body));
-    if (body.action === 'finish') return out_(finishRun_(body));
     return out_({ ok: false, error: 'unknown action "' + body.action + '"' });
   } catch (err) {
     return out_({ ok: false, error: String(err && err.message || err), unit: body.unit || null,
@@ -126,17 +128,18 @@ function shiftIso_(iso, by) {
   d.setUTCDate(d.getUTCDate() + by);
   return d.toISOString().slice(0, 10);
 }
-function spanDays_(a, b) { return Math.round((new Date(b) - new Date(a)) / 864e5) + 1; }
-
-// The newest row per unit, dates resolved. The tab is an append-only log, so
-// "newest" is the latest Tanggal Akhir — and on a tie the bottom-most row,
-// because further down means added later. Rows that can't run (no unit, no
-// Tanggal Akhir, unreadable dates) are returned under `invalid` with their row
-// number, so the dashboard can say exactly which line to fix.
-function config_() {
+// The rows that apply to one picked date. The tab is an append-only log, so a
+// unit exports when one of its rows CONTAINS the date (Mulai ≤ date ≤ Akhir);
+// with several containing rows the bottom-most wins, because further down
+// means added later. Units present on the sheet whose rows don't cover the
+// date come back under `unmatched`; rows that can't be read at all (no unit,
+// no Tanggal Akhir, unreadable dates) under `invalid` with their row number —
+// the dashboard names both, nothing is silently dropped.
+function config_(dateIso) {
+  if (!ISO_RE.test(String(dateIso || ''))) throw new Error('date required — ?action=config&date=YYYY-MM-DD');
   var sh = sheet_();
   var vals = sh.getRange(2, 1, Math.max(sh.getLastRow() - 1, 1), 5).getValues();
-  var newest = {}, order = [], invalid = [];
+  var match = {}, order = [], invalid = [], units = {};
   for (var i = 0; i < vals.length; i++) {
     var rowNo = i + 2;
     var start = isoOf_(vals[i][0]), end = isoOf_(vals[i][1]);
@@ -149,20 +152,23 @@ function config_() {
     else {
       start = start || shiftIso_(end, -(DEFAULT_RANGE_DAYS - 1));
       if (start > end) bad = 'Tanggal Mulai setelah Tanggal Akhir';
-      else if (spanDays_(start, end) > MAX_RANGE_DAYS) bad = 'rentang lebih dari ' + MAX_RANGE_DAYS + ' hari';
     }
     if (bad) { invalid.push({ row: rowNo, unit: unit || '?', error: bad }); continue; }
-    var row = { unit: unit, start: start, end: end, row: rowNo,
-      highlights: String(vals[i][3] || '').trim(), lowlights: String(vals[i][4] || '').trim() };
-    if (!newest[unit]) order.push(unit);
-    if (!newest[unit] || row.end >= newest[unit].end) newest[unit] = row;
+    units[unit] = true;
+    if (start <= dateIso && dateIso <= end) {
+      if (!match[unit]) order.push(unit);
+      match[unit] = { unit: unit, row: rowNo, start: start, end: end,
+        highlights: String(vals[i][3] || '').trim(), lowlights: String(vals[i][4] || '').trim() };
+    }
   }
-  var rows = [];
-  for (var j = 0; j < order.length; j++) rows.push(newest[order[j]]);
-  return { ok: true, rows: rows, invalid: invalid, sheet: SHEET_TAB, today: todayIso_() };
+  var rows = [], unmatched = [];
+  for (var j = 0; j < order.length; j++) rows.push(match[order[j]]);
+  for (var u in units) if (!match[u]) unmatched.push(u);
+  return { ok: true, date: dateIso, rows: rows, unmatched: unmatched, invalid: invalid,
+    sheet: SHEET_TAB, today: todayIso_() };
 }
 
-/* ==================== run folder ==================== */
+/* ==================== oversize fallback folder ==================== */
 
 function parentFolder_() {
   if (PARENT_FOLDER_ID) return DriveApp.getFolderById(PARENT_FOLDER_ID);
@@ -171,23 +177,15 @@ function parentFolder_() {
   return it.hasNext() ? it.next() : root.createFolder(PARENT_FOLDER_NAME);
 }
 
-function startRun_() {
-  var name = 'Batch ' + Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH.mm');
-  var folder = parentFolder_().createFolder(name);
-  return { ok: true, folderId: folder.getId(), folderUrl: folder.getUrl(), folderName: name };
-}
-
 /* ==================== one unit → one PDF ==================== */
 
-// payload: { folderId, unit, type, start, end,
+// payload: { unit, type, start, end,
 //            stats: { actual, planned, deviation, target, committed, bare } | null,
 //            series: [ { d:"YYYY-MM-DD", p, a } ],
 //            photos: [ { id, day:"YYYY-MM-DD", caption } ],
 //            highlights, lowlights }   ← both come from the sheet's row
 function renderUnit_(p) {
-  if (!p.folderId) throw new Error('folderId missing — call action:"start" first');
   if (!p.unit) throw new Error('unit missing');
-  var folder = DriveApp.getFolderById(p.folderId);
   var period = fmtEn_(p.start) + ' – ' + fmtEn_(p.end);
   var name = 'Casa Nira ' + p.unit + ' Progress Report - ' + period;
 
@@ -242,42 +240,22 @@ function renderUnit_(p) {
     // Export via DriveApp, not doc.getAs: the Drive copy is guaranteed flushed
     // once saveAndClose returns.
     var pdf = DriveApp.getFileById(doc.getId()).getAs('application/pdf').setName(name + '.pdf');
-    var file = folder.createFile(pdf);
-    return { ok: true, unit: p.unit,
-      file: { id: file.getId(), url: file.getUrl(), name: file.getName() },
+    var bytes = pdf.getBytes();
+    if (bytes.length <= MAX_INLINE_PDF) {
+      // Normal path: the PDF travels back in the answer and the dashboard
+      // zips it in the browser — nothing is left in Drive.
+      return { ok: true, unit: p.unit, name: name + '.pdf', bytes: bytes.length,
+        pdf: Utilities.base64Encode(bytes), photos: inserted, skippedPhotos: skipped };
+    }
+    // Too big for the dashboard's serverless proxy: park it in Drive and hand
+    // back the link instead — the only case Drive is still used.
+    var file = parentFolder_().createFile(pdf);
+    return { ok: true, unit: p.unit, name: name + '.pdf', bytes: bytes.length, tooLarge: true,
+      file: { id: file.getId(), url: file.getUrl() },
       photos: inserted, skippedPhotos: skipped };
   } finally {
     // The Doc is scaffolding — only the PDF should remain.
     try { DriveApp.getFileById(doc.getId()).setTrashed(true); } catch (err) {}
-  }
-}
-
-// Zip the run: every PDF the units produced becomes ONE archive in the parent
-// folder, and the working folder is trashed — the deliverable is the ZIP, not
-// a folder of loose files. If zipping fails (Apps Script caps a blob around
-// 50 MB — roughly a dozen very photo-heavy units), the folder is kept and the
-// answer says so: the PDFs are safe either way.
-function finishRun_(p) {
-  if (!p.folderId) throw new Error('folderId missing — call action:"start" first');
-  var folder = DriveApp.getFolderById(p.folderId);
-  var blobs = [], seen = {}, n = 0;
-  var it = folder.getFilesByType(MimeType.PDF);
-  while (it.hasNext()) {
-    var b = it.next().getBlob();
-    var nm = b.getName();
-    if (seen[nm]) b.setName(nm.replace(/\.pdf$/i, '') + ' (' + seen[nm] + ').pdf');
-    seen[nm] = (seen[nm] || 0) + 1;
-    blobs.push(b); n++;
-  }
-  if (!n) return { ok: false, error: 'no PDFs in the run folder to zip', folderUrl: folder.getUrl() };
-  var name = folder.getName() + '.zip';
-  try {
-    var file = parentFolder_().createFile(Utilities.zip(blobs, name));
-    folder.setTrashed(true);
-    return { ok: true, zip: { id: file.getId(), url: file.getUrl(), name: name }, files: n };
-  } catch (err) {
-    return { ok: false, folderUrl: folder.getUrl(), files: n,
-      error: 'zip failed (' + String(err && err.message || err) + ') — the PDFs are still in the run folder' };
   }
 }
 
